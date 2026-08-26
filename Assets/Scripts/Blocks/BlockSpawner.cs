@@ -15,7 +15,7 @@ public class BlockSpawner : MonoBehaviour
 
     /// <summary>
     /// TEMPORARY hardcoded test layout. Call manually from the Inspector/context menu only.
-    /// Positions are Board grid cells; Block.Initialize uses BoardManager.GridToLocal.
+    /// Positions are Board grid cells; Block.Initialize applies presentation via BoardManager grid-space.
     /// </summary>
     [ContextMenu("Spawn Test Level (Debug)")]
     public void SpawnTestLevel()

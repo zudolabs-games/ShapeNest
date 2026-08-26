@@ -1,13 +1,14 @@
-using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// UI nest slot on the Board. Uses BoardManager grid coordinates. Does not occupy block cells.
-/// ShapeType is gameplay identity; sprites are presentation-only and can be replaced.
+/// Gameplay nest slot: required shape, grid cell, layer consumption.
+/// Presentation (position/scale/size) is delegated to <see cref="IPieceView"/> / <see cref="UIPieceView"/>.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
+[RequireComponent(typeof(UIPieceView))]
 public class Target : MonoBehaviour
 {
     private enum VisualState
@@ -89,6 +90,10 @@ public class Target : MonoBehaviour
     private bool isRegistered;
     private Image image;
     private RectTransform cachedRect;
+    private UIPieceView pieceView;
+    private PieceView3D worldView;
+    private IGridSpace worldGridSpace;
+    private readonly List<PieceView3D> extraWorldViews = new List<PieceView3D>();
 
     private Vector3 restScale = Vector3.one;
     private Color restColor = Color.white;
@@ -96,7 +101,7 @@ public class Target : MonoBehaviour
     private bool hasRestPose;
     private bool isReadyFeedbackActive;
     private VisualState visualState = VisualState.Normal;
-    private Coroutine readyRoutine;
+    private Sequence readySequence;
     private readonly List<Image> extraCellImages = new List<Image>();
     private Vector2Int[] cachedLocals = { Vector2Int.zero };
     private ShapeType[] cachedShapes = { ShapeType.Square };
@@ -168,22 +173,52 @@ public class Target : MonoBehaviour
     public ShapeType OuterShape => outerShape;
     public IReadOnlyList<ShapeCellData> Cells => cells;
 
+    /// <summary>
+    /// Presentation-only: true while nest match dissolve is running or after it completed.
+    /// BoardPresentationController must not overwrite World3D while this is true.
+    /// </summary>
+    public bool IsMatchPresentationActive =>
+        visualState == VisualState.Entering || visualState == VisualState.Matched;
+
+    /// <summary>True after a successful full match presentation has completed.</summary>
+    public bool IsMatched => visualState == VisualState.Matched;
+
     public RectTransform RectTransform
     {
         get
         {
             if (cachedRect == null)
             {
-                cachedRect = (RectTransform)transform;
+                cachedRect = PieceView.RectTransform;
             }
 
             return cachedRect;
         }
     }
 
+    /// <summary>Presentation adapter for this nest.</summary>
+    public IPieceView View => PieceView;
+
+    private UIPieceView PieceView
+    {
+        get
+        {
+            if (pieceView == null)
+            {
+                pieceView = GetComponent<UIPieceView>();
+                if (pieceView == null)
+                {
+                    pieceView = gameObject.AddComponent<UIPieceView>();
+                }
+            }
+
+            return pieceView;
+        }
+    }
+
     private void Awake()
     {
-        cachedRect = (RectTransform)transform;
+        cachedRect = PieceView.RectTransform;
         CacheImage();
         CaptureRestPose();
         RebuildCache();
@@ -199,11 +234,15 @@ public class Target : MonoBehaviour
     {
         StopReadyRoutine();
         isReadyFeedbackActive = false;
-        visualState = VisualState.Normal;
-        ApplyRestVisuals();
-        if (image != null)
+        // Preserve Matched so a disable/destroy cannot resurrect a finished nest as Normal.
+        if (visualState != VisualState.Matched)
         {
-            image.enabled = true;
+            visualState = VisualState.Normal;
+            ApplyRestVisuals();
+            if (image != null)
+            {
+                image.enabled = AllowUiPieceImages;
+            }
         }
     }
 
@@ -263,6 +302,22 @@ public class Target : MonoBehaviour
         return cachedShapes[index];
     }
 
+    /// <summary>Visual outer layer for a nest cell. Distinct from RequiredShape when nested.</summary>
+    public ShapeType GetOuterShapeAtIndex(int index)
+    {
+        if (index < 0 || index >= cachedCellCount)
+        {
+            return outerShape;
+        }
+
+        return cachedOuters[index];
+    }
+
+    public bool HasInnerLayerAt(int index)
+    {
+        return HasInnerLayer(index);
+    }
+
     public void Initialize(BoardManager board, Vector2Int startPosition)
     {
         StopReadyRoutine();
@@ -283,25 +338,185 @@ public class Target : MonoBehaviour
         CaptureRestPose();
         RebuildCellVisuals();
 
-        if (boardManager == null)
+        if (boardManager == null || boardManager.GridSpace == null)
         {
             return;
         }
 
-        RectTransform.anchoredPosition = boardManager.GridToLocal(gridPosition);
+        PieceView.ApplyGridPosition(boardManager.GridSpace, gridPosition);
+        SyncWorldViewPosition();
         isRegistered = boardManager.TryRegisterTarget(this);
     }
 
     public void RefreshLayoutVisuals()
     {
         SyncVisualSizeToBoard();
-        if (boardManager != null)
+        if (boardManager != null && boardManager.GridSpace != null)
         {
-            RectTransform.anchoredPosition = boardManager.GridToLocal(gridPosition);
+            PieceView.ApplyGridPosition(boardManager.GridSpace, gridPosition);
         }
 
+        SyncWorldViewPosition();
         RefreshVisual();
         RebuildCellVisuals();
+    }
+
+    /// <summary>Binds optional World3D presentation. Gameplay state stays on Target.</summary>
+    public void SetWorldView(PieceView3D view, IGridSpace space)
+    {
+        worldView = view;
+        worldGridSpace = space;
+        if (worldView != null && !IsMatchPresentationActive)
+        {
+            worldView.EnsurePresentationVisible();
+        }
+
+        SyncWorldViewPosition();
+    }
+
+    public void ClearWorldView()
+    {
+        // Logical ref only — controller owns destroy/prune. Do not leave a live unbound view.
+        if (worldView != null)
+        {
+            worldView.ClearSourceBlock();
+            if (worldView.gameObject.activeSelf)
+            {
+                worldView.gameObject.SetActive(false);
+            }
+        }
+
+        worldView = null;
+        worldGridSpace = null;
+        extraWorldViews.Clear();
+    }
+
+    /// <summary>Presentation-only extra nest-cell views. Controller owns create/destroy.</summary>
+    public void SetExtraWorldViews(IReadOnlyList<PieceView3D> views)
+    {
+        extraWorldViews.Clear();
+        if (views == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < views.Count; i++)
+        {
+            if (views[i] != null)
+            {
+                extraWorldViews.Add(views[i]);
+            }
+        }
+    }
+
+    public PieceView3D WorldView => worldView;
+
+    /// <summary>Index of the occupancy-anchor cell (local (0,0)), used as WorldView.</summary>
+    public int AnchorCellIndex
+    {
+        get
+        {
+            for (int i = 0; i < cachedCellCount; i++)
+            {
+                if (cachedLocals[i] == Vector2Int.zero)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+    }
+
+    public IReadOnlyList<PieceView3D> ExtraWorldViews => extraWorldViews;
+
+    public void RefreshWorldPresentation()
+    {
+        SyncWorldViewPosition();
+    }
+
+    public void SetUiPresentationVisible(bool visible)
+    {
+        // World3D owns nest visuals — never re-show gameplay Images in that mode.
+        if (BoardPresentationController.SuppressGameplayPieceUiImages())
+        {
+            visible = false;
+        }
+
+        Image[] images = GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            if (images[i] != null)
+            {
+                images[i].enabled = visible;
+            }
+        }
+    }
+
+    /// <summary>Whether this nest's uGUI Images may be enabled (UI presentation only).</summary>
+    private static bool AllowUiPieceImages =>
+        !BoardPresentationController.SuppressGameplayPieceUiImages();
+
+    private void SyncWorldViewPosition()
+    {
+        if (worldView == null || worldGridSpace == null)
+        {
+            return;
+        }
+
+        worldView.ApplyGridPosition(worldGridSpace, gridPosition);
+    }
+
+    private void ApplyWorldViewMatchScale(float scale)
+    {
+        ForEachWorldView(view =>
+        {
+            view.LocalScale = view.ConfiguredFootprintScale * scale;
+        });
+    }
+
+    private void HideAllWorldViews()
+    {
+        ForEachWorldView(view =>
+        {
+            view.LocalScale = Vector3.zero;
+            view.gameObject.SetActive(false);
+        });
+        ClearWorldView();
+    }
+
+    private void RestoreWorldViewPresentation()
+    {
+        ForEachWorldView(view =>
+        {
+            if (!IsMatchPresentationActive)
+            {
+                view.EnsurePresentationVisible();
+            }
+
+            view.LocalScale = view.ConfiguredFootprintScale;
+        });
+    }
+
+    private void ForEachWorldView(System.Action<PieceView3D> action)
+    {
+        if (action == null)
+        {
+            return;
+        }
+
+        if (worldView != null)
+        {
+            action(worldView);
+        }
+
+        for (int i = 0; i < extraWorldViews.Count; i++)
+        {
+            if (extraWorldViews[i] != null)
+            {
+                action(extraWorldViews[i]);
+            }
+        }
     }
 
     public void ShowReadyFeedback()
@@ -322,7 +537,7 @@ public class Target : MonoBehaviour
         StopReadyRoutine();
         visualState = VisualState.Entering;
         isReadyFeedbackActive = true;
-        readyRoutine = StartCoroutine(ReadyPulseRoutine());
+        StartReadyPulse();
     }
 
     public void HideReadyFeedback()
@@ -336,11 +551,7 @@ public class Target : MonoBehaviour
         CacheImage();
         CaptureRestPose();
 
-        if (readyRoutine != null)
-        {
-            StopCoroutine(readyRoutine);
-            readyRoutine = null;
-        }
+        StopReadyRoutine();
 
         if (!isReadyFeedbackActive)
         {
@@ -356,7 +567,7 @@ public class Target : MonoBehaviour
             return;
         }
 
-        readyRoutine = StartCoroutine(RestoreRestRoutine());
+        StartRestoreRest();
     }
 
     public void BeginMatchPresentation()
@@ -370,13 +581,15 @@ public class Target : MonoBehaviour
 
     public void SetMatchPresentation(float scale, float alpha)
     {
-        visualState = VisualState.Entering;
-        if (cachedRect == null)
+        if (visualState == VisualState.Matched)
         {
-            cachedRect = (RectTransform)transform;
+            return;
         }
 
-        cachedRect.localScale = restScale * scale;
+        visualState = VisualState.Entering;
+        PieceView.LocalScale = restScale * scale;
+        ApplyWorldViewMatchScale(Mathf.Max(0f, scale));
+
         CacheImage();
         ApplyTargetVisualAlpha(Mathf.Clamp01(alpha), alpha > 0.001f);
     }
@@ -386,12 +599,9 @@ public class Target : MonoBehaviour
         visualState = VisualState.Matched;
         StopReadyRoutine();
         isReadyFeedbackActive = false;
-        if (cachedRect == null)
-        {
-            cachedRect = (RectTransform)transform;
-        }
+        PieceView.LocalScale = Vector3.zero;
+        HideAllWorldViews();
 
-        cachedRect.localScale = Vector3.zero;
         CacheImage();
         if (image != null)
         {
@@ -418,7 +628,7 @@ public class Target : MonoBehaviour
         CacheImage();
         if (image != null)
         {
-            image.enabled = true;
+            image.enabled = AllowUiPieceImages;
             if (restColor.a < 0.01f)
             {
                 restColor = Color.white;
@@ -426,10 +636,17 @@ public class Target : MonoBehaviour
             }
         }
 
+        // worldView may be null after CompleteMatchPresentation; controller rebinds on level load.
+        RestoreWorldViewPresentation();
+
         ApplyRestVisuals();
         CaptureRestPose();
         RebuildCellVisuals();
         RefreshVisual();
+        if (!AllowUiPieceImages)
+        {
+            SetUiPresentationVisible(false);
+        }
     }
 
     public void RefreshVisual()
@@ -475,42 +692,51 @@ public class Target : MonoBehaviour
         ApplyNestedOverlays();
     }
 
-    private IEnumerator ReadyPulseRoutine()
+    private void StartReadyPulse()
     {
+        StopReadyRoutine();
         Vector3 peak = restScale * readyScale;
         Vector3 trough = restScale * pulseScale;
         float halfPulse = Mathf.Max(0.01f, readyPulseDuration * 0.5f);
+        Color fromColor = image != null ? image.color : restColor;
 
-        yield return AnimateReadyVisual(
-            cachedRect.localScale,
+        readySequence = DOTween.Sequence().SetId(TweenAnimationUtility.ReadyPulseId).SetLink(gameObject);
+        readySequence.Append(BuildReadyVisualTween(
+            PieceView.LocalScale,
             peak,
-            image != null ? image.color : restColor,
+            fromColor,
             readyColor,
             readyRiseDuration,
-            true);
+            easeOut: true));
 
-        while (isReadyFeedbackActive)
-        {
-            yield return AnimateReadyVisual(peak, trough, readyColor, readyColor, halfPulse, false);
-            if (!isReadyFeedbackActive)
-            {
-                yield break;
-            }
-
-            yield return AnimateReadyVisual(trough, peak, readyColor, readyColor, halfPulse, true);
-        }
+        Sequence loop = DOTween.Sequence();
+        loop.Append(BuildReadyVisualTween(peak, trough, readyColor, readyColor, halfPulse, easeOut: false));
+        loop.Append(BuildReadyVisualTween(trough, peak, readyColor, readyColor, halfPulse, easeOut: true));
+        loop.SetLoops(-1, LoopType.Restart);
+        readySequence.Append(loop);
     }
 
-    private IEnumerator RestoreRestRoutine()
+    private void StartRestoreRest()
     {
-        Vector3 fromScale = cachedRect.localScale;
+        StopReadyRoutine();
+        Vector3 fromScale = PieceView.LocalScale;
         Color fromColor = image != null ? image.color : restColor;
-        yield return AnimateReadyVisual(fromScale, restScale, fromColor, restColor, readyRestoreDuration, true);
-        ApplyRestVisuals();
-        readyRoutine = null;
+        readySequence = DOTween.Sequence().SetId(TweenAnimationUtility.ReadyPulseId).SetLink(gameObject);
+        readySequence.Append(BuildReadyVisualTween(
+            fromScale,
+            restScale,
+            fromColor,
+            restColor,
+            readyRestoreDuration,
+            easeOut: true));
+        readySequence.OnComplete(() =>
+        {
+            ApplyRestVisuals();
+            readySequence = null;
+        });
     }
 
-    private IEnumerator AnimateReadyVisual(
+    private Tween BuildReadyVisualTween(
         Vector3 fromScale,
         Vector3 toScale,
         Color fromColor,
@@ -521,27 +747,23 @@ public class Target : MonoBehaviour
         if (duration <= 0f)
         {
             ApplyVisual(toScale, toColor);
-            yield break;
+            return DOTween.Sequence();
         }
 
-        float elapsed = 0f;
-        while (elapsed < duration)
+        return TweenAnimationUtility.Progress(duration, t =>
         {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            float eased = easeOut ? 1f - ((1f - t) * (1f - t)) : t * t;
+            float eased = easeOut
+                ? TweenAnimationUtility.EvaluateEaseOutQuad(t)
+                : TweenAnimationUtility.EvaluateEaseInQuad(t);
             ApplyVisual(
                 Vector3.LerpUnclamped(fromScale, toScale, eased),
                 Color.LerpUnclamped(fromColor, toColor, eased));
-            yield return null;
-        }
-
-        ApplyVisual(toScale, toColor);
+        });
     }
 
     private void ApplyVisual(Vector3 scale, Color color)
     {
-        cachedRect.localScale = scale;
+        PieceView.LocalScale = scale;
         if (image != null)
         {
             image.color = color;
@@ -552,12 +774,7 @@ public class Target : MonoBehaviour
 
     private void ApplyRestVisuals()
     {
-        if (cachedRect == null)
-        {
-            cachedRect = (RectTransform)transform;
-        }
-
-        cachedRect.localScale = restScale;
+        PieceView.LocalScale = restScale;
         if (image != null)
         {
             image.color = restColor;
@@ -573,12 +790,7 @@ public class Target : MonoBehaviour
             return;
         }
 
-        if (cachedRect == null)
-        {
-            cachedRect = (RectTransform)transform;
-        }
-
-        restScale = cachedRect.localScale;
+        restScale = PieceView.LocalScale;
         if (restScale.sqrMagnitude < 0.0001f)
         {
             restScale = Vector3.one;
@@ -677,12 +889,7 @@ public class Target : MonoBehaviour
         }
 
         Vector2 size = PieceGameplayVisuals.PieceSizeForCell(boardManager.VisualCellSize);
-        RectTransform.sizeDelta = size;
-        PiecePresentation presentation = GetComponent<PiecePresentation>();
-        if (presentation != null)
-        {
-            presentation.SetVisualSize(size);
-        }
+        PieceView.SetVisualSize(size);
     }
 
     private void RebuildCellVisuals()
@@ -792,7 +999,7 @@ public class Target : MonoBehaviour
 
         if (image != null && visualState != VisualState.Matched)
         {
-            image.enabled = showAnchor || cachedCellCount <= 1;
+            image.enabled = AllowUiPieceImages && (showAnchor || cachedCellCount <= 1);
         }
     }
 
@@ -895,10 +1102,12 @@ public class Target : MonoBehaviour
     {
         Color color = restColor;
         color.a = restColor.a * Mathf.Clamp01(alpha);
+        // Phase 27: MatchEffect dissolve must not re-enable Overlay Images while World3D is active.
+        bool showUi = enabled && AllowUiPieceImages;
         if (image != null)
         {
             image.color = color;
-            image.enabled = enabled;
+            image.enabled = showUi;
         }
 
         ApplyColorToExtraCells(color);
@@ -906,7 +1115,7 @@ public class Target : MonoBehaviour
         {
             if (extraCellImages[i] != null)
             {
-                extraCellImages[i].enabled = enabled;
+                extraCellImages[i].enabled = showUi;
             }
         }
     }
@@ -924,11 +1133,13 @@ public class Target : MonoBehaviour
 
     private void StopReadyRoutine()
     {
-        if (readyRoutine != null)
+        if (readySequence != null && readySequence.IsActive())
         {
-            StopCoroutine(readyRoutine);
-            readyRoutine = null;
+            readySequence.Kill(false);
         }
+
+        readySequence = null;
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.ReadyPulseId);
     }
 
     private void CacheImage()

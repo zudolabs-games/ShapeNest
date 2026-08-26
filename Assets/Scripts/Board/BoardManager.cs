@@ -3,9 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Grid layout for ShapeNest on a UI Canvas.
+/// Grid layout and occupancy for ShapeNest.
 /// Lives on the Board RectTransform. Cell (0, 0) is the bottom-left cell.
-/// Visual cell size comes from the Board rect; serialized cellSize is kept for compatibility.
+/// Presentation coordinates are provided by <see cref="IGridSpace"/> (currently <see cref="UIGridSpace"/>).
 /// </summary>
 [ExecuteAlways]
 [RequireComponent(typeof(RectTransform))]
@@ -38,10 +38,18 @@ public class BoardManager : MonoBehaviour
     [SerializeField]
     private bool debugOccupancy;
 
+    private UIGridSpace uiGridSpace;
+
     public int Width => width;
     public int Height => height;
     public float CellSize => cellSize;
     public float GridPadding => gridPadding;
+
+    /// <summary>Active presentation grid-space (UI implementation in Phase 1).</summary>
+    public IGridSpace GridSpace => EnsureUIGridSpace();
+
+    /// <summary>Board RectTransform used by <see cref="UIGridSpace"/>.</summary>
+    public RectTransform BoardRectTransform => BoardRect;
 
     /// <summary>
     /// Sets the playable grid from LevelData. Rebuilds the runtime grid lines.
@@ -102,57 +110,15 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    private UIGridSpace EnsureUIGridSpace()
+    {
+        return uiGridSpace ??= new UIGridSpace(this);
+    }
+
     /// <summary>
     /// Square cell size in Board local UI units, derived from the RectTransform.
     /// </summary>
-    public Vector2 VisualCellSize
-    {
-        get
-        {
-            Rect rect = PlayableRect;
-            if (width <= 0 || height <= 0)
-            {
-                return Vector2.one;
-            }
-
-            float cell = Mathf.Min(rect.width / width, rect.height / height);
-            cell = Mathf.Max(0.01f, cell);
-            return new Vector2(cell, cell);
-        }
-    }
-
-    private Rect PlayableRect
-    {
-        get
-        {
-            Rect rect = BoardRect.rect;
-            float pad = Mathf.Min(gridPadding, rect.width * 0.12f, rect.height * 0.12f);
-            pad = Mathf.Max(0f, pad);
-            if (rect.width <= pad * 2f || rect.height <= pad * 2f)
-            {
-                return rect;
-            }
-
-            return new Rect(rect.xMin + pad, rect.yMin + pad, rect.width - pad * 2f, rect.height - pad * 2f);
-        }
-    }
-
-    /// <summary>
-    /// Playable area occupied by the square cell grid, centered inside PlayableRect.
-    /// </summary>
-    private Rect CellGridRect
-    {
-        get
-        {
-            Rect playable = PlayableRect;
-            Vector2 cell = VisualCellSize;
-            float gridWidthPx = cell.x * width;
-            float gridHeightPx = cell.y * height;
-            float originX = playable.xMin + (playable.width - gridWidthPx) * 0.5f;
-            float originY = playable.yMin + (playable.height - gridHeightPx) * 0.5f;
-            return new Rect(originX, originY, gridWidthPx, gridHeightPx);
-        }
-    }
+    public Vector2 VisualCellSize => EnsureUIGridSpace().CellSize;
 
     /// <summary>
     /// Local / anchored position of the cell center, relative to the Board RectTransform.
@@ -160,11 +126,7 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public Vector3 GridToLocal(Vector2Int gridCoordinate)
     {
-        Rect rect = CellGridRect;
-        Vector2 cell = VisualCellSize;
-        float x = rect.xMin + (gridCoordinate.x + 0.5f) * cell.x;
-        float y = rect.yMin + (gridCoordinate.y + 0.5f) * cell.y;
-        return new Vector3(x, y, 0f);
+        return EnsureUIGridSpace().GridToLocal(gridCoordinate);
     }
 
     /// <summary>
@@ -173,7 +135,7 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public Vector3 GridToWorld(Vector2Int gridCoordinate)
     {
-        return GridToLocal(gridCoordinate);
+        return EnsureUIGridSpace().GridToWorld(gridCoordinate);
     }
 
     /// <summary>
@@ -182,18 +144,7 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public Vector2Int LocalToGrid(Vector3 localPosition)
     {
-        Rect rect = CellGridRect;
-        Vector2 cell = VisualCellSize;
-
-        if (cell.x <= 0f || cell.y <= 0f)
-        {
-            return Vector2Int.zero;
-        }
-
-        // Invert GridToLocal: subtract bottom-left, divide by cell size, then nearest center.
-        float x = (localPosition.x - rect.xMin) / cell.x - 0.5f;
-        float y = (localPosition.y - rect.yMin) / cell.y - 0.5f;
-        return new Vector2Int(Mathf.RoundToInt(x), Mathf.RoundToInt(y));
+        return EnsureUIGridSpace().LocalToGrid(localPosition);
     }
 
     /// <summary>
@@ -201,7 +152,21 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public Vector2Int WorldToGrid(Vector3 localPosition)
     {
-        return LocalToGrid(localPosition);
+        return EnsureUIGridSpace().WorldToGrid(localPosition);
+    }
+
+    /// <summary>
+    /// Applies the presentation position for a piece RectTransform at a grid cell.
+    /// Coordinate conversion lives in <see cref="IGridSpace"/>, not on Block/Target.
+    /// </summary>
+    public void ApplyPieceAnchoredPosition(RectTransform piece, Vector2Int gridPosition)
+    {
+        if (piece == null)
+        {
+            return;
+        }
+
+        piece.anchoredPosition = GridToLocal(gridPosition);
     }
 
     public bool IsInsideBoard(Vector2Int gridCoordinate)
@@ -753,7 +718,7 @@ public class BoardManager : MonoBehaviour
 
     private Vector2 GetCornerLocal(int cornerX, int cornerY)
     {
-        Rect rect = CellGridRect;
+        Rect rect = EnsureUIGridSpace().CellGridRect;
         Vector2 cell = VisualCellSize;
         return new Vector2(rect.xMin + cornerX * cell.x, rect.yMin + cornerY * cell.y);
     }
@@ -772,7 +737,8 @@ public class BoardManager : MonoBehaviour
         }
 
         StretchRuntimeGrid();
-        SetRuntimeGridVisible(true);
+        // Phase 11: World3D is the board presentation — keep UI grid chrome hidden.
+        SetRuntimeGridVisible(false);
     }
 
     private void BuildRuntimeGrid()
@@ -835,7 +801,7 @@ public class BoardManager : MonoBehaviour
         runtimeGridRoot.anchorMin = Vector2.zero;
         runtimeGridRoot.anchorMax = Vector2.one;
         Rect board = BoardRect.rect;
-        Rect cellGrid = CellGridRect;
+        Rect cellGrid = EnsureUIGridSpace().CellGridRect;
         float left = cellGrid.xMin - board.xMin;
         float bottom = cellGrid.yMin - board.yMin;
         float right = board.xMax - cellGrid.xMax;

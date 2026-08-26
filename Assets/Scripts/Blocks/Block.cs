@@ -1,14 +1,14 @@
-using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Data model for a Canvas-based puzzle block.
-/// Owns shape, allowed move direction, and grid cell. Placement uses BoardManager UI coordinates.
-/// Visual states are presentation-only.
+/// Gameplay model for a puzzle block: shape, move direction, grid cell, occupancy identity.
+/// Presentation (position/scale/held) is delegated to <see cref="IPieceView"/> / <see cref="UIPieceView"/>.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
+[RequireComponent(typeof(UIPieceView))]
 public class Block : MonoBehaviour
 {
     private enum VisualState
@@ -86,10 +86,14 @@ public class Block : MonoBehaviour
     private RectTransform cachedRect;
     private VisualState visualState = VisualState.Normal;
     private bool dragSelected;
-    private Coroutine selectionRoutine;
+    private Tween selectionTween;
     private int restSiblingIndex;
     private bool hasRestSiblingIndex;
     private PiecePresentation piecePresentation;
+    private UIPieceView pieceView;
+    private PieceView3D worldView;
+    private IGridSpace worldGridSpace;
+    private readonly List<PieceView3D> extraWorldViews = new List<PieceView3D>();
     private readonly List<Image> extraCellImages = new List<Image>();
     private Vector2Int[] cachedLocals = { Vector2Int.zero };
     private ShapeType[] cachedShapes = { ShapeType.Square };
@@ -149,10 +153,30 @@ public class Block : MonoBehaviour
         {
             if (cachedRect == null)
             {
-                cachedRect = (RectTransform)transform;
+                cachedRect = PieceView.RectTransform;
             }
 
             return cachedRect;
+        }
+    }
+
+    /// <summary>Presentation adapter for this piece. Prefer this over direct RectTransform writes for position/scale.</summary>
+    public IPieceView View => PieceView;
+
+    private UIPieceView PieceView
+    {
+        get
+        {
+            if (pieceView == null)
+            {
+                pieceView = GetComponent<UIPieceView>();
+                if (pieceView == null)
+                {
+                    pieceView = gameObject.AddComponent<UIPieceView>();
+                }
+            }
+
+            return pieceView;
         }
     }
 
@@ -161,9 +185,18 @@ public class Block : MonoBehaviour
     private bool IsMatchVisual =>
         visualState == VisualState.Matching || visualState == VisualState.Matched;
 
+    /// <summary>
+    /// Presentation-only: true while match dissolve is running or after it completed.
+    /// BoardPresentationController must not overwrite World3D while this is true.
+    /// </summary>
+    public bool IsMatchPresentationActive => IsMatchVisual;
+
+    /// <summary>True after a successful match presentation has completed.</summary>
+    public bool IsMatched => visualState == VisualState.Matched;
+
     private void Awake()
     {
-        cachedRect = (RectTransform)transform;
+        cachedRect = PieceView.RectTransform;
         CacheImage();
         CaptureRestScale();
         CaptureRestColor();
@@ -223,6 +256,17 @@ public class Block : MonoBehaviour
         }
 
         return cachedShapes[index];
+    }
+
+    /// <summary>Visual outer layer for a cell. Distinct from <see cref="GetActiveShape"/> when nested.</summary>
+    public ShapeType GetOuterShape(int index)
+    {
+        if (index < 0 || index >= cachedCellCount)
+        {
+            return outerShape;
+        }
+
+        return cachedOuters[index];
     }
 
     public ShapeCellData GetCell(int index)
@@ -346,11 +390,25 @@ public class Block : MonoBehaviour
     public void ClearTravelState(int index)
     {
         cellsHiddenForTravel.Remove(index);
+        BoardPresentationController.NotifyChainCellTravelCleared(this);
     }
 
     public void RefreshActiveLayers()
     {
         RebuildCache();
+        // ShapeType stays the active matching layer. World3D outer/inner meshes use GetOuterShape / GetActiveShape.
+        int anchor = FindAnchorIndex();
+        if (anchor >= 0 && anchor < cachedCellCount)
+        {
+            shapeType = cachedShapes[anchor];
+            outerShape = cachedOuters[anchor];
+        }
+        else if (cachedCellCount > 0)
+        {
+            shapeType = cachedShapes[0];
+            outerShape = cachedOuters[0];
+        }
+
         SyncVisualSizeToBoard();
         RefreshVisual();
         RebuildCellVisuals();
@@ -372,7 +430,10 @@ public class Block : MonoBehaviour
         ApplyLayout(nextShape, remaining, PieceComposition.Simple, nextOuter);
         ResetMatchPresentation();
         isSettled = false;
-        SetGridPosition(worldAnchor);
+        // Keep the consumed cell's World3D pose (nest seating) until the controller
+        // rebinds WorldView onto a surviving cell view already at worldAnchor.
+        SetGridPosition(worldAnchor, preserveWorldPresentation: true);
+        BoardPresentationController.AdoptSurvivorWorldView(this, worldAnchor);
         if (boardManager != null)
         {
             boardManager.TryRegisterBlock(this, worldAnchor);
@@ -406,17 +467,205 @@ public class Block : MonoBehaviour
         state.Configure(this, enabled, durability);
     }
 
-    public void SetGridPosition(Vector2Int position)
+    /// <param name="preserveWorldPresentation">
+    /// When true, updates logical/UI grid position without snapping World3D to empty-cell seating.
+    /// Used after a successful nest-entry so the already-correct World3D pose is kept through dissolve.
+    /// </param>
+    public void SetGridPosition(Vector2Int position, bool preserveWorldPresentation = false)
     {
         gridPosition = position;
 
-        if (boardManager == null)
+        if (boardManager != null && boardManager.GridSpace != null)
+        {
+            PieceView.ApplyGridPosition(boardManager.GridSpace, gridPosition);
+        }
+
+        if (!preserveWorldPresentation)
+        {
+            SyncWorldViewPosition();
+        }
+    }
+
+    /// <summary>
+    /// Binds an optional world-space presentation view (Phase 5+). Gameplay state stays on Block.
+    /// </summary>
+    public void SetWorldView(PieceView3D view, IGridSpace space, bool syncPosition = true)
+    {
+        if (worldView != null && worldView != view)
+        {
+            worldView.ClearSourceBlock();
+        }
+
+        worldView = view;
+        worldGridSpace = space;
+        if (worldView != null)
+        {
+            worldView.BindSourceBlock(this);
+            // Rebind must never inherit a prior match's zero scale / disabled renderer.
+            if (!IsMatchVisual)
+            {
+                worldView.EnsurePresentationVisible();
+            }
+        }
+
+        if (syncPosition)
+        {
+            SyncWorldViewPosition();
+        }
+    }
+
+    public void ClearWorldView()
+    {
+        if (worldView != null)
+        {
+            worldView.ClearSourceBlock();
+        }
+
+        // Logical ref only — BoardPresentationController owns destroy/prune of the GameObject.
+        worldView = null;
+        worldGridSpace = null;
+        extraWorldViews.Clear();
+    }
+
+    /// <summary>
+    /// Presentation-only extra cell views for multi-cell blocks. Does not affect occupancy.
+    /// </summary>
+    public void SetExtraWorldViews(IReadOnlyList<PieceView3D> views)
+    {
+        extraWorldViews.Clear();
+        if (views == null)
         {
             return;
         }
 
-        Vector3 localPosition = boardManager.GridToLocal(gridPosition);
-        RectTransform.anchoredPosition = localPosition;
+        for (int i = 0; i < views.Count; i++)
+        {
+            if (views[i] != null)
+            {
+                extraWorldViews.Add(views[i]);
+            }
+        }
+    }
+
+    public PieceView3D WorldView => worldView;
+
+    /// <summary>Index of the occupancy-anchor cell (local (0,0)), used as WorldView.</summary>
+    public int AnchorCellIndex => FindAnchorIndex();
+
+    /// <summary>Non-anchor World3D cell views. Controller owns create/destroy; Block only holds refs.</summary>
+    public IReadOnlyList<PieceView3D> ExtraWorldViews => extraWorldViews;
+
+    /// <summary>Presentation-only: PieceView3D for occupancy cell index, or null.</summary>
+    public PieceView3D GetWorldViewForCellIndex(int index)
+    {
+        if (index < 0 || index >= CellCount)
+        {
+            return null;
+        }
+
+        if (index == AnchorCellIndex)
+        {
+            return worldView;
+        }
+
+        int extraSlot = 0;
+        for (int i = 0; i < CellCount; i++)
+        {
+            if (i == AnchorCellIndex)
+            {
+                continue;
+            }
+
+            if (i == index)
+            {
+                return extraSlot < extraWorldViews.Count ? extraWorldViews[extraSlot] : null;
+            }
+
+            extraSlot++;
+        }
+
+        return null;
+    }
+
+    /// <summary>Shows or hides uGUI Images on this block without affecting gameplay state.</summary>
+    public void SetUiPresentationVisible(bool visible)
+    {
+        // World3D owns piece visuals — never re-show gameplay Images in that mode.
+        if (BoardPresentationController.SuppressGameplayPieceUiImages())
+        {
+            visible = false;
+        }
+
+        Image[] images = GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            if (images[i] != null)
+            {
+                images[i].enabled = visible;
+            }
+        }
+    }
+
+    /// <summary>Whether this block's uGUI Images may be enabled (UI presentation only).</summary>
+    private static bool AllowUiPieceImages =>
+        !BoardPresentationController.SuppressGameplayPieceUiImages();
+
+    private void SyncWorldViewPosition()
+    {
+        if (worldView == null || worldGridSpace == null)
+        {
+            return;
+        }
+
+        worldView.ApplyGridPosition(worldGridSpace, gridPosition);
+    }
+
+    private void ApplyWorldViewMatchScale(float scale)
+    {
+        ForEachWorldView(view =>
+        {
+            view.LocalScale = view.ConfiguredFootprintScale * scale;
+        });
+    }
+
+    private void HideAllWorldViews()
+    {
+        ForEachWorldView(view =>
+        {
+            view.LocalScale = Vector3.zero;
+            view.gameObject.SetActive(false);
+        });
+        ClearWorldView();
+    }
+
+    private void RestoreWorldViewPresentation()
+    {
+        ForEachWorldView(view =>
+        {
+            view.EnsurePresentationVisible();
+            view.LocalScale = view.ConfiguredFootprintScale;
+        });
+    }
+
+    private void ForEachWorldView(System.Action<PieceView3D> action)
+    {
+        if (action == null)
+        {
+            return;
+        }
+
+        if (worldView != null)
+        {
+            action(worldView);
+        }
+
+        for (int i = 0; i < extraWorldViews.Count; i++)
+        {
+            if (extraWorldViews[i] != null)
+            {
+                action(extraWorldViews[i]);
+            }
+        }
     }
 
     public void Settle()
@@ -467,7 +716,7 @@ public class Block : MonoBehaviour
             return;
         }
 
-        if (!dragSelected && selectionRoutine == null)
+        if (!dragSelected && selectionTween == null)
         {
             return;
         }
@@ -480,7 +729,7 @@ public class Block : MonoBehaviour
         {
             StopSelectionRoutine();
             SetHeldPresentation(false);
-            RectTransform.localScale = restScale;
+            PieceView.LocalScale = restScale;
             return;
         }
 
@@ -496,7 +745,7 @@ public class Block : MonoBehaviour
         if (!IsMatchVisual)
         {
             CaptureRestScale();
-            RectTransform.localScale = restScale;
+            PieceView.LocalScale = restScale;
             visualState = isSettled ? VisualState.Settled : VisualState.Normal;
         }
     }
@@ -516,16 +765,27 @@ public class Block : MonoBehaviour
 
     public void SetMatchPresentation(float scale, float alpha)
     {
+        if (visualState == VisualState.Matched)
+        {
+            return;
+        }
+
         visualState = VisualState.Matching;
         CaptureRestScale();
         CaptureRestColor();
         ApplyVisualToAll(restScale * scale, restColor.a * Mathf.Clamp01(alpha), alpha > 0.001f);
+        ApplyWorldViewMatchScale(Mathf.Max(0f, scale));
     }
 
+    /// <summary>
+    /// Finishes match presentation. Nest match VFX is owned by <see cref="MatchEffect"/>, not here.
+    /// </summary>
     public void CompleteMatchPresentation()
     {
         visualState = VisualState.Matched;
-        RectTransform.localScale = Vector3.zero;
+        PieceView.LocalScale = Vector3.zero;
+        HideAllWorldViews();
+
         CacheImage();
         if (image != null)
         {
@@ -546,17 +806,23 @@ public class Block : MonoBehaviour
         visualState = isSettled ? VisualState.Settled : VisualState.Normal;
         CancelDragSelectionImmediate();
         CaptureRestScale();
-        RectTransform.localScale = restScale;
+        PieceView.LocalScale = restScale;
+        RestoreWorldViewPresentation();
+
         CacheImage();
         if (image != null)
         {
-            image.enabled = !cellsHiddenForTravel.Contains(FindAnchorIndex());
-            image.raycastTarget = true;
+            image.enabled = AllowUiPieceImages && !cellsHiddenForTravel.Contains(FindAnchorIndex());
+            image.raycastTarget = AllowUiPieceImages;
         }
 
-        SetExtraCellsRaycast(true);
-        ApplyAlphaToExtraCells(1f, true);
+        SetExtraCellsRaycast(AllowUiPieceImages);
+        ApplyAlphaToExtraCells(1f, AllowUiPieceImages);
         UpdateSettledVisual();
+        if (!AllowUiPieceImages)
+        {
+            SetUiPresentationVisible(false);
+        }
     }
 
     public void UpdateSettledVisual()
@@ -771,12 +1037,7 @@ public class Block : MonoBehaviour
         }
 
         Vector2 size = PieceGameplayVisuals.PieceSizeForCell(boardManager.VisualCellSize);
-        RectTransform.sizeDelta = size;
-        PiecePresentation presentation = CachePresentation();
-        if (presentation != null)
-        {
-            presentation.SetVisualSize(size);
-        }
+        PieceView.SetVisualSize(size);
     }
 
     private Color ConnectorColor()
@@ -914,7 +1175,7 @@ public class Block : MonoBehaviour
 
         if (image != null && !IsMatchVisual)
         {
-            image.enabled = showAnchor || cachedCellCount <= 1;
+            image.enabled = AllowUiPieceImages && (showAnchor || cachedCellCount <= 1);
         }
     }
 
@@ -1014,19 +1275,21 @@ public class Block : MonoBehaviour
 
     private void ApplyVisualToAll(Vector3 scale, float alpha, bool enabled)
     {
-        RectTransform.localScale = scale;
+        PieceView.LocalScale = scale;
         CacheImage();
         CaptureRestColor();
         Color color = restColor;
         color.a = alpha;
+        // Phase 27: MatchEffect dissolve must not re-enable Overlay Images while World3D is active.
+        bool showUi = enabled && AllowUiPieceImages;
         if (image != null)
         {
             image.color = color;
-            image.enabled = enabled && !cellsHiddenForTravel.Contains(FindAnchorIndex());
+            image.enabled = showUi && !cellsHiddenForTravel.Contains(FindAnchorIndex());
         }
 
         ApplyColorToExtraCells(color);
-        ApplyAlphaToExtraCells(alpha, enabled);
+        ApplyAlphaToExtraCells(alpha, showUi);
     }
 
     private void ApplyColorToExtraCells(Color color)
@@ -1125,10 +1388,10 @@ public class Block : MonoBehaviour
 
     private void SetHeldBlend(float blend)
     {
-        PiecePresentation presentation = CachePresentation();
-        if (presentation != null)
+        PieceView.SetHeldBlend(blend);
+        if (worldView != null)
         {
-            presentation.SetHeldBlend(blend);
+            worldView.SetHeldBlend(blend);
         }
     }
 
@@ -1139,7 +1402,7 @@ public class Block : MonoBehaviour
             return;
         }
 
-        restScale = RectTransform.localScale;
+        restScale = PieceView.LocalScale;
         if (restScale.sqrMagnitude < 0.0001f)
         {
             restScale = Vector3.one;
@@ -1165,51 +1428,50 @@ public class Block : MonoBehaviour
         StopSelectionRoutine();
         if (dragSelectDuration <= 0f)
         {
-            RectTransform.localScale = targetScale;
+            PieceView.LocalScale = targetScale;
             SetHeldBlend(heldBlend);
             return;
         }
 
-        selectionRoutine = StartCoroutine(SelectionScaleRoutine(RectTransform.localScale, targetScale, heldBlend));
-    }
-
-    private IEnumerator SelectionScaleRoutine(Vector3 from, Vector3 to, float heldBlendTo)
-    {
         PiecePresentation presentation = CachePresentation();
-        float heldBlendFrom = presentation != null ? presentation.HeldBlend : heldBlendTo;
-        float elapsed = 0f;
-        while (elapsed < dragSelectDuration)
-        {
-            if (IsMatchVisual)
+        float heldBlendFrom = presentation != null ? presentation.HeldBlend : heldBlend;
+        Vector3 from = PieceView.LocalScale;
+        selectionTween = TweenAnimationUtility.Progress(dragSelectDuration, t =>
             {
-                selectionRoutine = null;
-                yield break;
-            }
+                if (IsMatchVisual)
+                {
+                    selectionTween?.Kill(false);
+                    selectionTween = null;
+                    return;
+                }
 
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / dragSelectDuration);
-            float eased = Mathf.SmoothStep(0f, 1f, t);
-            RectTransform.localScale = Vector3.LerpUnclamped(from, to, eased);
-            SetHeldBlend(Mathf.LerpUnclamped(heldBlendFrom, heldBlendTo, eased));
-            yield return null;
-        }
+                float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
+                PieceView.LocalScale = Vector3.LerpUnclamped(from, targetScale, eased);
+                SetHeldBlend(Mathf.LerpUnclamped(heldBlendFrom, heldBlend, eased));
+            })
+            .SetId(TweenAnimationUtility.SelectionId)
+            .SetLink(gameObject)
+            .OnComplete(() =>
+            {
+                if (!IsMatchVisual)
+                {
+                    PieceView.LocalScale = targetScale;
+                    SetHeldBlend(heldBlend);
+                }
 
-        if (!IsMatchVisual)
-        {
-            RectTransform.localScale = to;
-            SetHeldBlend(heldBlendTo);
-        }
-
-        selectionRoutine = null;
+                selectionTween = null;
+            });
     }
 
     private void StopSelectionRoutine()
     {
-        if (selectionRoutine != null)
+        if (selectionTween != null && selectionTween.IsActive())
         {
-            StopCoroutine(selectionRoutine);
-            selectionRoutine = null;
+            selectionTween.Kill(false);
         }
+
+        selectionTween = null;
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.SelectionId);
     }
 
     private void RaiseInDrawOrder()

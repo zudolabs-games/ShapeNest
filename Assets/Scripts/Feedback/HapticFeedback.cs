@@ -112,6 +112,79 @@ public class HapticFeedback : MonoBehaviour
 #endif
     }
 
+    public void PlayBlocked()
+    {
+        if (!enableHaptics)
+        {
+            return;
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        ShapeNest_PlaySelection();
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        PlayAndroid(lightEffect, 6L);
+#endif
+    }
+
+    public void PlayChainMatch()
+    {
+        if (!enableHaptics)
+        {
+            return;
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        ShapeNest_PlayImpact(1);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        PlayAndroid(mediumEffect, 20L);
+#endif
+    }
+
+    public void PlayNestedMatch()
+    {
+        if (!enableHaptics)
+        {
+            return;
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        ShapeNest_PlayImpact(0);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        PlayAndroid(lightEffect, 14L);
+#endif
+    }
+
+    public void PlayFullConsume()
+    {
+        if (!enableHaptics)
+        {
+            return;
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        ShapeNest_PlayImpact(2);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        PlayAndroid(strongEffect, 34L);
+#endif
+    }
+
+    public void PlayLogicalMatch(bool consumedInnerLayer, bool fullyConsumed)
+    {
+        if (consumedInnerLayer && !fullyConsumed)
+        {
+            PlayNestedMatch();
+            return;
+        }
+
+        if (fullyConsumed)
+        {
+            PlayFullConsume();
+            return;
+        }
+
+        PlayChainMatch();
+    }
+
     public void PlayLevelComplete()
     {
         if (!enableHaptics)
@@ -138,6 +211,11 @@ public class HapticFeedback : MonoBehaviour
 #elif UNITY_ANDROID && !UNITY_EDITOR
         PlayAndroid(timeUpEffect, 24L);
 #endif
+    }
+
+    public void PlayFailure()
+    {
+        PlayTimeUp();
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR

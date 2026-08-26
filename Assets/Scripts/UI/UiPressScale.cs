@@ -1,4 +1,4 @@
-using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -12,13 +12,18 @@ public class UiPressScale : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
     private RectTransform rect;
     private Vector3 restScale = Vector3.one;
-    private Coroutine routine;
+    private Tween scaleTween;
     private bool captured;
 
     private void Awake()
     {
         rect = transform as RectTransform;
         CaptureRest();
+    }
+
+    private void OnDisable()
+    {
+        KillTween(false);
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -60,33 +65,35 @@ public class UiPressScale : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
             return;
         }
 
-        if (routine != null)
-        {
-            StopCoroutine(routine);
-        }
-
-        routine = StartCoroutine(ScaleRoutine(rect.localScale, target));
-    }
-
-    private IEnumerator ScaleRoutine(Vector3 from, Vector3 to)
-    {
+        KillTween(false);
         if (duration <= 0f)
         {
-            rect.localScale = to;
-            routine = null;
-            yield break;
+            rect.localScale = target;
+            return;
         }
 
-        float elapsed = 0f;
-        while (elapsed < duration)
+        Vector3 from = rect.localScale;
+        scaleTween = TweenAnimationUtility.Progress(duration, t =>
+            {
+                float eased = TweenAnimationUtility.EvaluateEaseOutQuad(t);
+                rect.localScale = Vector3.LerpUnclamped(from, target, eased);
+            }, unscaled: true)
+            .SetId(TweenAnimationUtility.UiPressId)
+            .SetLink(gameObject)
+            .OnComplete(() =>
+            {
+                rect.localScale = target;
+                scaleTween = null;
+            });
+    }
+
+    private void KillTween(bool complete)
+    {
+        if (scaleTween != null && scaleTween.IsActive())
         {
-            elapsed += Time.unscaledDeltaTime;
-            float t = 1f - ((1f - Mathf.Clamp01(elapsed / duration)) * (1f - Mathf.Clamp01(elapsed / duration)));
-            rect.localScale = Vector3.LerpUnclamped(from, to, t);
-            yield return null;
+            scaleTween.Kill(complete);
         }
 
-        rect.localScale = to;
-        routine = null;
+        scaleTween = null;
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -22,7 +22,7 @@ public class ResultScreenIntro : MonoBehaviour
     [SerializeField] private float infoDelay = 0.14f;
     [SerializeField] private float buttonDelay = 0.22f;
 
-    private Coroutine routine;
+    private Sequence sequence;
     private Vector3 panelRest = Vector3.one;
     private Vector3 titleRest = Vector3.one;
     private Vector3 infoRest = Vector3.one;
@@ -32,21 +32,47 @@ public class ResultScreenIntro : MonoBehaviour
     public void Play()
     {
         CaptureRests();
-        if (routine != null)
-        {
-            StopCoroutine(routine);
-        }
+        StopAndHold();
+        ApplyHidden();
 
-        routine = StartCoroutine(PlayRoutine());
+        float total = Mathf.Max(
+            backgroundDuration,
+            panelDuration,
+            titleDelay + elementDuration,
+            infoDelay + elementDuration,
+            buttonDelay + elementDuration);
+
+        sequence = DOTween.Sequence().SetId(TweenAnimationUtility.HudId).SetUpdate(true).SetLink(gameObject);
+        sequence.Append(TweenAnimationUtility.Progress(total, t =>
+        {
+            Evaluate(t * total);
+        }, unscaled: true));
+        sequence.OnComplete(() =>
+        {
+            Evaluate(total);
+            if (buttonGroup != null)
+            {
+                buttonGroup.interactable = true;
+                buttonGroup.blocksRaycasts = true;
+            }
+
+            sequence = null;
+        });
     }
 
     public void StopAndHold()
     {
-        if (routine != null)
+        if (sequence != null && sequence.IsActive())
         {
-            StopCoroutine(routine);
-            routine = null;
+            sequence.Kill(false);
         }
+
+        sequence = null;
+    }
+
+    private void OnDisable()
+    {
+        StopAndHold();
     }
 
     private void CaptureRests()
@@ -77,34 +103,6 @@ public class ResultScreenIntro : MonoBehaviour
         }
 
         capturedRests = true;
-    }
-
-    private IEnumerator PlayRoutine()
-    {
-        ApplyHidden();
-        float elapsed = 0f;
-        float total = Mathf.Max(
-            backgroundDuration,
-            panelDuration,
-            titleDelay + elementDuration,
-            infoDelay + elementDuration,
-            buttonDelay + elementDuration);
-
-        while (elapsed < total)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            Evaluate(elapsed);
-            yield return null;
-        }
-
-        Evaluate(total);
-        if (buttonGroup != null)
-        {
-            buttonGroup.interactable = true;
-            buttonGroup.blocksRaycasts = true;
-        }
-
-        routine = null;
     }
 
     private void ApplyHidden()

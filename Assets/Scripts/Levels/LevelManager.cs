@@ -238,6 +238,10 @@ public class LevelManager : MonoBehaviour
             levelComplete = false;
             timeUpSoundPlayed = false;
             pieceMatchSequenceDepth = 0;
+            if (audioFeedback != null)
+            {
+                audioFeedback.ResetSessionCues();
+            }
             StopAlignedMatchQueue();
             hasLastMatch = false;
             currentLevel = level;
@@ -640,12 +644,12 @@ public class LevelManager : MonoBehaviour
             timeUpSoundPlayed = true;
             if (audioFeedback != null)
             {
-                audioFeedback.PlayTimeUp();
+                audioFeedback.PlayFailure();
             }
 
             if (hapticFeedback != null)
             {
-                hapticFeedback.PlayTimeUp();
+                hapticFeedback.PlayFailure();
             }
         }
 
@@ -952,6 +956,8 @@ public class LevelManager : MonoBehaviour
         {
             boardManager.ClearRuntimeRegistrations();
         }
+
+        BoardPresentationController.ClearNestedInnerTravelers();
     }
 
     /// <summary>

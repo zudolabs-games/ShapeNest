@@ -1,4 +1,4 @@
-using System.Collections;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,11 +30,9 @@ public class GameHUD : MonoBehaviour
 
     private CanvasGroup levelGroup;
     private Vector3 levelRestScale = Vector3.one;
-    private Coroutine levelIntroRoutine;
-
+    private Sequence levelIntroTween;
     private Vector3 timerRestScale = Vector3.one;
-    private Coroutine timerPulseRoutine;
-
+    private Sequence timerPulseTween;
     private OverlayView pauseOverlay;
 
     private void Awake()
@@ -265,45 +263,40 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        if (levelIntroRoutine != null)
+        if (levelIntroTween != null && levelIntroTween.IsActive())
         {
-            StopCoroutine(levelIntroRoutine);
+            levelIntroTween.Kill(false);
         }
 
-        levelIntroRoutine = StartCoroutine(LevelIntroRoutine());
-    }
-
-    private IEnumerator LevelIntroRoutine()
-    {
         RectTransform rect = levelText.rectTransform;
-        float duration = 0.18f;
-        float elapsed = 0f;
+        const float duration = 0.18f;
         if (levelGroup != null)
         {
             levelGroup.alpha = 0f;
         }
 
         rect.localScale = levelRestScale * 0.96f;
-        while (elapsed < duration)
+        levelIntroTween = DOTween.Sequence().SetId(TweenAnimationUtility.HudId).SetUpdate(true).SetLink(gameObject);
+        levelIntroTween.Append(TweenAnimationUtility.Progress(duration, t =>
         {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
             if (levelGroup != null)
             {
-                levelGroup.alpha = t;
+                levelGroup.alpha = eased;
             }
 
-            rect.localScale = Vector3.LerpUnclamped(levelRestScale * 0.96f, levelRestScale, t);
-            yield return null;
-        }
-
-        if (levelGroup != null)
+            rect.localScale = Vector3.LerpUnclamped(levelRestScale * 0.96f, levelRestScale, eased);
+        }, unscaled: true));
+        levelIntroTween.OnComplete(() =>
         {
-            levelGroup.alpha = 1f;
-        }
+            if (levelGroup != null)
+            {
+                levelGroup.alpha = 1f;
+            }
 
-        rect.localScale = levelRestScale;
-        levelIntroRoutine = null;
+            rect.localScale = levelRestScale;
+            levelIntroTween = null;
+        });
     }
 
     private void PulseTimer(float peakScale, float duration)
@@ -313,45 +306,41 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        if (timerPulseRoutine != null)
+        if (timerPulseTween != null && timerPulseTween.IsActive())
         {
-            StopCoroutine(timerPulseRoutine);
+            timerPulseTween.Kill(false);
         }
 
-        timerPulseRoutine = StartCoroutine(TimerPulseRoutine(peakScale, duration));
-    }
-
-    private IEnumerator TimerPulseRoutine(float peakScale, float duration)
-    {
         RectTransform rect = timerText.rectTransform;
-        float elapsed = 0f;
         Vector3 peak = timerRestScale * peakScale;
         float rise = duration * 0.4f;
-        while (elapsed < duration)
+        timerPulseTween = DOTween.Sequence().SetId(TweenAnimationUtility.HudId).SetUpdate(true).SetLink(gameObject);
+        timerPulseTween.Append(TweenAnimationUtility.Progress(duration, u =>
         {
-            elapsed += Time.unscaledDeltaTime;
+            float elapsed = u * duration;
             float t;
             Vector3 from;
             Vector3 to;
             if (elapsed <= rise)
             {
-                t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / rise));
+                t = TweenAnimationUtility.EvaluateSmoothStep(elapsed / Mathf.Max(0.0001f, rise));
                 from = timerRestScale;
                 to = peak;
             }
             else
             {
-                t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((elapsed - rise) / (duration - rise)));
+                t = TweenAnimationUtility.EvaluateSmoothStep((elapsed - rise) / Mathf.Max(0.0001f, duration - rise));
                 from = peak;
                 to = timerRestScale;
             }
 
             rect.localScale = Vector3.LerpUnclamped(from, to, t);
-            yield return null;
-        }
-
-        rect.localScale = timerRestScale;
-        timerPulseRoutine = null;
+        }, unscaled: true));
+        timerPulseTween.OnComplete(() =>
+        {
+            rect.localScale = timerRestScale;
+            timerPulseTween = null;
+        });
     }
 
     private void ShowOverlay(OverlayView overlay, float duration, bool impactTitle)
@@ -361,38 +350,12 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        if (overlay.intro != null)
+        if (overlay.intro != null && overlay.intro.IsActive())
         {
-            StopCoroutine(overlay.intro);
+            overlay.intro.Kill(false);
         }
 
         overlay.root.SetActive(true);
-        overlay.intro = StartCoroutine(OverlayIntroRoutine(overlay, duration, impactTitle));
-    }
-
-    private void HideOverlayImmediate(OverlayView overlay)
-    {
-        if (overlay == null || overlay.root == null)
-        {
-            return;
-        }
-
-        if (overlay.intro != null)
-        {
-            StopCoroutine(overlay.intro);
-            overlay.intro = null;
-        }
-
-        if (overlay.group != null)
-        {
-            overlay.group.alpha = 0f;
-        }
-
-        overlay.root.SetActive(false);
-    }
-
-    private IEnumerator OverlayIntroRoutine(OverlayView overlay, float duration, bool impactTitle)
-    {
         if (overlay.group != null)
         {
             overlay.group.alpha = 0f;
@@ -408,48 +371,68 @@ public class GameHUD : MonoBehaviour
             overlay.title.rectTransform.localScale = Vector3.one;
         }
 
-        float elapsed = 0f;
-        while (elapsed < duration)
+        overlay.intro = DOTween.Sequence().SetId(TweenAnimationUtility.HudId).SetUpdate(true).SetLink(overlay.root);
+        overlay.intro.Append(TweenAnimationUtility.Progress(duration, t =>
         {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
             if (overlay.group != null)
             {
-                overlay.group.alpha = t;
+                overlay.group.alpha = eased;
             }
 
             if (overlay.content != null)
             {
-                overlay.content.localScale = Vector3.LerpUnclamped(Vector3.one * 0.94f, Vector3.one, t);
+                overlay.content.localScale = Vector3.LerpUnclamped(Vector3.one * 0.94f, Vector3.one, eased);
             }
 
             if (impactTitle && overlay.title != null)
             {
-                float bounce = t < 0.55f
-                    ? Mathf.LerpUnclamped(0.92f, 1.06f, Mathf.SmoothStep(0f, 1f, t / 0.55f))
-                    : Mathf.LerpUnclamped(1.06f, 1f, Mathf.SmoothStep(0f, 1f, (t - 0.55f) / 0.45f));
+                float bounce = eased < 0.55f
+                    ? Mathf.LerpUnclamped(0.92f, 1.06f, TweenAnimationUtility.EvaluateSmoothStep(eased / 0.55f))
+                    : Mathf.LerpUnclamped(1.06f, 1f, TweenAnimationUtility.EvaluateSmoothStep((eased - 0.55f) / 0.45f));
                 overlay.title.rectTransform.localScale = Vector3.one * bounce;
             }
+        }, unscaled: true));
+        overlay.intro.OnComplete(() =>
+        {
+            if (overlay.group != null)
+            {
+                overlay.group.alpha = 1f;
+            }
 
-            yield return null;
+            if (overlay.content != null)
+            {
+                overlay.content.localScale = Vector3.one;
+            }
+
+            if (overlay.title != null)
+            {
+                overlay.title.rectTransform.localScale = Vector3.one;
+            }
+
+            overlay.intro = null;
+        });
+    }
+
+    private void HideOverlayImmediate(OverlayView overlay)
+    {
+        if (overlay == null || overlay.root == null)
+        {
+            return;
+        }
+
+        if (overlay.intro != null && overlay.intro.IsActive())
+        {
+            overlay.intro.Kill(false);
+            overlay.intro = null;
         }
 
         if (overlay.group != null)
         {
-            overlay.group.alpha = 1f;
+            overlay.group.alpha = 0f;
         }
 
-        if (overlay.content != null)
-        {
-            overlay.content.localScale = Vector3.one;
-        }
-
-        if (overlay.title != null)
-        {
-            overlay.title.rectTransform.localScale = Vector3.one;
-        }
-
-        overlay.intro = null;
+        overlay.root.SetActive(false);
     }
 
     private static void BindButton(Button button, UnityEngine.Events.UnityAction action)
@@ -504,6 +487,6 @@ public class GameHUD : MonoBehaviour
         public CanvasGroup group;
         public RectTransform content;
         public TMP_Text title;
-        public Coroutine intro;
+        public Sequence intro;
     }
 }

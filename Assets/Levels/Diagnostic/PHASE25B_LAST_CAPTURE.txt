@@ -1,0 +1,502 @@
+PHASE 25B LIVE CAPTURE — Square Block → Square Target
+status=complete
+level=Assets/Levels/Diagnostic/DIAGNOSTIC_SquareSquare.asset
+isolated=true (not in LevelDatabase)
+blockInstanceId=-116034
+targetInstanceId=-115996
+frameT3EqualsT4_check_see_positions_below
+
+=== CAMERA ===
+path=BoardCamera3D
+position=(0.00000, 5.53625, -0.60550)
+rotationEuler=(88.00002, 0.00000, 0.00000)
+orthographic=True
+orthographicSize=4.69200
+near=0.05000 far=100.00000
+CellWorldSize=0.76159
+Board3D.position=(0.00000, 0.00000, -0.42088)
+Board3D.rotationEuler=(0.00000, 0.00000, 0.00000)
+Board3D.lossyScale=(1.00000, 1.00000, 1.00000)
+
+========== T0_BeforeMovement frame=4 t=0.06000 ==========
+--- BLOCK ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Block (Clone)
+instanceId=-116034
+gridPosition=(2, 4)
+UI.anchoredPosition=(0.00002, 371.20000)
+UI.localPosition=(0.00002, 371.20000, 0.00000)
+UI.position=(540.00000, 1254.40000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Pieces3D/Block3D_Square_-116034
+WorldView.position=(0.00000, 0.38772, 1.22416)
+WorldView.localPosition=(0.00000, 0.38772, 1.64503)
+WorldView.localScale=(0.54834, 0.16755, 0.54834)
+WorldView.lossyScale=(0.54834, 0.16755, 0.54834)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=False
+parent.path=Board3D/Pieces3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.38772, 1.22416)
+MeshRenderer.bounds.min=(-0.27417, 0.30394, 0.94998)
+MeshRenderer.bounds.max=(0.27417, 0.47149, 1.49833)
+MeshRenderer.bounds.size=(0.54834, 0.16755, 0.54834)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeSolid_Square
+IsMoving=False
+IsDragging=False
+IsMatchPresentationActive=False
+IsMatched=False
+WorldView.IsMotionLocked=False
+GridToWorld(blockCell)=(0.00000, 0.27894, 1.22416)
+UI GridToLocal(blockCell)=(0.00002, 371.20000, 0.00000)
+UIGridSpace type=UIGridSpace
+--- TARGET ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Target(Clone)
+instanceId=-115996
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Nests3D/Nest3D_Square_-115996
+WorldView.position=(0.00000, 0.29321, -2.06591)
+WorldView.localPosition=(0.00000, 0.29321, -1.64503)
+WorldView.localScale=(0.65497, 0.06854, 0.65497)
+WorldView.lossyScale=(0.65497, 0.06854, 0.65497)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=True
+parent.path=Board3D/Nests3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.29321, -2.06591)
+MeshRenderer.bounds.min=(-0.32748, 0.25894, -2.39340)
+MeshRenderer.bounds.max=(0.32748, 0.32748, -1.73843)
+MeshRenderer.bounds.size=(0.65497, 0.06854, 0.65497)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeNest_Square
+IsMatchPresentationActive=False
+IsMatched=False
+GridToWorld(targetCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(targetCell)=(0.00002, -371.20000, 0.00000)
+--- GRID DELTAS ---
+logicalCellEqual=False
+GridToWorld(block)-GridToWorld(target)=(0.00000, 0.00000, 3.29007)
+GridToWorld XZ delta=(0.00000, 3.29007)
+1 WorldView.position delta=(0.00000, 0.09450, 3.29007)
+WorldView XZ delta=(0.00000, 3.29007)
+2 bounds.center delta=(0.00000, 0.09450, 3.29007)
+3 block.bounds.min.y - target.bounds.max.y=-0.02354
+4 block.bounds.max.y - target.bounds.max.y=0.14401
+5 block.bounds.center.y - target.bounds.center.y=0.09450
+6 bounds XZ center delta=(0.00000, 3.29007)
+screen block.center=(540.00000, 1297.36200, 5.20925)
+screen target.center=(540.00000, 623.93770, 5.18887)
+screen center delta (block-target)=(0.00000, 673.42410, 0.02038)
+screen block.bounds.min=(483.90340, 1240.70100, 5.28341)
+screen target.bounds.max=(607.00430, 691.14590, 5.16605)
+screen (block.min - target.max)=(-123.10090, 549.55530, 0.11735)
+NOTE: screen Y increases upward in WorldToScreenPoint.
+
+========== T1_DuringMovement frame=11 t=0.20000 ==========
+--- BLOCK ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Block (Clone)
+instanceId=-116034
+gridPosition=(2, 4)
+UI.anchoredPosition=(0.00002, 371.20000)
+UI.localPosition=(0.00002, 371.20000, 0.00000)
+UI.position=(540.00000, 1254.40000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Pieces3D/Block3D_Square_-116034
+WorldView.position=(0.00000, 0.38772, 1.23939)
+WorldView.localPosition=(0.00000, 0.38772, 1.66027)
+WorldView.localScale=(0.54834, 0.16755, 0.54834)
+WorldView.lossyScale=(0.54834, 0.16755, 0.54834)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=False
+parent.path=Board3D/Pieces3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.38772, 1.23939)
+MeshRenderer.bounds.min=(-0.27417, 0.30394, 0.96521)
+MeshRenderer.bounds.max=(0.27417, 0.47149, 1.51356)
+MeshRenderer.bounds.size=(0.54834, 0.16755, 0.54834)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeSolid_Square
+IsMoving=True
+IsDragging=True
+IsMatchPresentationActive=False
+IsMatched=False
+WorldView.IsMotionLocked=True
+GridToWorld(blockCell)=(0.00000, 0.27894, 1.22416)
+UI GridToLocal(blockCell)=(0.00002, 371.20000, 0.00000)
+UIGridSpace type=UIGridSpace
+--- TARGET ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Target(Clone)
+instanceId=-115996
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Nests3D/Nest3D_Square_-115996
+WorldView.position=(0.00000, 0.29321, -2.06591)
+WorldView.localPosition=(0.00000, 0.29321, -1.64503)
+WorldView.localScale=(0.65497, 0.06854, 0.65497)
+WorldView.lossyScale=(0.65497, 0.06854, 0.65497)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=True
+parent.path=Board3D/Nests3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.29321, -2.06591)
+MeshRenderer.bounds.min=(-0.32748, 0.25894, -2.39340)
+MeshRenderer.bounds.max=(0.32748, 0.32748, -1.73843)
+MeshRenderer.bounds.size=(0.65497, 0.06854, 0.65497)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeNest_Square
+IsMatchPresentationActive=False
+IsMatched=False
+GridToWorld(targetCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(targetCell)=(0.00002, -371.20000, 0.00000)
+--- GRID DELTAS ---
+logicalCellEqual=False
+GridToWorld(block)-GridToWorld(target)=(0.00000, 0.00000, 3.29007)
+GridToWorld XZ delta=(0.00000, 3.29007)
+1 WorldView.position delta=(0.00000, 0.09450, 3.30530)
+WorldView XZ delta=(0.00000, 3.30530)
+2 bounds.center delta=(0.00000, 0.09450, 3.30530)
+3 block.bounds.min.y - target.bounds.max.y=-0.02354
+4 block.bounds.max.y - target.bounds.max.y=0.14401
+5 block.bounds.center.y - target.bounds.center.y=0.09450
+6 bounds XZ center delta=(0.00000, 3.30530)
+screen block.center=(540.00000, 1300.47600, 5.20978)
+screen target.center=(540.00000, 623.93770, 5.18887)
+screen center delta (block-target)=(0.00000, 676.53860, 0.02091)
+screen block.bounds.min=(483.90340, 1243.81600, 5.28394)
+screen target.bounds.max=(607.00430, 691.14590, 5.16605)
+screen (block.min - target.max)=(-123.10090, 552.66980, 0.11788)
+NOTE: screen Y increases upward in WorldToScreenPoint.
+
+========== T2_NestEntryCompletion frame=51 t=1.00000 ==========
+--- BLOCK ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Block (Clone)
+instanceId=-116034
+gridPosition=(2, 1)
+UI.anchoredPosition=(0.00002, -185.60000)
+UI.localPosition=(0.00002, -185.60000, 0.00000)
+UI.position=(540.00000, 697.60000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Pieces3D/Block3D_Square_-116034
+WorldView.position=(0.00000, 0.41628, -2.06591)
+WorldView.localPosition=(0.00000, 0.41628, -1.64503)
+WorldView.localScale=(0.54834, 0.16755, 0.54834)
+WorldView.lossyScale=(0.54834, 0.16755, 0.54834)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=False
+parent.path=Board3D/Pieces3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.41628, -2.06591)
+MeshRenderer.bounds.min=(-0.27417, 0.33251, -2.34008)
+MeshRenderer.bounds.max=(0.27417, 0.50006, -1.79174)
+MeshRenderer.bounds.size=(0.54834, 0.16755, 0.54834)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeSolid_Square
+IsMoving=True
+IsDragging=True
+IsMatchPresentationActive=False
+IsMatched=False
+WorldView.IsMotionLocked=True
+GridToWorld(blockCell)=(0.00000, 0.27894, -1.24340)
+UI GridToLocal(blockCell)=(0.00002, -185.60000, 0.00000)
+UIGridSpace type=UIGridSpace
+--- TARGET ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Target(Clone)
+instanceId=-115996
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Nests3D/Nest3D_Square_-115996
+WorldView.position=(0.00000, 0.29321, -2.06591)
+WorldView.localPosition=(0.00000, 0.29321, -1.64503)
+WorldView.localScale=(0.65497, 0.06854, 0.65497)
+WorldView.lossyScale=(0.65497, 0.06854, 0.65497)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=True
+parent.path=Board3D/Nests3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.29321, -2.06591)
+MeshRenderer.bounds.min=(-0.32748, 0.25894, -2.39340)
+MeshRenderer.bounds.max=(0.32748, 0.32748, -1.73843)
+MeshRenderer.bounds.size=(0.65497, 0.06854, 0.65497)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeNest_Square
+IsMatchPresentationActive=True
+IsMatched=False
+GridToWorld(targetCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(targetCell)=(0.00002, -371.20000, 0.00000)
+--- GRID DELTAS ---
+logicalCellEqual=False
+GridToWorld(block)-GridToWorld(target)=(0.00000, 0.00000, 0.82252)
+GridToWorld XZ delta=(0.00000, 0.82252)
+1 WorldView.position delta=(0.00000, 0.12307, 0.00000)
+WorldView XZ delta=(0.00000, 0.00000)
+2 bounds.center delta=(0.00000, 0.12307, 0.00000)
+3 block.bounds.min.y - target.bounds.max.y=0.00503
+4 block.bounds.max.y - target.bounds.max.y=0.17258
+5 block.bounds.center.y - target.bounds.center.y=0.12307
+6 bounds XZ center delta=(0.00000, 0.00000)
+screen block.center=(540.00000, 624.81650, 5.06588)
+screen target.center=(540.00000, 623.93770, 5.18887)
+screen center delta (block-target)=(0.00000, 0.87878, -0.12300)
+screen block.bounds.min=(483.90340, 568.15590, 5.14003)
+screen target.bounds.max=(607.00430, 691.14590, 5.16605)
+screen (block.min - target.max)=(-123.10090, -122.99000, -0.02602)
+NOTE: screen Y increases upward in WorldToScreenPoint.
+
+========== T3_ImmediatelyAfterNestEntryReturns frame=52 t=1.02000 ==========
+--- BLOCK ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Block (Clone)
+instanceId=-116034
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Pieces3D/Block3D_Square_-116034
+WorldView.position=(0.00000, 0.41628, -2.06591)
+WorldView.localPosition=(0.00000, 0.41628, -1.64503)
+WorldView.localScale=(0.54834, 0.16755, 0.54834)
+WorldView.lossyScale=(0.54834, 0.16755, 0.54834)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=False
+parent.path=Board3D/Pieces3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.41628, -2.06591)
+MeshRenderer.bounds.min=(-0.27417, 0.33251, -2.34008)
+MeshRenderer.bounds.max=(0.27417, 0.50006, -1.79174)
+MeshRenderer.bounds.size=(0.54834, 0.16755, 0.54834)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeSolid_Square
+IsMoving=True
+IsDragging=True
+IsMatchPresentationActive=True
+IsMatched=False
+WorldView.IsMotionLocked=False
+GridToWorld(blockCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(blockCell)=(0.00002, -371.20000, 0.00000)
+UIGridSpace type=UIGridSpace
+--- TARGET ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Target(Clone)
+instanceId=-115996
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Nests3D/Nest3D_Square_-115996
+WorldView.position=(0.00000, 0.29321, -2.06591)
+WorldView.localPosition=(0.00000, 0.29321, -1.64503)
+WorldView.localScale=(0.65497, 0.06854, 0.65497)
+WorldView.lossyScale=(0.65497, 0.06854, 0.65497)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=True
+parent.path=Board3D/Nests3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.29321, -2.06591)
+MeshRenderer.bounds.min=(-0.32748, 0.25894, -2.39340)
+MeshRenderer.bounds.max=(0.32748, 0.32748, -1.73843)
+MeshRenderer.bounds.size=(0.65497, 0.06854, 0.65497)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeNest_Square
+IsMatchPresentationActive=True
+IsMatched=False
+GridToWorld(targetCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(targetCell)=(0.00002, -371.20000, 0.00000)
+--- GRID DELTAS ---
+logicalCellEqual=True
+GridToWorld(block)-GridToWorld(target)=(0.00000, 0.00000, 0.00000)
+GridToWorld XZ delta=(0.00000, 0.00000)
+1 WorldView.position delta=(0.00000, 0.12307, 0.00000)
+WorldView XZ delta=(0.00000, 0.00000)
+2 bounds.center delta=(0.00000, 0.12307, 0.00000)
+3 block.bounds.min.y - target.bounds.max.y=0.00503
+4 block.bounds.max.y - target.bounds.max.y=0.17258
+5 block.bounds.center.y - target.bounds.center.y=0.12307
+6 bounds XZ center delta=(0.00000, 0.00000)
+screen block.center=(540.00000, 624.81650, 5.06588)
+screen target.center=(540.00000, 623.93770, 5.18887)
+screen center delta (block-target)=(0.00000, 0.87878, -0.12300)
+screen block.bounds.min=(483.90340, 568.15590, 5.14003)
+screen target.bounds.max=(607.00430, 691.14590, 5.16605)
+screen (block.min - target.max)=(-123.10090, -122.99000, -0.02602)
+NOTE: screen Y increases upward in WorldToScreenPoint.
+
+========== T4_ImmediatelyBeforeMatchDissolve frame=52 t=1.02000 ==========
+--- BLOCK ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Block (Clone)
+instanceId=-116034
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Pieces3D/Block3D_Square_-116034
+WorldView.position=(0.00000, 0.41628, -2.06591)
+WorldView.localPosition=(0.00000, 0.41628, -1.64503)
+WorldView.localScale=(0.54834, 0.16755, 0.54834)
+WorldView.lossyScale=(0.54834, 0.16755, 0.54834)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=False
+parent.path=Board3D/Pieces3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.41628, -2.06591)
+MeshRenderer.bounds.min=(-0.27417, 0.33251, -2.34008)
+MeshRenderer.bounds.max=(0.27417, 0.50006, -1.79174)
+MeshRenderer.bounds.size=(0.54834, 0.16755, 0.54834)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeSolid_Square
+IsMoving=True
+IsDragging=True
+IsMatchPresentationActive=True
+IsMatched=False
+WorldView.IsMotionLocked=False
+GridToWorld(blockCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(blockCell)=(0.00002, -371.20000, 0.00000)
+UIGridSpace type=UIGridSpace
+--- TARGET ---
+logicalPath=UIController/GamePlay/Gameplay Area/Board/Target(Clone)
+instanceId=-115996
+gridPosition=(2, 0)
+UI.anchoredPosition=(0.00002, -371.20000)
+UI.localPosition=(0.00002, -371.20000, 0.00000)
+UI.position=(540.00000, 512.00000, 0.00000)
+UI.active=True inHierarchy=True
+enabled UI Images in hierarchy=0 / 3
+UIGridToLocal vs anchored delta=(0.00000, 0.00000)
+worldPath=Board3D/Nests3D/Nest3D_Square_-115996
+WorldView.position=(0.00000, 0.29321, -2.06591)
+WorldView.localPosition=(0.00000, 0.29321, -1.64503)
+WorldView.localScale=(0.65497, 0.06854, 0.65497)
+WorldView.lossyScale=(0.65497, 0.06854, 0.65497)
+WorldView.rotationEuler=(0.00000, 0.00000, 0.00000)
+WorldView.activeSelf=True activeInHierarchy=True
+ConfiguredShape=Square ConfiguredAsNest=True
+parent.path=Board3D/Nests3D
+parent.position=(0.00000, 0.00000, -0.42088)
+parent.rotationEuler=(0.00000, 0.00000, 0.00000)
+parent.localScale=(1.00000, 1.00000, 1.00000)
+parent.lossyScale=(1.00000, 1.00000, 1.00000)
+MeshRenderer.enabled=True
+MeshRenderer.gameObject.activeSelf=True
+MeshRenderer.bounds.center=(0.00000, 0.29321, -2.06591)
+MeshRenderer.bounds.min=(-0.32748, 0.25894, -2.39340)
+MeshRenderer.bounds.max=(0.32748, 0.32748, -1.73843)
+MeshRenderer.bounds.size=(0.65497, 0.06854, 0.65497)
+mesh.bounds.center=(0.00000, 0.00000, 0.00000)
+mesh.bounds.size=(1.00000, 1.00000, 1.00000)
+mesh.name=ShapeNest_Square
+IsMatchPresentationActive=True
+IsMatched=False
+GridToWorld(targetCell)=(0.00000, 0.27894, -2.06591)
+UI GridToLocal(targetCell)=(0.00002, -371.20000, 0.00000)
+--- GRID DELTAS ---
+logicalCellEqual=True
+GridToWorld(block)-GridToWorld(target)=(0.00000, 0.00000, 0.00000)
+GridToWorld XZ delta=(0.00000, 0.00000)
+1 WorldView.position delta=(0.00000, 0.12307, 0.00000)
+WorldView XZ delta=(0.00000, 0.00000)
+2 bounds.center delta=(0.00000, 0.12307, 0.00000)
+3 block.bounds.min.y - target.bounds.max.y=0.00503
+4 block.bounds.max.y - target.bounds.max.y=0.17258
+5 block.bounds.center.y - target.bounds.center.y=0.12307
+6 bounds XZ center delta=(0.00000, 0.00000)
+screen block.center=(540.00000, 624.81650, 5.06588)
+screen target.center=(540.00000, 623.93770, 5.18887)
+screen center delta (block-target)=(0.00000, 0.87878, -0.12300)
+screen block.bounds.min=(483.90340, 568.15590, 5.14003)
+screen target.bounds.max=(607.00430, 691.14590, 5.16605)
+screen (block.min - target.max)=(-123.10090, -122.99000, -0.02602)
+NOTE: screen Y increases upward in WorldToScreenPoint.
+
+=== T3 vs T4 same-sample? ===
+T3_len=4152 T4_len=4150

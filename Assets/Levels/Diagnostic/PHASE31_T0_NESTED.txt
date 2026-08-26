@@ -1,0 +1,21 @@
+=== PHASE31 T0 REST Regression_07_NestedChainMiddle ===
+blocks=1
+--- Block id=-363918 ShapeType=Circle OuterShape=Circle CellCount=3 grid=(2, 5) settled=False WorldView=Block3D_Circle_-363918
+  extraCount=2
+  cell[0] local=(0, 0) world=(2, 5) active=Circle cell.shapeType=Circle inners=[] hasInner=False
+    WorldView=Block3D_Circle_-363918 configured=Circle renderer=True scale=(0.40, 0.12, 0.40) pos=(-0.61, 0.30, 0.79) source=True isAnchor=True extra=False
+    Image enabled=False sprite=BlockCircle
+  cell[1] local=(1, 0) world=(3, 5) active=Triangle cell.shapeType=Square inners=[Triangle] hasInner=True
+    WorldView=Block3D_Circle_-363918_c1 configured=Triangle renderer=True scale=(0.40, 0.12, 0.40) pos=(0.00, 0.30, 0.79) source=True isAnchor=False extra=True
+    Image enabled=False sprite=BlockSquare
+  cell[2] local=(2, 0) world=(4, 5) active=Circle cell.shapeType=Circle inners=[] hasInner=False
+    WorldView=Block3D_Circle_-363918_c2 configured=Circle renderer=True scale=(0.40, 0.12, 0.40) pos=(0.61, 0.30, 0.79) source=True isAnchor=False extra=True
+    Image enabled=False sprite=BlockCircle
+targets=3
+--- Target id=-363802 Required=Triangle Outer=Square grid=(3, 4) WorldView=Nest3D_Triangle_-363802 configured=Triangle
+--- Target id=-363880 Required=Circle Outer=Circle grid=(6, 0) WorldView=Nest3D_Circle_-363880 configured=Circle
+--- Target id=-363842 Required=Circle Outer=Circle grid=(0, 0) WorldView=Nest3D_Circle_-363842 configured=Circle
+enabled InnerTravel/CellTravel=0 Block Images=0 Target Images=0
+connectors=2
+  ChainLink_-363918_1 pos=(0.30, 0.28, 0.79) scale=(0.25, 0.12, 0.13)
+  ChainLink_-363918_0 pos=(-0.30, 0.28, 0.79) scale=(0.25, 0.12, 0.13)

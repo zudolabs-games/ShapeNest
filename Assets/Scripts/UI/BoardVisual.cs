@@ -155,6 +155,8 @@ public class BoardVisual : MonoBehaviour
         backgroundImage.maskable = true;
 
         backgroundRect.SetSiblingIndex(0);
+        // Phase 11: World3D is the active board — keep UI board chrome hidden.
+        backgroundRect.gameObject.SetActive(false);
 
         Transform grid = transform.Find(RuntimeGridName);
         if (grid == null)
@@ -163,6 +165,7 @@ public class BoardVisual : MonoBehaviour
         }
 
         grid.SetSiblingIndex(1);
+        grid.gameObject.SetActive(false);
         ApplyGridPresentation(grid);
     }
 

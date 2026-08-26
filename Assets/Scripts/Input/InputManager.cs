@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using TouchPhase = UnityEngine.InputSystem.TouchPhase;
@@ -31,8 +30,8 @@ public class InputManager : MonoBehaviour
     [SerializeField]
     private MagnetBooster magnetBooster;
 
-    private readonly List<RaycastResult> raycastResults = new List<RaycastResult>();
-    private PointerEventData pointerEventData;
+    [SerializeField]
+    private BoardInput3D boardInput3D;
 
     private Block pressedBlock;
     private BlockMover pressedMover;
@@ -50,12 +49,18 @@ public class InputManager : MonoBehaviour
     private Vector2Int segmentCell;
     private Vector2 steerAnchorLocal;
     private int trackedTouchId = -1;
+    private bool blockedCuePlayed;
 
     private void Awake()
     {
         if (magnetBooster == null)
         {
             magnetBooster = FindFirstObjectByType<MagnetBooster>();
+        }
+
+        if (boardInput3D == null)
+        {
+            boardInput3D = FindFirstObjectByType<BoardInput3D>(FindObjectsInactive.Include);
         }
     }
 
@@ -229,6 +234,7 @@ public class InputManager : MonoBehaviour
         isPressing = pressedBlock != null;
         directionLocked = false;
         lockedDirection = Vector2Int.zero;
+        blockedCuePlayed = false;
         pressedMover = null;
         cachedBoard = null;
         cachedBoardRect = null;
@@ -301,6 +307,12 @@ public class InputManager : MonoBehaviour
             Vector2Int direction = GetCardinalDirection(delta);
             if (!pressedMover.IsDirectionAllowed(direction))
             {
+                if (!blockedCuePlayed)
+                {
+                    blockedCuePlayed = true;
+                    pressedMover.NotifyBlockedAttempt();
+                }
+
                 return;
             }
 
@@ -478,37 +490,15 @@ public class InputManager : MonoBehaviour
 
     private Block FindBlockAt(Vector2 screenPosition)
     {
-        EventSystem eventSystem = EventSystem.current;
-        if (eventSystem == null)
+        // Phase 11: board presentation is World3D only — resolve via physics pick.
+        if (boardInput3D == null)
         {
-            return null;
+            boardInput3D = FindFirstObjectByType<BoardInput3D>(FindObjectsInactive.Include);
         }
 
-        if (pointerEventData == null)
+        if (boardInput3D != null)
         {
-            pointerEventData = new PointerEventData(eventSystem);
-        }
-
-        pointerEventData.Reset();
-        pointerEventData.position = screenPosition;
-
-        raycastResults.Clear();
-        eventSystem.RaycastAll(pointerEventData, raycastResults);
-
-        for (int i = 0; i < raycastResults.Count; i++)
-        {
-            GameObject hit = raycastResults[i].gameObject;
-            Block block = hit.GetComponentInParent<Block>();
-            if (block != null)
-            {
-                return block;
-            }
-
-            Canvas canvas = hit.GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.sortingOrder > 0)
-            {
-                return null;
-            }
+            return boardInput3D.TryFindBlock(screenPosition);
         }
 
         return null;
@@ -523,6 +513,7 @@ public class InputManager : MonoBehaviour
 
         isPressing = false;
         trackedTouchId = -1;
+        blockedCuePlayed = false;
         pressedBlock = null;
         pressedMover = null;
         cachedBoard = null;

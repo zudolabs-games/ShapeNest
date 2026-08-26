@@ -23,6 +23,7 @@ public class ShapeNestSettingsScreen : UIScreenBase
     public override void OnAwake()
     {
         base.OnAwake();
+        ResolveFeedbackInstances();
         Bind(resumeButton, OnResumeClicked);
         Bind(restartButton, OnRestartClicked);
         Bind(soundButton, OnSoundClicked);
@@ -32,6 +33,7 @@ public class ShapeNestSettingsScreen : UIScreenBase
     public override void OnScreenShowAnimationStarted()
     {
         base.OnScreenShowAnimationStarted();
+        ResolveFeedbackInstances();
         RefreshToggleLabels();
         if (intro != null)
         {
@@ -77,16 +79,39 @@ public class ShapeNestSettingsScreen : UIScreenBase
 
     private void RefreshToggleLabels()
     {
-        if (soundLabel != null)
+        if (soundLabel != null && audioFeedback != null)
         {
-            bool on = audioFeedback == null || audioFeedback.SoundEnabled;
-            soundLabel.text = on ? "SOUND ON" : "SOUND OFF";
+            soundLabel.text = audioFeedback.SoundEnabled ? "SOUND ON" : "SOUND OFF";
         }
 
-        if (hapticsLabel != null)
+        if (hapticsLabel != null && hapticFeedback != null)
         {
-            bool on = hapticFeedback == null || hapticFeedback.Enabled;
-            hapticsLabel.text = on ? "HAPTICS ON" : "HAPTICS OFF";
+            hapticsLabel.text = hapticFeedback.Enabled ? "HAPTICS ON" : "HAPTICS OFF";
+        }
+    }
+
+    /// <summary>
+    /// Uses serialized scene refs when present. Falls back to the existing scene
+    /// instances used by gameplay. Never creates new feedback objects.
+    /// </summary>
+    private void ResolveFeedbackInstances()
+    {
+        if (audioFeedback == null)
+        {
+            audioFeedback = FindFirstObjectByType<AudioFeedback>();
+            if (audioFeedback == null)
+            {
+                Debug.LogWarning("ShapeNestSettingsScreen: AudioFeedback was not found.", this);
+            }
+        }
+
+        if (hapticFeedback == null)
+        {
+            hapticFeedback = FindFirstObjectByType<HapticFeedback>();
+            if (hapticFeedback == null)
+            {
+                Debug.LogWarning("ShapeNestSettingsScreen: HapticFeedback was not found.", this);
+            }
         }
     }
 
