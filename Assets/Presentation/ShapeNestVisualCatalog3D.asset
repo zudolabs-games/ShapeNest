@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e8c1a07d3f4c6e9a2b5d8f1c4e7a90, type: 3}
+  m_Name: ShapeNestVisualCatalog3D
+  m_EditorClassIdentifier: Assembly-CSharp::ShapeNestVisualCatalog3D
+  cellPrefab: {fileID: 0}
+  boardSurfacePrefab: {fileID: 0}
+  boardFramePrefab: {fileID: 0}
+  blockSquare: {fileID: 0}
+  blockCircle: {fileID: 0}
+  blockTriangle: {fileID: 0}
+  blockDiamond: {fileID: 0}
+  blockHexagon: {fileID: 0}
+  blockStar: {fileID: 0}
+  nestSquare: {fileID: 0}
+  nestCircle: {fileID: 0}
+  nestTriangle: {fileID: 0}
+  nestDiamond: {fileID: 0}
+  nestHexagon: {fileID: 0}
+  nestStar: {fileID: 0}
+  icePrefab: {fileID: 0}
+  shutterPrefab: {fileID: 0}
+  magnetBoosterPrefab: {fileID: 0}
+  matchVfxPrefab: {fileID: 0}
+  environmentPrefab: {fileID: 0}

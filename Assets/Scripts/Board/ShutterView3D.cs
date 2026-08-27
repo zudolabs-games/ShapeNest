@@ -349,14 +349,26 @@ public class ShutterView3D : MonoBehaviour
     {
         while (cellPlates.Count < count)
         {
-            GameObject plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject plate;
+            bool designerPlate = ShapeNestVisualCatalog3D.TryGetShutterPrefab(out GameObject shutterPrefab);
+            if (designerPlate)
+            {
+                plate = Instantiate(shutterPrefab);
+            }
+            else
+            {
+                plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            }
+
             plate.name = "ShutterPlate_" + cellPlates.Count;
             plate.transform.SetParent(cellsRoot, false);
             RemoveCollider(plate);
-            ApplyMaterial(plate, GetPlateMaterial(), new Color(0.22f, 0.12f, 0.34f, 1f));
-
-            CreateSlat(plate.transform, "SlatTop", new Vector3(0f, 0.55f, 0.28f));
-            CreateSlat(plate.transform, "SlatBottom", new Vector3(0f, 0.55f, -0.28f));
+            if (!designerPlate)
+            {
+                ApplyMaterial(plate, GetPlateMaterial(), new Color(0.22f, 0.12f, 0.34f, 1f));
+                CreateSlat(plate.transform, "SlatTop", new Vector3(0f, 0.55f, 0.28f));
+                CreateSlat(plate.transform, "SlatBottom", new Vector3(0f, 0.55f, -0.28f));
+            }
 
             cellPlates.Add(plate.transform);
         }

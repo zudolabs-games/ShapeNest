@@ -92,7 +92,16 @@ public class MagnetBoosterButton : MonoBehaviour
             return;
         }
 
-        magnetBooster.ToggleMagnet();
+        BoosterManager manager = FindFirstObjectByType<BoosterManager>();
+        if (manager != null)
+        {
+            manager.TryActivate(BoosterType.Magnet);
+        }
+        else
+        {
+            magnetBooster.ToggleMagnet();
+        }
+
         Refresh();
     }
 

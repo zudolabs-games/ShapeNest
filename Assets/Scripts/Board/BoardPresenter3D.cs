@@ -338,6 +338,17 @@ public class BoardPresenter3D : MonoBehaviour
         // Floor only — kept below cell tops so recessed tiles remain visible.
         float floorHeight = Mathf.Max(0.08f, boardThickness - cellRecess - 0.02f);
 
+        if (ShapeNestVisualCatalog3D.TryGetBoardSurfacePrefab(out GameObject surfacePrefab))
+        {
+            GameObject instance = Instantiate(surfacePrefab);
+            instance.name = "Slab";
+            instance.transform.SetParent(surfaceRoot, false);
+            instance.transform.localPosition = new Vector3(0f, floorHeight * 0.5f, 0f);
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = new Vector3(sizeX, floorHeight, sizeZ);
+            return;
+        }
+
         GameObject slab = new GameObject("Slab");
         slab.transform.SetParent(surfaceRoot, false);
         slab.transform.localPosition = new Vector3(0f, floorHeight * 0.5f, 0f);
@@ -358,6 +369,18 @@ public class BoardPresenter3D : MonoBehaviour
         float outerZ = innerZ + frameWallThickness * 2f;
         float wallHeight = boardThickness + 0.1f;
         float y = wallHeight * 0.5f;
+
+        if (ShapeNestVisualCatalog3D.TryGetBoardFramePrefab(out GameObject framePrefab))
+        {
+            GameObject instance = Instantiate(framePrefab);
+            instance.name = "DesignerFrame";
+            instance.transform.SetParent(frameRoot, false);
+            instance.transform.localPosition = new Vector3(0f, y, 0f);
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = new Vector3(outerX, wallHeight, outerZ);
+            return;
+        }
+
         float zEdge = (outerZ * 0.5f) - (frameWallThickness * 0.5f);
         float xEdge = (outerX * 0.5f) - (frameWallThickness * 0.5f);
         float corner = Mathf.Min(boardCornerRadius * 0.55f, frameWallThickness * 0.9f);
@@ -402,23 +425,34 @@ public class BoardPresenter3D : MonoBehaviour
             {
                 Vector2Int cell = new Vector2Int(x, y);
                 Vector3 center = gridSpace.GridToLocal(cell);
-                GameObject tile = CreateCellTile(cell, tileFace, tileThickness);
+                GameObject tile = CreateCellTile(cell, tileFace, tileThickness, out bool keepDesignerMaterials);
                 tile.transform.SetParent(cellsRoot, false);
                 tile.transform.localPosition = new Vector3(center.x, cellCenterY, center.z);
                 tile.transform.localRotation = Quaternion.identity;
                 tile.transform.localScale = Vector3.one;
-                ApplyMaterial(tile, cellMaterial, new Color(0.24f, 0.20f, 0.48f, 1f));
+                if (!keepDesignerMaterials)
+                {
+                    ApplyMaterial(tile, cellMaterial, new Color(0.24f, 0.20f, 0.48f, 1f));
+                }
             }
         }
 
         TuneSharedMaterial(cellMaterial, new Color(0.24f, 0.20f, 0.48f, 1f), 0.04f, 0.5f);
     }
 
-    private GameObject CreateCellTile(Vector2Int cell, float face, float thickness)
+    private GameObject CreateCellTile(Vector2Int cell, float face, float thickness, out bool keepDesignerMaterials)
     {
-        if (cellPrefab != null)
+        keepDesignerMaterials = false;
+        GameObject prefab = cellPrefab;
+        if (prefab == null)
         {
-            GameObject instance = Instantiate(cellPrefab);
+            ShapeNestVisualCatalog3D.TryGetCellPrefab(out prefab);
+            keepDesignerMaterials = prefab != null;
+        }
+
+        if (prefab != null)
+        {
+            GameObject instance = Instantiate(prefab);
             instance.name = $"Cell_{cell.x}_{cell.y}";
             instance.transform.localScale = new Vector3(face, thickness, face);
             return instance;

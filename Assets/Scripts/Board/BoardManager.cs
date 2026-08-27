@@ -535,6 +535,127 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Collects registered nests whose remaining layer stacks match the block's cells.
+    /// Each target is claimed at most once. Does not consume, match, or notify.
+    /// </summary>
+    public void CollectCorrespondingTargets(Block block, List<Target> results)
+    {
+        if (results == null)
+        {
+            return;
+        }
+
+        results.Clear();
+        if (block == null)
+        {
+            return;
+        }
+
+        int cellCount = Mathf.Max(1, block.CellCount);
+        for (int i = 0; i < cellCount; i++)
+        {
+            Target match = FindUnclaimedCorrespondingTarget(block, i, results);
+            if (match != null)
+            {
+                results.Add(match);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Unregisters a nest and finishes its removal presentation without a successful match.
+    /// Does not notify LevelManager, Ice, or Shutters.
+    /// </summary>
+    public void RemoveTargetWithoutMatch(Target target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        UnregisterTarget(target);
+        target.BeginMatchPresentation();
+        target.CompleteMatchPresentation();
+    }
+
+    private Target FindUnclaimedCorrespondingTarget(Block block, int cellIndex, List<Target> claimed)
+    {
+        foreach (KeyValuePair<Vector2Int, Target> entry in targets)
+        {
+            Target candidate = entry.Value;
+            if (candidate == null || candidate.IsMatched)
+            {
+                continue;
+            }
+
+            if (claimed != null && claimed.Contains(candidate))
+            {
+                continue;
+            }
+
+            if (RemainingStacksMatch(block, cellIndex, candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool RemainingStacksMatch(Block block, int cellIndex, Target target)
+    {
+        if (block == null || target == null)
+        {
+            return false;
+        }
+
+        ShapeCellData blockCell = block.GetCell(cellIndex);
+        ShapeType blockActive = block.GetActiveShape(cellIndex);
+        ShapeType blockOuter = blockCell != null ? blockCell.shapeType : blockActive;
+        int blockLayers = ShapeLayout.LayerCount(blockCell);
+        IReadOnlyList<ShapeType> blockInners = blockCell != null ? blockCell.innerShapes : null;
+
+        ShapeCellData targetCell = null;
+        IReadOnlyList<ShapeCellData> targetCells = target.Cells;
+        if (targetCells != null && targetCells.Count > 0)
+        {
+            targetCell = targetCells[0];
+        }
+
+        ShapeType targetActive = target.RequiredShape;
+        ShapeType targetOuter = targetCell != null ? targetCell.shapeType : targetActive;
+        int targetLayers = ShapeLayout.LayerCount(targetCell);
+        IReadOnlyList<ShapeType> targetInners = targetCell != null ? targetCell.innerShapes : null;
+
+        if (blockActive != targetActive || blockOuter != targetOuter || blockLayers != targetLayers)
+        {
+            return false;
+        }
+
+        return SameShapeList(blockInners, targetInners);
+    }
+
+    private static bool SameShapeList(IReadOnlyList<ShapeType> a, IReadOnlyList<ShapeType> b)
+    {
+        int ac = a != null ? a.Count : 0;
+        int bc = b != null ? b.Count : 0;
+        if (ac != bc)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < ac; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Drops occupancy and target maps. Does not destroy objects or change grid size.
     /// Used when a level is rebuilt at runtime.
     /// </summary>

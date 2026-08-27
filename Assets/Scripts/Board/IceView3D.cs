@@ -59,7 +59,7 @@ public class IceView3D : MonoBehaviour
         bool sameSource = source == ice;
         source = ice;
         EnsureShell();
-        if (shellRenderer != null && material != null)
+        if (shellRenderer != null && material != null && !ShapeNestVisualCatalog3D.TryGetIcePrefab(out _))
         {
             shellRenderer.sharedMaterial = material;
         }
@@ -497,6 +497,16 @@ public class IceView3D : MonoBehaviour
             {
                 shell = existing;
             }
+            else if (ShapeNestVisualCatalog3D.TryGetIcePrefab(out GameObject icePrefab))
+            {
+                GameObject instance = Instantiate(icePrefab);
+                instance.name = "IceShell";
+                instance.transform.SetParent(transform, false);
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one;
+                shell = instance.transform;
+            }
             else
             {
                 GameObject cube = new GameObject("IceShell");
@@ -511,6 +521,10 @@ public class IceView3D : MonoBehaviour
         if (shellRenderer == null)
         {
             shellRenderer = shell.GetComponent<MeshRenderer>();
+            if (shellRenderer == null)
+            {
+                shellRenderer = shell.GetComponentInChildren<MeshRenderer>(true);
+            }
         }
 
         if (shellRenderer != null && shellRenderer.sharedMaterial == null)

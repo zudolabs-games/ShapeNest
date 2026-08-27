@@ -8,6 +8,7 @@ using UnityEngine;
 public static class TweenAnimationUtility
 {
     public const string PieceMotionId = "ShapeNest.PieceMotion";
+    public const string CarryId = "ShapeNest.Carry";
     public const string SelectionId = "ShapeNest.Selection";
     public const string ReadyPulseId = "ShapeNest.ReadyPulse";
     public const string UiPressId = "ShapeNest.UiPress";
@@ -34,6 +35,8 @@ public static class TweenAnimationUtility
     public static float EvaluateEaseInOutCubic(float t) => PieceMotionMath.EaseInOutCubic(t);
 
     public static float EvaluateEaseInQuad(float t) => PieceMotionMath.EaseInQuad(Mathf.Clamp01(t));
+
+    public static float EvaluateEaseInCubic(float t) => PieceMotionMath.EaseInCubic(t);
 
     /// <summary>Yield until a tween finishes. Safe if tween is null or already complete.</summary>
     public static IEnumerator Wait(Tween tween)

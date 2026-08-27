@@ -57,6 +57,7 @@ public class LevelManager : MonoBehaviour
     private bool timeUpSoundPlayed;
     private Coroutine pauseTimeFreezeRoutine;
     private Coroutine alignedMatchRoutine;
+    private Coroutine levelCompletePresentationRoutine;
     private int pieceMatchSequenceDepth;
     private bool alignedMatchRunning;
     private bool hasLastMatch;
@@ -90,9 +91,9 @@ public class LevelManager : MonoBehaviour
             hapticFeedback = GetComponent<HapticFeedback>();
         }
 
-        if (GetComponent<MagnetBooster>() == null && FindFirstObjectByType<MagnetBooster>() == null)
+        if (GetComponent<BoosterManager>() == null && FindFirstObjectByType<BoosterManager>() == null)
         {
-            gameObject.AddComponent<MagnetBooster>();
+            gameObject.AddComponent<BoosterManager>();
         }
 
         SyncCurrentLevelIndex(currentLevel);
@@ -102,6 +103,7 @@ public class LevelManager : MonoBehaviour
     private void OnDisable()
     {
         Time.timeScale = 1f;
+        CancelLevelCompletePresentationWait();
     }
 
     private void Start()
@@ -233,6 +235,7 @@ public class LevelManager : MonoBehaviour
                 pauseTimeFreezeRoutine = null;
             }
             StopTimer();
+            CancelLevelCompletePresentationWait();
             session = SessionState.Playing;
             isLevelActive = false;
             levelComplete = false;
@@ -248,15 +251,28 @@ public class LevelManager : MonoBehaviour
             SyncCurrentLevelIndex(level);
             ClearRuntimeLevel();
 
-            MagnetBooster magnet = GetComponent<MagnetBooster>();
-            if (magnet == null)
+            BoosterManager boosters = GetComponent<BoosterManager>();
+            if (boosters == null)
             {
-                magnet = FindFirstObjectByType<MagnetBooster>();
+                boosters = FindFirstObjectByType<BoosterManager>();
             }
 
-            if (magnet != null)
+            if (boosters != null)
             {
-                magnet.ResetMagnetState("level load");
+                boosters.ResetAll("level load");
+            }
+            else
+            {
+                MagnetBooster magnet = GetComponent<MagnetBooster>();
+                if (magnet == null)
+                {
+                    magnet = FindFirstObjectByType<MagnetBooster>();
+                }
+
+                if (magnet != null)
+                {
+                    magnet.ResetMagnetState("level load");
+                }
             }
 
             successfulMatchCount = 0;
@@ -614,6 +630,45 @@ public class LevelManager : MonoBehaviour
         PlayerProgressManager.Instance.MarkLevelCompleted(
             currentLevelIndex,
             levelDatabase != null ? levelDatabase.Count : -1);
+
+        if (IsHammerCompletionPresentationActive())
+        {
+            if (levelCompletePresentationRoutine != null)
+            {
+                StopCoroutine(levelCompletePresentationRoutine);
+            }
+
+            levelCompletePresentationRoutine = StartCoroutine(PresentLevelCompleteWhenHammerFinishes());
+            return;
+        }
+
+        PresentLevelCompleteScreen();
+    }
+
+    private static bool IsHammerCompletionPresentationActive()
+    {
+        HammerBooster hammer = FindFirstObjectByType<HammerBooster>(FindObjectsInactive.Exclude);
+        return hammer != null && hammer.IsPresentationActive;
+    }
+
+    private IEnumerator PresentLevelCompleteWhenHammerFinishes()
+    {
+        while (IsHammerCompletionPresentationActive())
+        {
+            yield return null;
+        }
+
+        levelCompletePresentationRoutine = null;
+        if (!levelComplete || session != SessionState.Completed || isLoading)
+        {
+            yield break;
+        }
+
+        PresentLevelCompleteScreen();
+    }
+
+    private void PresentLevelCompleteScreen()
+    {
         Debug.Log("LEVEL COMPLETE!");
         if (audioFeedback != null)
         {
@@ -626,6 +681,17 @@ public class LevelManager : MonoBehaviour
         }
 
         SyncSessionScreen();
+    }
+
+    private void CancelLevelCompletePresentationWait()
+    {
+        if (levelCompletePresentationRoutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(levelCompletePresentationRoutine);
+        levelCompletePresentationRoutine = null;
     }
 
     private void ExpireTime()

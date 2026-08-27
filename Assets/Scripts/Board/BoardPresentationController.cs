@@ -26,7 +26,7 @@ public class BoardPresentationController : MonoBehaviour
     private GameObject[] uiBoardVisualRoots;
 
     [SerializeField]
-    [Tooltip("Opaque GamePlay Screen Space Overlay plate. Image is disabled in World3D so the 3D board can show through; GameObject stays active.")]
+    [Tooltip("Opaque gameplay Screen Space Overlay plate (GameplayCanvas/BG). Image is disabled in World3D so the 3D board can show through; GameObject stays active.")]
     private Image gamePlayOverlayBackground;
 
     [SerializeField]
@@ -42,6 +42,10 @@ public class BoardPresentationController : MonoBehaviour
     [Header("World3D piece presentation")]
     [SerializeField]
     private ShapeNestTheme theme;
+
+    [SerializeField]
+    [Tooltip("Optional designer 3D prefabs. Empty slots keep the current procedural World3D visuals.")]
+    private ShapeNestVisualCatalog3D visualCatalog;
 
     [SerializeField]
     [Range(0.4f, 1f)]
@@ -61,7 +65,7 @@ public class BoardPresentationController : MonoBehaviour
 
     [Header("Adaptive board presentation (Phase 14)")]
     [SerializeField]
-    [Tooltip("Gameplay Area RectTransform. Auto-resolved from UIController/GamePlay/Gameplay Area when empty.")]
+    [Tooltip("Gameplay Area RectTransform. Auto-resolved from UIController/GameplayCanvas/Gameplay Area when empty.")]
     private RectTransform gameplayArea;
 
     [SerializeField]
@@ -96,6 +100,9 @@ public class BoardPresentationController : MonoBehaviour
     private float lastAdaptiveCell = -1f;
     private Vector2 lastAdaptiveAreaScreen = new Vector2(-1f, -1f);
     private Vector2 lastAdaptiveScreen = new Vector2(-1f, -1f);
+
+    /// <summary>Optional designer 3D prefabs. Null / empty slots keep procedural World3D visuals.</summary>
+    public ShapeNestVisualCatalog3D VisualCatalog => visualCatalog;
 
     /// <summary>Board presentation is always World3D after Phase 11.</summary>
     public BoardPresentationMode Mode => BoardPresentationMode.World3D;
@@ -182,6 +189,7 @@ public class BoardPresentationController : MonoBehaviour
     private void Awake()
     {
         mode = BoardPresentationMode.World3D;
+        ShapeNestVisualCatalog3D.Bind(visualCatalog);
         ResolveReferences();
         ApplyMode();
     }
@@ -189,6 +197,7 @@ public class BoardPresentationController : MonoBehaviour
     private void OnEnable()
     {
         mode = BoardPresentationMode.World3D;
+        ShapeNestVisualCatalog3D.Bind(visualCatalog);
         ResolveReferences();
         ApplyMode();
     }
@@ -227,6 +236,7 @@ public class BoardPresentationController : MonoBehaviour
         }
 
         FollowMultiCellWorldViews(blocks, targets);
+        SyncDragDestinationHighlight(blocks);
 
         CleanupFinishedObstacleViews();
         CleanupFinishedPieceViews(blocks, targets);
@@ -235,6 +245,26 @@ public class BoardPresentationController : MonoBehaviour
 
         // Layout systems may re-enable UI board chrome — keep it hidden.
         SetUiBoardVisualsActive(false);
+    }
+
+    private void OnDisable()
+    {
+        ShapeNestVisualCatalog3D.Unbind(visualCatalog);
+        BoardCellDestinationHighlight3D.HideImmediate(boardPresenter3D);
+    }
+
+    private void SyncDragDestinationHighlight(Block[] blocks)
+    {
+        if (boardPresenter3D == null)
+        {
+            return;
+        }
+
+        BoardCellDestinationHighlight3D highlight = BoardCellDestinationHighlight3D.Ensure(boardPresenter3D);
+        if (highlight != null)
+        {
+            highlight.Sync(blocks);
+        }
     }
 
     private void OnValidate()
@@ -1145,6 +1175,7 @@ public class BoardPresentationController : MonoBehaviour
 
             if (primaryTraveling)
             {
+                extra.MatchCarryPresentation(primary);
                 extra.ApplyGridPosition(space, block.GetCellWorld(i));
                 extra.LocalScale = extra.ConfiguredFootprintScale;
             }
@@ -1640,6 +1671,7 @@ public class BoardPresentationController : MonoBehaviour
 
         Vector3 delta = space.GridToWorld(extraCell) - space.GridToWorld(anchorCell);
         extra.transform.position = primary.transform.position + delta;
+        extra.MatchCarryPresentation(primary);
         CopyWorldScaleFactor(primary, extra);
     }
 
@@ -2665,7 +2697,7 @@ public class BoardPresentationController : MonoBehaviour
 
     private void SetUiBoardVisualsActive(bool active)
     {
-        // World3D: hide opaque GamePlay overlay plate (Image only — keep HUD hierarchy).
+        // World3D: hide opaque gameplay overlay plate (Image only — keep HUD hierarchy).
         SetGamePlayOverlayBackgroundRendering(active);
 
         if (uiBoardVisualRoots != null && uiBoardVisualRoots.Length > 0)
@@ -2717,7 +2749,12 @@ public class BoardPresentationController : MonoBehaviour
             return;
         }
 
-        Transform bg = uiController.transform.Find("GamePlay/BG");
+        Transform bg = uiController.transform.Find("GameplayCanvas/BG");
+        if (bg == null)
+        {
+            bg = uiController.transform.Find("GamePlay/BG");
+        }
+
         if (bg != null)
         {
             gamePlayOverlayBackground = bg.GetComponent<Image>();

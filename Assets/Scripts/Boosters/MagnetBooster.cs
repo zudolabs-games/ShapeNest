@@ -4,12 +4,15 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Additive Magnet booster. Plans a full soft-obstacle route to a matching nest and
-/// drives successive BlockMover segments until match. Other movable blocks are soft
-/// obstacles (temporarily cleared from occupancy for hops only). Hard gates remain:
-/// fixed direction, Ice, closed shutters, board bounds. One charge per successful match.
+/// Additive Magnet booster. 1-cell blocks: plan a soft-obstacle route to a matching
+/// nest and drive existing BlockMover hops until match. Multi-cell chains: split into
+/// independent 1-cell Blocks with existing SpawnSplitBlock, then start every remnant's
+/// Magnet BlockMover journey in the same execution window so pieces travel together.
+/// Other movable blocks are soft obstacles (temporarily cleared from occupancy for hops
+/// only). Hard gates remain: fixed direction, Ice, closed shutters, board bounds.
+/// One charge per successful Magnet completion (not per chain cell).
 /// </summary>
-public class MagnetBooster : MonoBehaviour
+public class MagnetBooster : MonoBehaviour, IBooster
 {
     public enum MagnetPhase
     {
@@ -45,6 +48,8 @@ public class MagnetBooster : MonoBehaviour
 
     private MagnetPhase phase = MagnetPhase.Idle;
     private Coroutine pullRoutine;
+    private readonly List<Coroutine> chainPullRoutines = new List<Coroutine>();
+    private readonly List<Block> activeMagnetCohort = new List<Block>();
     private Block highlightedBlock;
 
     public MagnetPhase Phase => phase;
@@ -52,11 +57,64 @@ public class MagnetBooster : MonoBehaviour
     public bool IsBusy => phase != MagnetPhase.Idle;
     public int MagnetCharges => magnetCharges;
 
+    public BoosterType Type => BoosterType.Magnet;
+
+    public BoosterState State
+    {
+        get
+        {
+            switch (phase)
+            {
+                case MagnetPhase.Selecting:
+                    return BoosterState.Selecting;
+                case MagnetPhase.Executing:
+                    return BoosterState.Executing;
+                default:
+                    return BoosterState.Idle;
+            }
+        }
+    }
+
+    int IBooster.Charges => magnetCharges;
+
+    public bool CanActivate
+    {
+        get
+        {
+            if (phase == MagnetPhase.Executing)
+            {
+                return false;
+            }
+
+            if (phase == MagnetPhase.Selecting)
+            {
+                return true;
+            }
+
+            if (levelManager != null && !levelManager.IsGameplayInputAllowed)
+            {
+                return false;
+            }
+
+            return magnetCharges > 0;
+        }
+    }
+
     /// <summary>Fired when charge count changes (UI sync).</summary>
     public event Action<int> OnChargesChanged;
 
     /// <summary>Fired when Magnet phase changes (Idle/Selecting/Executing).</summary>
     public event Action<MagnetPhase> OnPhaseChanged;
+
+    public event Action OnStateChanged;
+
+    void IBooster.Activate() => ActivateMagnet();
+
+    void IBooster.Cancel() => CancelMagnet();
+
+    void IBooster.ResetState(string reason) => ResetMagnetState(reason);
+
+    bool IBooster.TryHandleBlockSelection(Block block) => TryHandleSelectionPress(block);
 
     private void Awake()
     {
@@ -88,6 +146,9 @@ public class MagnetBooster : MonoBehaviour
             pullRoutine = null;
         }
 
+        StopChainPullRoutines();
+        activeMagnetCohort.Clear();
+        ClearMagnetPresentation();
         ClearHighlight();
         if (phase != MagnetPhase.Idle)
         {
@@ -199,11 +260,26 @@ public class MagnetBooster : MonoBehaviour
             return false;
         }
 
+        bool resolveChain = block.CellCount > 1;
+        if (resolveChain && block.IsFrozen)
+        {
+            Log("Magnet failed: block frozen by Ice");
+            return false;
+        }
+
+        if (resolveChain && !CanFullyResolveChain(block, out string chainFail))
+        {
+            Log($"Magnet failed: {chainFail}");
+            return false;
+        }
+
         ClearHighlight();
         highlightedBlock = block;
         block.ShowDragSelection();
         SetPhase(MagnetPhase.Executing);
-        pullRoutine = StartCoroutine(ExecuteMagnetJourney(block));
+        pullRoutine = resolveChain
+            ? StartCoroutine(ExecuteMagnetChainResolution(block))
+            : StartCoroutine(ExecuteMagnetJourney(block));
         return true;
     }
 
@@ -599,7 +675,7 @@ public class MagnetBooster : MonoBehaviour
     /// Temporarily unregisters other blocks along a Magnet segment so BlockMover can hop.
     /// Soft blocks are not moved; occupancy is restored after the segment.
     /// </summary>
-    private static List<Block> SuspendSoftBlocksForSegment(
+    private List<Block> SuspendSoftBlocksForSegment(
         BoardManager board,
         Block magnetBlock,
         Vector2Int origin,
@@ -630,7 +706,7 @@ public class MagnetBooster : MonoBehaviour
         return suspended;
     }
 
-    private static void CollectSoftOccupantsAtAnchor(
+    private void CollectSoftOccupantsAtAnchor(
         BoardManager board,
         Block magnetBlock,
         Vector2Int anchor,
@@ -642,6 +718,17 @@ public class MagnetBooster : MonoBehaviour
         {
             Block occupant = board.GetBlockAt(anchor + magnetBlock.GetLocalCell(i));
             if (occupant == null || occupant == magnetBlock || !seen.Add(occupant))
+            {
+                continue;
+            }
+
+            if (IsMagnetCohortMember(occupant))
+            {
+                continue;
+            }
+
+            BlockMover occupantMover = occupant.GetComponent<BlockMover>();
+            if (occupantMover != null && (occupantMover.IsDragging || occupantMover.IsMoving))
             {
                 continue;
             }
@@ -696,98 +783,1254 @@ public class MagnetBooster : MonoBehaviour
 
     private IEnumerator ExecuteMagnetJourney(Block block)
     {
-        BlockMover mover = block != null ? block.GetComponent<BlockMover>() : null;
-        int matchesBefore = levelManager != null ? levelManager.SuccessfulMatchCount : 0;
         bool returnToSelecting = false;
-        bool anySegmentMoved = false;
-
         try
         {
-            if (block == null || mover == null)
-            {
-                returnToSelecting = true;
-                yield break;
-            }
-
-            BoardManager board = boardManager != null ? boardManager : block.Board;
-            int maxSegments = board != null
-                ? Mathf.Max(8, board.Width * board.Height + 4)
-                : 32;
-
-            for (int segment = 0; segment < maxSegments; segment++)
-            {
-                if (block == null || !block || !block.isActiveAndEnabled || block.IsSettled)
-                {
-                    break;
-                }
-
-                if (HasMagnetSucceeded(block, matchesBefore))
-                {
-                    break;
-                }
-
-                // Re-plan from the live board after every segment (cascades/shutters/etc.).
-                if (!TryBuildMagnetPlan(block, out MagnetPlan plan, out string failReason))
-                {
-                    Log(anySegmentMoved
-                        ? $"Magnet stopped mid-journey: {failReason}"
-                        : $"Magnet failed before first move: {failReason}");
-                    returnToSelecting = magnetCharges > 0;
-                    yield break;
-                }
-
-                Vector2Int posBefore = block.GridPosition;
-                yield return ExecuteMagnetSegment(block, mover, plan);
-
-                if (block == null || !block || !block.isActiveAndEnabled || block.IsSettled)
-                {
-                    break;
-                }
-
-                if (block.GridPosition != posBefore)
-                {
-                    anySegmentMoved = true;
-                }
-                else if (!HasMagnetSucceeded(block, matchesBefore))
-                {
-                    Log("Magnet stopped: segment produced no movement");
-                    returnToSelecting = magnetCharges > 0;
-                    yield break;
-                }
-
-                if (HasMagnetSucceeded(block, matchesBefore))
-                {
-                    break;
-                }
-            }
-
-            if (HasMagnetSucceeded(block, matchesBefore))
+            bool[] matched = new bool[1];
+            bool[] aborted = new bool[1];
+            yield return ExecuteMagnetPullCore(block, matched, aborted, false);
+            if (matched[0])
             {
                 SetCharges(magnetCharges - 1);
                 Log($"Magnet journey complete (match). Charges left={magnetCharges}");
             }
             else
             {
-                Log(anySegmentMoved
-                    ? "Magnet journey ended without match (not consumed)"
-                    : "Magnet journey failed (not consumed)");
+                Log(aborted[0]
+                    ? "Magnet journey failed (not consumed)"
+                    : "Magnet journey ended without match (not consumed)");
                 returnToSelecting = magnetCharges > 0;
             }
         }
         finally
         {
-            BoardManager board = boardManager != null
-                ? boardManager
-                : (block != null ? block.Board : null);
-            if (board != null)
+            FinishMagnetExecution(block, returnToSelecting);
+        }
+    }
+
+    /// <summary>
+    /// Approach A (Magnet only; normal drag is unchanged):
+    /// 1. Precheck CanFullyResolveChain (unchanged from Phase 49B).
+    /// 2. Explode the selected chain into independent 1-cell gameplay Blocks at the
+    ///    current world cells using RebuildFromRemaining + SpawnSplitBlock.
+    ///    Occupancy stays on the same cells; connectors drop because CellCount becomes 1.
+    /// 3. Start every remnant's existing Magnet BlockMover journey in the same
+    ///    execution window (sibling coroutines). Pieces do not wait for another
+    ///    piece's match before their first hop.
+    /// 4. Nested leftovers (inner consumed, outer remains) start together in the
+    ///    next wave after gameplay is idle.
+    /// 5. Consume exactly one Magnet charge when no descendants remain.
+    /// </summary>
+    private IEnumerator ExecuteMagnetChainResolution(Block root)
+    {
+        bool returnToSelecting = false;
+        try
+        {
+            HashSet<int> foreignIds = SnapshotForeignBlockIds(root);
+            ClearHighlight();
+            if (!TryExplodeMagnetChain(root))
             {
-                board.RebindChildBlockOccupancy();
+                Log("Magnet chain stopped: could not split into independent pieces");
+                returnToSelecting = magnetCharges > 0;
+                yield break;
             }
 
-            ClearHighlight();
-            pullRoutine = null;
-            SetPhase(returnToSelecting ? MagnetPhase.Selecting : MagnetPhase.Idle);
+            // One presentation frame so extras/connectors rebuild for 1-cell Blocks
+            // before hops start. All journeys still begin in the following window.
+            yield return null;
+            if (boardManager != null)
+            {
+                boardManager.RebindChildBlockOccupancy();
+            }
+
+            const int maxWaves = 12;
+            for (int wave = 0; wave < maxWaves; wave++)
+            {
+                if (wave > 0)
+                {
+                    yield return WaitForMagnetGameplayIdle();
+                    if (boardManager != null)
+                    {
+                        boardManager.RebindChildBlockOccupancy();
+                    }
+                }
+
+                List<Block> pieces = CollectChainDescendants(foreignIds);
+                if (pieces.Count == 0)
+                {
+                    SetCharges(magnetCharges - 1);
+                    Log($"Magnet chain resolved. Charges left={magnetCharges}");
+                    yield break;
+                }
+
+                yield return ExecuteMagnetPullsTogether(pieces);
+            }
+
+            Log("Magnet chain stopped: resolution loop limit");
+            returnToSelecting = magnetCharges > 0;
         }
+        finally
+        {
+            StopChainPullRoutines();
+            activeMagnetCohort.Clear();
+            FinishMagnetExecution(root, returnToSelecting);
+        }
+    }
+
+    private IEnumerator ExecuteMagnetPullCore(Block block, bool[] matched, bool[] aborted, bool requireOwnPieceConsume)
+    {
+        matched[0] = false;
+        aborted[0] = false;
+        BlockMover mover = block != null ? block.GetComponent<BlockMover>() : null;
+        int matchesBefore = levelManager != null ? levelManager.SuccessfulMatchCount : 0;
+        int cellsBefore = block != null ? Mathf.Max(1, block.CellCount) : 0;
+        int layersBefore = block != null
+            ? ShapeLayout.TotalLayers(
+                CollectBlockCells(block),
+                block.ShapeType,
+                block.Composition,
+                block.OuterShape)
+            : 0;
+        bool anySegmentMoved = false;
+        int stallRetries = 0;
+
+        if (block == null || mover == null)
+        {
+            aborted[0] = true;
+            yield break;
+        }
+
+        mover.SetMagnetPresenting(true);
+        try
+        {
+            BoardManager board = boardManager != null ? boardManager : block.Board;
+            int maxSegments = board != null
+                ? Mathf.Max(8, board.Width * board.Height + 4)
+                : 32;
+
+        for (int segment = 0; segment < maxSegments; segment++)
+        {
+            if (block == null || !block || !block.isActiveAndEnabled || block.IsSettled)
+            {
+                break;
+            }
+
+            if (HasMagnetPullSucceeded(
+                block,
+                matchesBefore,
+                cellsBefore,
+                layersBefore,
+                requireOwnPieceConsume))
+            {
+                break;
+            }
+
+            MagnetPlan plan = default;
+            string failReason = null;
+            float planDeadline = Time.realtimeSinceStartup + 4f;
+            bool planned = false;
+            while (Time.realtimeSinceStartup < planDeadline)
+            {
+                if (HasMagnetPullSucceeded(
+                    block,
+                    matchesBefore,
+                    cellsBefore,
+                    layersBefore,
+                    requireOwnPieceConsume))
+                {
+                    planned = false;
+                    break;
+                }
+
+                if (TryBuildMagnetPlan(block, out plan, out failReason))
+                {
+                    planned = true;
+                    break;
+                }
+
+                if (!ShouldRetryMagnetPlan(failReason))
+                {
+                    break;
+                }
+
+                yield return null;
+            }
+
+            if (HasMagnetPullSucceeded(
+                block,
+                matchesBefore,
+                cellsBefore,
+                layersBefore,
+                requireOwnPieceConsume))
+            {
+                break;
+            }
+
+            if (!planned)
+            {
+                Log(anySegmentMoved
+                    ? $"Magnet stopped mid-journey: {failReason}"
+                    : $"Magnet failed before first move: {failReason}");
+                aborted[0] = true;
+                yield break;
+            }
+
+            Vector2Int posBefore = block.GridPosition;
+            yield return ExecuteMagnetSegment(block, mover, plan);
+
+            if (block == null || !block || !block.isActiveAndEnabled || block.IsSettled)
+            {
+                break;
+            }
+
+            if (block.GridPosition != posBefore)
+            {
+                anySegmentMoved = true;
+                stallRetries = 0;
+            }
+            else if (!HasMagnetPullSucceeded(
+                block,
+                matchesBefore,
+                cellsBefore,
+                layersBefore,
+                requireOwnPieceConsume))
+            {
+                if (IsMagnetCohortBusy(block) && stallRetries < 120)
+                {
+                    stallRetries++;
+                    yield return null;
+                    segment--;
+                    continue;
+                }
+
+                Log("Magnet stopped: segment produced no movement");
+                aborted[0] = true;
+                yield break;
+            }
+
+            if (HasMagnetPullSucceeded(
+                block,
+                matchesBefore,
+                cellsBefore,
+                layersBefore,
+                requireOwnPieceConsume))
+            {
+                break;
+            }
+        }
+
+        matched[0] = HasMagnetPullSucceeded(
+            block,
+            matchesBefore,
+            cellsBefore,
+            layersBefore,
+            requireOwnPieceConsume);
+        if (!matched[0])
+        {
+            aborted[0] = !anySegmentMoved;
+        }
+        }
+        finally
+        {
+            if (mover != null)
+            {
+                mover.SetMagnetPresenting(false);
+            }
+        }
+    }
+
+    private void FinishMagnetExecution(Block block, bool returnToSelecting)
+    {
+        BoardManager board = boardManager != null
+            ? boardManager
+            : (block != null ? block.Board : null);
+        if (board != null)
+        {
+            board.RebindChildBlockOccupancy();
+        }
+
+        ClearHighlight();
+        pullRoutine = null;
+        SetPhase(returnToSelecting ? MagnetPhase.Selecting : MagnetPhase.Idle);
+    }
+
+    private IEnumerator WaitForMagnetGameplayIdle()
+    {
+        float deadline = Time.realtimeSinceStartup + 8f;
+        while (levelManager != null && Time.realtimeSinceStartup < deadline)
+        {
+            bool alignedBusy = levelManager.IsAlignedMatchRunning;
+            bool pieceBusy = !levelManager.IsPieceInputAllowed;
+            if (!alignedBusy && !pieceBusy)
+            {
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+
+    private HashSet<int> SnapshotForeignBlockIds(Block root)
+    {
+        var foreign = new HashSet<int>();
+        Block[] all = FindObjectsByType<Block>(FindObjectsSortMode.None);
+        int rootId = root != null ? root.GetInstanceID() : 0;
+        for (int i = 0; i < all.Length; i++)
+        {
+            Block b = all[i];
+            if (b == null)
+            {
+                continue;
+            }
+
+            int id = b.GetInstanceID();
+            if (id != rootId)
+            {
+                foreign.Add(id);
+            }
+        }
+
+        return foreign;
+    }
+
+    private List<Block> CollectChainDescendants(HashSet<int> foreignIds)
+    {
+        var pieces = new List<Block>();
+        Block[] scratch = FindObjectsByType<Block>(FindObjectsSortMode.None);
+        for (int i = 0; i < scratch.Length; i++)
+        {
+            Block b = scratch[i];
+            if (b == null || b.IsSettled || !b.isActiveAndEnabled)
+            {
+                continue;
+            }
+
+            if (foreignIds != null && foreignIds.Contains(b.GetInstanceID()))
+            {
+                continue;
+            }
+
+            pieces.Add(b);
+        }
+
+        return pieces;
+    }
+
+    /// <summary>
+    /// Magnet-only: turn one multi-cell Block into independent 1-cell Blocks occupying
+    /// the same world cells. Uses existing RebuildFromRemaining + SpawnSplitBlock.
+    /// Normal player drag never calls this.
+    /// </summary>
+    private bool TryExplodeMagnetChain(Block root)
+    {
+        if (root == null || root.CellCount <= 1)
+        {
+            return true;
+        }
+
+        if (levelManager == null)
+        {
+            return false;
+        }
+
+        BoardManager board = boardManager != null ? boardManager : root.Board;
+        if (board == null)
+        {
+            return false;
+        }
+
+        int count = root.CellCount;
+        var worlds = new Vector2Int[count];
+        var cells = new ShapeCellData[count];
+        int anchorIndex = root.AnchorCellIndex;
+        if (anchorIndex < 0 || anchorIndex >= count)
+        {
+            anchorIndex = 0;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            worlds[i] = root.GridPosition + root.GetLocalCell(i);
+            ShapeCellData source = root.GetCell(i);
+            cells[i] = new ShapeCellData
+            {
+                localPosition = Vector2Int.zero,
+                shapeType = source != null ? source.shapeType : root.GetActiveShape(i),
+                innerShapes = source != null
+                    ? ShapeLayout.CloneInners(source.innerShapes)
+                    : new List<ShapeType>()
+            };
+        }
+
+        board.UnregisterBlock(root);
+        var primary = new List<ShapeCellData> { cells[anchorIndex] };
+        root.RebuildFromRemaining(primary, worlds[anchorIndex]);
+        board.UnregisterBlock(root);
+        if (!board.TryRegisterBlock(root, worlds[anchorIndex]))
+        {
+            Log("Magnet explode failed: could not re-register primary cell");
+            return false;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            if (i == anchorIndex)
+            {
+                continue;
+            }
+
+            var one = new List<ShapeCellData> { cells[i] };
+            Block spawned = levelManager.SpawnSplitBlock(root, one, worlds[i]);
+            if (spawned == null)
+            {
+                Log("Magnet explode failed: SpawnSplitBlock returned null");
+                return false;
+            }
+
+            board.UnregisterBlock(spawned);
+            board.TryRegisterBlock(spawned, worlds[i]);
+        }
+
+        Log($"Magnet split chain into {count} independent pieces");
+        return true;
+    }
+
+    private IEnumerator ExecuteMagnetPullsTogether(List<Block> pieces)
+    {
+        StopChainPullRoutines();
+        activeMagnetCohort.Clear();
+        if (pieces == null || pieces.Count == 0)
+        {
+            yield break;
+        }
+
+        int n = pieces.Count;
+        bool[] done = new bool[n];
+        bool[] matched = new bool[n];
+        bool[] aborted = new bool[n];
+        for (int i = 0; i < n; i++)
+        {
+            activeMagnetCohort.Add(pieces[i]);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            Coroutine routine = StartCoroutine(
+                ExecuteMagnetPullAndMark(pieces[i], matched, aborted, done, i));
+            chainPullRoutines.Add(routine);
+        }
+
+        float deadline = Time.realtimeSinceStartup + 30f;
+        bool allDone = false;
+        while (!allDone && Time.realtimeSinceStartup < deadline)
+        {
+            allDone = true;
+            for (int i = 0; i < n; i++)
+            {
+                if (!done[i])
+                {
+                    allDone = false;
+                    break;
+                }
+            }
+
+            if (allDone)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        StopChainPullRoutines();
+        activeMagnetCohort.Clear();
+    }
+
+    private IEnumerator ExecuteMagnetPullAndMark(
+        Block block,
+        bool[] matched,
+        bool[] aborted,
+        bool[] done,
+        int index)
+    {
+        bool[] oneMatched = new bool[1];
+        bool[] oneAborted = new bool[1];
+        yield return ExecuteMagnetPullCore(block, oneMatched, oneAborted, true);
+        matched[index] = oneMatched[0];
+        aborted[index] = oneAborted[0];
+        done[index] = true;
+    }
+
+    private void StopChainPullRoutines()
+    {
+        for (int i = 0; i < chainPullRoutines.Count; i++)
+        {
+            if (chainPullRoutines[i] != null)
+            {
+                StopCoroutine(chainPullRoutines[i]);
+            }
+        }
+
+        chainPullRoutines.Clear();
+    }
+
+    private bool IsMagnetCohortMember(Block block)
+    {
+        if (block == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < activeMagnetCohort.Count; i++)
+        {
+            if (activeMagnetCohort[i] == block)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsMagnetCohortBusy(Block except)
+    {
+        for (int i = 0; i < activeMagnetCohort.Count; i++)
+        {
+            Block b = activeMagnetCohort[i];
+            if (b == null || b == except || !b || b.IsSettled)
+            {
+                continue;
+            }
+
+            BlockMover mover = b.GetComponent<BlockMover>();
+            if (mover != null && (mover.IsDragging || mover.IsMoving))
+            {
+                return true;
+            }
+        }
+
+        return levelManager != null
+            && (levelManager.IsAlignedMatchRunning || !levelManager.IsPieceInputAllowed);
+    }
+
+    private static bool ShouldRetryMagnetPlan(string failReason)
+    {
+        if (string.IsNullOrEmpty(failReason))
+        {
+            return false;
+        }
+
+        return failReason.IndexOf("input", StringComparison.OrdinalIgnoreCase) >= 0
+            || failReason.IndexOf("busy", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private bool CanFullyResolveChain(Block block, out string failReason)
+    {
+        failReason = null;
+        if (block == null)
+        {
+            failReason = "invalid block";
+            return false;
+        }
+
+        BoardManager board = boardManager != null ? boardManager : block.Board;
+        if (board == null)
+        {
+            failReason = "no board";
+            return false;
+        }
+
+        Dictionary<Vector2Int, List<ShapeType>> simLayers = SnapshotSimNestLayers(board);
+        var needed = new List<ShapeType>();
+        ShapeLayout.CollectResolvableLayers(
+            CollectBlockCells(block),
+            block.ShapeType,
+            block.Composition,
+            block.OuterShape,
+            needed);
+        if (!SimNestCoverageAllows(needed, simLayers))
+        {
+            failReason = "not every chain cell has a matching nest";
+            return false;
+        }
+
+        var pieces = new List<MagnetSimPiece>
+        {
+            MagnetSimPiece.FromBlock(block)
+        };
+
+        const int maxSteps = 32;
+        for (int step = 0; step < maxSteps; step++)
+        {
+            DrainSimAlignedMatches(board, pieces, simLayers);
+            if (pieces.Count == 0)
+            {
+                return true;
+            }
+
+            SortSimPieces(pieces);
+            MagnetSimPiece piece = pieces[0];
+            if (!TrySimFindPath(board, piece, simLayers, out Vector2Int lastLegal, out Vector2Int nestAnchor))
+            {
+                failReason = "no legal route for a remaining chain cell";
+                return false;
+            }
+
+            piece.anchor = lastLegal;
+            if (!TrySimConsumeOneMatch(piece, nestAnchor, simLayers))
+            {
+                failReason = "remaining chain cell cannot match its nest";
+                return false;
+            }
+
+            ReplaceSimPieceWithSplits(pieces, 0, piece);
+        }
+
+        failReason = "chain resolution exceeds plan limit";
+        return false;
+    }
+
+    private static List<ShapeCellData> CollectBlockCells(Block block)
+    {
+        if (block == null)
+        {
+            return new List<ShapeCellData>();
+        }
+
+        return ShapeLayout.Clone(block.Cells, block.ShapeType);
+    }
+
+    private static Dictionary<Vector2Int, List<ShapeType>> SnapshotSimNestLayers(BoardManager board)
+    {
+        var simLayers = new Dictionary<Vector2Int, List<ShapeType>>();
+        if (board == null)
+        {
+            return simLayers;
+        }
+
+        var seen = new HashSet<int>();
+        int width = board.Width;
+        int height = board.Height;
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                Vector2Int cell = new Vector2Int(x, y);
+                Target target = board.GetTargetAt(cell);
+                if (target == null || !seen.Add(target.GetInstanceID()))
+                {
+                    continue;
+                }
+
+                var layers = new List<ShapeType>();
+                ShapeLayout.CollectResolvableLayers(
+                    target.Cells,
+                    target.ShapeType,
+                    target.Composition,
+                    target.OuterShape,
+                    layers);
+                int nestCount = Mathf.Max(1, target.CellCount);
+                for (int i = 0; i < nestCount; i++)
+                {
+                    simLayers[target.GridPosition + target.GetLocalCell(i)] = layers;
+                }
+            }
+        }
+
+        return simLayers;
+    }
+
+    private static bool SimNestCoverageAllows(
+        List<ShapeType> needed,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (needed == null || needed.Count == 0)
+        {
+            return true;
+        }
+
+        var available = new Dictionary<ShapeType, int>();
+        if (simLayers != null)
+        {
+            var seenLists = new HashSet<List<ShapeType>>();
+            foreach (KeyValuePair<Vector2Int, List<ShapeType>> pair in simLayers)
+            {
+                List<ShapeType> layers = pair.Value;
+                if (layers == null || !seenLists.Add(layers))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    ShapeType shape = layers[i];
+                    if (available.ContainsKey(shape))
+                    {
+                        available[shape] = available[shape] + 1;
+                    }
+                    else
+                    {
+                        available[shape] = 1;
+                    }
+                }
+            }
+        }
+
+        var required = new Dictionary<ShapeType, int>();
+        for (int i = 0; i < needed.Count; i++)
+        {
+            ShapeType shape = needed[i];
+            if (required.ContainsKey(shape))
+            {
+                required[shape] = required[shape] + 1;
+            }
+            else
+            {
+                required[shape] = 1;
+            }
+        }
+
+        foreach (KeyValuePair<ShapeType, int> pair in required)
+        {
+            int have = 0;
+            if (available != null)
+            {
+                available.TryGetValue(pair.Key, out have);
+            }
+
+            if (have < pair.Value)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void DrainSimAlignedMatches(
+        BoardManager board,
+        List<MagnetSimPiece> pieces,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (pieces == null)
+        {
+            return;
+        }
+
+        bool progressed = true;
+        int guard = 0;
+        while (progressed && pieces.Count > 0 && guard < 32)
+        {
+            guard++;
+            progressed = false;
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                MagnetSimPiece piece = pieces[i];
+                if (piece == null || !TrySimFindAdjacentOrOccupyingNest(board, piece, simLayers, out Vector2Int nestAnchor))
+                {
+                    continue;
+                }
+
+                if (!TrySimConsumeOneMatch(piece, nestAnchor, simLayers))
+                {
+                    continue;
+                }
+
+                ReplaceSimPieceWithSplits(pieces, i, piece);
+                progressed = true;
+                break;
+            }
+        }
+    }
+
+    private static void SortSimPieces(List<MagnetSimPiece> pieces)
+    {
+        if (pieces == null || pieces.Count < 2)
+        {
+            return;
+        }
+
+        pieces.Sort(CompareSimPieces);
+    }
+
+    private static int CompareSimPieces(MagnetSimPiece a, MagnetSimPiece b)
+    {
+        if (a == null && b == null)
+        {
+            return 0;
+        }
+
+        if (a == null)
+        {
+            return 1;
+        }
+
+        if (b == null)
+        {
+            return -1;
+        }
+
+        int countCompare = a.CellCount.CompareTo(b.CellCount);
+        if (countCompare != 0)
+        {
+            return countCompare;
+        }
+
+        int yCompare = a.anchor.y.CompareTo(b.anchor.y);
+        if (yCompare != 0)
+        {
+            return yCompare;
+        }
+
+        return a.anchor.x.CompareTo(b.anchor.x);
+    }
+
+    private static bool TrySimFindPath(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        out Vector2Int lastLegal,
+        out Vector2Int nestAnchor)
+    {
+        lastLegal = Vector2Int.zero;
+        nestAnchor = Vector2Int.zero;
+        if (piece == null || board == null)
+        {
+            return false;
+        }
+
+        Vector2Int origin = piece.anchor;
+        if (TrySimFindAdjacentOrOccupyingNest(board, piece, simLayers, out nestAnchor))
+        {
+            lastLegal = origin;
+            return true;
+        }
+
+        int capacity = Mathf.Max(16, board.Width * board.Height);
+        var visited = new HashSet<Vector2Int>();
+        var cameFrom = new Dictionary<Vector2Int, Vector2Int>(capacity);
+        var queue = new Queue<Vector2Int>(capacity);
+        visited.Add(origin);
+        queue.Enqueue(origin);
+
+        Vector2Int goal = origin;
+        bool found = false;
+        bool pathEndsInNestEntry = false;
+
+        while (queue.Count > 0)
+        {
+            Vector2Int pos = queue.Dequeue();
+            for (int i = 0; i < CardinalDirections.Length; i++)
+            {
+                Vector2Int direction = CardinalDirections[i];
+                if (!MagnetDirectionAllowed(piece.moveDirection, direction))
+                {
+                    continue;
+                }
+
+                Vector2Int next = pos + direction;
+                if (HasSimNestMatchSoft(board, piece, next, simLayers))
+                {
+                    cameFrom[next] = pos;
+                    goal = next;
+                    pathEndsInNestEntry = true;
+                    found = true;
+                    queue.Clear();
+                    break;
+                }
+
+                if (!CanSimSoftHopInto(board, piece, next, simLayers) || visited.Contains(next))
+                {
+                    continue;
+                }
+
+                visited.Add(next);
+                cameFrom[next] = pos;
+                if (IsSimGoalCell(board, piece, next, simLayers))
+                {
+                    goal = next;
+                    pathEndsInNestEntry = false;
+                    found = true;
+                    queue.Clear();
+                    break;
+                }
+
+                queue.Enqueue(next);
+            }
+        }
+
+        if (!found)
+        {
+            return false;
+        }
+
+        List<Vector2Int> path = ReconstructPath(origin, goal, cameFrom);
+        if (path == null || path.Count == 0)
+        {
+            return false;
+        }
+
+        if (pathEndsInNestEntry)
+        {
+            lastLegal = path.Count >= 2 ? path[path.Count - 2] : origin;
+            return TryGetSimMatchingNestWorld(board, piece, goal, simLayers, out nestAnchor);
+        }
+
+        lastLegal = goal;
+        return TrySimFindAdjacentOrOccupyingNestAt(board, piece, lastLegal, simLayers, out nestAnchor);
+    }
+
+    private static bool TrySimFindAdjacentOrOccupyingNest(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        out Vector2Int nestAnchor)
+    {
+        nestAnchor = Vector2Int.zero;
+        if (piece == null)
+        {
+            return false;
+        }
+
+        return TrySimFindAdjacentOrOccupyingNestAt(board, piece, piece.anchor, simLayers, out nestAnchor);
+    }
+
+    private static bool TrySimFindAdjacentOrOccupyingNestAt(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Vector2Int anchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        out Vector2Int nestWorld)
+    {
+        nestWorld = Vector2Int.zero;
+        if (TryGetSimMatchingNestWorld(board, piece, anchor, simLayers, out nestWorld))
+        {
+            return true;
+        }
+
+        for (int i = 0; i < CardinalDirections.Length; i++)
+        {
+            Vector2Int direction = CardinalDirections[i];
+            if (!MagnetDirectionAllowed(piece.moveDirection, direction))
+            {
+                continue;
+            }
+
+            Vector2Int candidate = anchor + direction;
+            if (!TryGetSimMatchingNestWorld(board, piece, candidate, simLayers, out nestWorld))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetSimMatchingNestWorld(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Vector2Int proposedAnchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        out Vector2Int nestWorld)
+    {
+        nestWorld = Vector2Int.zero;
+        if (!IsSimSoftFootprintValid(board, piece, proposedAnchor))
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, piece.CellCount);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = proposedAnchor + piece.GetLocalCell(i);
+            if (!TryGetSimRequiredShape(simLayers, world, out ShapeType required))
+            {
+                continue;
+            }
+
+            if (required != piece.GetActiveShape(i))
+            {
+                continue;
+            }
+
+            nestWorld = world;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsSimGoalCell(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Vector2Int anchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        return TrySimFindAdjacentOrOccupyingNestAt(board, piece, anchor, simLayers, out _);
+    }
+
+    private static bool CanSimSoftHopInto(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Vector2Int nextAnchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (!IsSimSoftFootprintValid(board, piece, nextAnchor))
+        {
+            return false;
+        }
+
+        if (HasSimNestMatchSoft(board, piece, nextAnchor, simLayers))
+        {
+            return false;
+        }
+
+        return !SimFootprintTouchesNest(piece, nextAnchor, simLayers);
+    }
+
+    private static bool IsSimSoftFootprintValid(BoardManager board, MagnetSimPiece piece, Vector2Int toAnchor)
+    {
+        if (piece == null || board == null)
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, piece.CellCount);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = toAnchor + piece.GetLocalCell(i);
+            if (!board.IsInsideBoard(world) || board.IsCellBlockedByClosedShutter(world))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool HasSimNestMatchSoft(
+        BoardManager board,
+        MagnetSimPiece piece,
+        Vector2Int proposedAnchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (!IsSimSoftFootprintValid(board, piece, proposedAnchor))
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, piece.CellCount);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = proposedAnchor + piece.GetLocalCell(i);
+            if (!TryGetSimRequiredShape(simLayers, world, out ShapeType required))
+            {
+                continue;
+            }
+
+            if (required == piece.GetActiveShape(i))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool SimFootprintTouchesNest(
+        MagnetSimPiece piece,
+        Vector2Int toAnchor,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (piece == null || simLayers == null)
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, piece.CellCount);
+        for (int i = 0; i < count; i++)
+        {
+            if (TryGetSimRequiredShape(simLayers, toAnchor + piece.GetLocalCell(i), out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetSimRequiredShape(
+        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        Vector2Int world,
+        out ShapeType required)
+    {
+        required = ShapeType.Square;
+        if (simLayers == null)
+        {
+            return false;
+        }
+
+        if (!simLayers.TryGetValue(world, out List<ShapeType> layers) || layers == null || layers.Count == 0)
+        {
+            return false;
+        }
+
+        required = layers[0];
+        return true;
+    }
+
+    private static bool TrySimConsumeOneMatch(
+        MagnetSimPiece piece,
+        Vector2Int nestFocus,
+        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+    {
+        if (piece == null || simLayers == null)
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, piece.CellCount);
+        int bestIndex = -1;
+        Vector2Int bestWorld = nestFocus;
+        int bestDist = int.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = piece.anchor + piece.GetLocalCell(i);
+            Vector2Int targetWorld = world;
+            bool occupying = TryGetSimRequiredShape(simLayers, world, out ShapeType occupyingRequired)
+                && occupyingRequired == piece.GetActiveShape(i);
+            bool adjacent = !occupying
+                && TryGetSimRequiredShape(simLayers, nestFocus, out ShapeType adjacentRequired)
+                && adjacentRequired == piece.GetActiveShape(i)
+                && IsFourAdjacent(world, nestFocus);
+            if (!occupying && !adjacent)
+            {
+                continue;
+            }
+
+            if (occupying)
+            {
+                targetWorld = world;
+            }
+            else
+            {
+                targetWorld = nestFocus;
+            }
+
+            int dist = Mathf.Abs(world.x - nestFocus.x) + Mathf.Abs(world.y - nestFocus.y);
+            if (dist >= bestDist)
+            {
+                continue;
+            }
+
+            bestDist = dist;
+            bestIndex = i;
+            bestWorld = targetWorld;
+        }
+
+        if (bestIndex < 0)
+        {
+            return false;
+        }
+
+        if (!TryGetSimRequiredShape(simLayers, bestWorld, out ShapeType required)
+            || required != piece.GetActiveShape(bestIndex))
+        {
+            return false;
+        }
+
+        if (!simLayers.TryGetValue(bestWorld, out List<ShapeType> layers) || layers == null || layers.Count == 0)
+        {
+            return false;
+        }
+
+        layers.RemoveAt(0);
+
+        ShapeCellData cell = piece.GetCell(bestIndex);
+        bool hadInner = cell != null && cell.innerShapes != null && cell.innerShapes.Count > 0;
+        if (hadInner)
+        {
+            ShapeLayout.TryConsumeLayer(cell, required);
+            piece.RefreshFallbackShape();
+            return true;
+        }
+
+        piece.RemoveCellAt(bestIndex);
+        return true;
+    }
+
+    private static void ReplaceSimPieceWithSplits(
+        List<MagnetSimPiece> pieces,
+        int index,
+        MagnetSimPiece piece)
+    {
+        if (pieces == null || index < 0 || index >= pieces.Count)
+        {
+            return;
+        }
+
+        pieces.RemoveAt(index);
+        if (piece == null || piece.CellCount <= 0 || piece.cells == null || piece.cells.Count == 0)
+        {
+            return;
+        }
+
+        var worlds = new List<Vector2Int>();
+        var remaining = new List<ShapeCellData>();
+        int count = piece.cells.Count;
+        for (int i = 0; i < count; i++)
+        {
+            ShapeCellData source = piece.cells[i];
+            worlds.Add(piece.anchor + (source != null ? source.localPosition : Vector2Int.zero));
+            remaining.Add(new ShapeCellData
+            {
+                localPosition = Vector2Int.zero,
+                shapeType = source != null ? source.shapeType : piece.shapeType,
+                innerShapes = source != null
+                    ? ShapeLayout.CloneInners(source.innerShapes)
+                    : new List<ShapeType>()
+            });
+        }
+
+        var anchors = new List<Vector2Int>();
+        var components = new List<List<ShapeCellData>>();
+        ShapeLayout.SplitConnected(worlds, remaining, anchors, components);
+        for (int i = 0; i < components.Count; i++)
+        {
+            pieces.Insert(index + i, MagnetSimPiece.FromCells(
+                components[i],
+                anchors[i],
+                piece.moveDirection));
+        }
+    }
+
+    private static bool MagnetDirectionAllowed(MoveDirection moveDirection, Vector2Int direction)
+    {
+        switch (moveDirection)
+        {
+            case MoveDirection.Any:
+                return direction == Vector2Int.up
+                    || direction == Vector2Int.down
+                    || direction == Vector2Int.left
+                    || direction == Vector2Int.right;
+            case MoveDirection.Up:
+                return direction == Vector2Int.up;
+            case MoveDirection.Down:
+                return direction == Vector2Int.down;
+            case MoveDirection.Left:
+                return direction == Vector2Int.left;
+            case MoveDirection.Right:
+                return direction == Vector2Int.right;
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsFourAdjacent(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) == 1;
     }
 
     private bool HasMagnetSucceeded(Block block, int matchesBefore)
@@ -803,6 +2046,37 @@ public class MagnetBooster : MonoBehaviour
         }
 
         return block.IsSettled;
+    }
+
+    private bool HasMagnetPullSucceeded(
+        Block block,
+        int matchesBefore,
+        int cellsBefore,
+        int layersBefore,
+        bool requireOwnPieceConsume)
+    {
+        if (!requireOwnPieceConsume)
+        {
+            return HasMagnetSucceeded(block, matchesBefore);
+        }
+
+        if (block == null || !block || !block.isActiveAndEnabled || block.IsSettled)
+        {
+            return true;
+        }
+
+        int cellsNow = Mathf.Max(1, block.CellCount);
+        if (cellsNow < cellsBefore)
+        {
+            return true;
+        }
+
+        int layersNow = ShapeLayout.TotalLayers(
+            CollectBlockCells(block),
+            block.ShapeType,
+            block.Composition,
+            block.OuterShape);
+        return layersNow < layersBefore;
     }
 
     private IEnumerator ExecuteMagnetSegment(Block block, BlockMover mover, MagnetPlan plan)
@@ -828,12 +2102,38 @@ public class MagnetBooster : MonoBehaviour
 
         try
         {
-            bool began = mover.TryBeginDrag(plan.direction);
+            bool began = false;
+            float beginDeadline = Time.realtimeSinceStartup + 4f;
+            while (!began && Time.realtimeSinceStartup < beginDeadline)
+            {
+                if (block == null || !block || block.IsSettled)
+                {
+                    yield break;
+                }
+
+                began = mover.TryBeginDrag(plan.direction);
+                if (began)
+                {
+                    break;
+                }
+
+                if (levelManager != null && !levelManager.IsPieceInputAllowed)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                Log("Magnet segment skipped: TryBeginDrag rejected");
+                yield break;
+            }
+
             if (!began)
             {
                 Log("Magnet segment skipped: TryBeginDrag rejected");
                 yield break;
             }
+
+            Log($"Magnet hop start shape={block.GetActiveShape(0)} cell={block.GridPosition} frame={Time.frameCount}");
 
             mover.SetDragRequest(plan.requestCell);
             yield return null;
@@ -902,6 +2202,7 @@ public class MagnetBooster : MonoBehaviour
 
         phase = next;
         OnPhaseChanged?.Invoke(phase);
+        OnStateChanged?.Invoke();
     }
 
     private void SetCharges(int count)
@@ -914,6 +2215,19 @@ public class MagnetBooster : MonoBehaviour
 
         magnetCharges = clamped;
         OnChargesChanged?.Invoke(magnetCharges);
+    }
+
+    private void ClearMagnetPresentation()
+    {
+        BlockMover[] movers = FindObjectsByType<BlockMover>(FindObjectsSortMode.None);
+        for (int i = 0; i < movers.Length; i++)
+        {
+            BlockMover mover = movers[i];
+            if (mover != null && mover.IsMagnetPresenting)
+            {
+                mover.SetMagnetPresenting(false);
+            }
+        }
     }
 
     private void ClearHighlight()
@@ -938,5 +2252,92 @@ public class MagnetBooster : MonoBehaviour
         public Vector2Int direction;
         public Vector2Int requestCell;
         public int hopsBeforeMatch;
+    }
+
+    /// <summary>
+    /// Virtual chain remnant for Magnet precheck only. Not a gameplay Block.
+    /// </summary>
+    private sealed class MagnetSimPiece
+    {
+        public Vector2Int anchor;
+        public List<ShapeCellData> cells;
+        public ShapeType shapeType;
+        public MoveDirection moveDirection;
+
+        public int CellCount
+        {
+            get { return ShapeLayout.EffectiveCount(cells); }
+        }
+
+        public static MagnetSimPiece FromBlock(Block block)
+        {
+            if (block == null)
+            {
+                return null;
+            }
+
+            return new MagnetSimPiece
+            {
+                anchor = block.GridPosition,
+                cells = ShapeLayout.Clone(block.Cells, block.ShapeType),
+                shapeType = block.ShapeType,
+                moveDirection = block.MoveDirection
+            };
+        }
+
+        public static MagnetSimPiece FromCells(
+            List<ShapeCellData> remaining,
+            Vector2Int worldAnchor,
+            MoveDirection moveDirection)
+        {
+            ShapeType fallback = remaining != null && remaining.Count > 0 && remaining[0] != null
+                ? remaining[0].shapeType
+                : ShapeType.Square;
+            return new MagnetSimPiece
+            {
+                anchor = worldAnchor,
+                cells = remaining != null ? remaining : new List<ShapeCellData>(),
+                shapeType = fallback,
+                moveDirection = moveDirection
+            };
+        }
+
+        public Vector2Int GetLocalCell(int index)
+        {
+            return ShapeLayout.EffectiveLocal(cells, index);
+        }
+
+        public ShapeType GetActiveShape(int index)
+        {
+            ShapeCellData cell = GetCell(index);
+            return ShapeLayout.ActiveShape(cell, shapeType);
+        }
+
+        public ShapeCellData GetCell(int index)
+        {
+            if (cells == null || index < 0 || index >= cells.Count)
+            {
+                return null;
+            }
+
+            return cells[index];
+        }
+
+        public void RefreshFallbackShape()
+        {
+            ShapeCellData first = cells != null && cells.Count > 0 ? cells[0] : null;
+            shapeType = ShapeLayout.ActiveShape(first, shapeType);
+        }
+
+        public void RemoveCellAt(int index)
+        {
+            if (cells == null || index < 0 || index >= cells.Count)
+            {
+                return;
+            }
+
+            cells.RemoveAt(index);
+            RefreshFallbackShape();
+        }
     }
 }

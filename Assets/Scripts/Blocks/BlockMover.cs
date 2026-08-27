@@ -113,6 +113,10 @@ public class BlockMover : MonoBehaviour
     private Vector2Int dragDirection;
     private Vector2Int desiredCell;
     private Vector2Int logicalCell;
+    private bool visualHopActive;
+    private Vector2Int visualHopFrom;
+    private bool matchEntryVisualActive;
+    private bool magnetPresenting;
     private bool hopAnticipatePending;
     private bool dragWantsForward;
     private bool hopBlockedCuePlayed;
@@ -152,7 +156,55 @@ public class BlockMover : MonoBehaviour
 
     public bool IsMoving => isMoving;
     public bool IsDragging => dragActive;
+
+    /// <summary>
+    /// True while a successful drag is live and has not been released or handed to match.
+    /// Presentation-only read of existing dragActive and dragReleased.
+    /// </summary>
+    public bool IsDragAiming => dragActive && !dragReleased;
+
+    /// <summary>
+    /// Presentation-only: true while nest-entry travel is still playing after match
+    /// handoff set <c>dragReleased</c>. Lets the destination highlight follow
+    /// <see cref="VisualGridCell"/> through the final visual stop without changing
+    /// drag-release or match detection.
+    /// </summary>
+    public bool IsMatchEntryPresenting => matchEntryVisualActive;
+
+    /// <summary>
+    /// Presentation-only: Magnet is driving this mover's automatic journey.
+    /// Independent of <see cref="IsDragAiming"/> because Magnet calls
+    /// <see cref="EndDrag"/> immediately while hops continue. Not gameplay state.
+    /// </summary>
+    public bool IsMagnetPresenting => magnetPresenting;
+
+    /// <summary>
+    /// Presentation-only setter for <see cref="IsMagnetPresenting"/>. Does not
+    /// change drag, hops, occupancy, or match detection.
+    /// </summary>
+    public void SetMagnetPresenting(bool presenting)
+    {
+        magnetPresenting = presenting;
+    }
+
     public Vector2Int LogicalCell => logicalCell;
+
+    /// <summary>
+    /// Existing clamped drag destination written by <see cref="SetDragRequest"/>.
+    /// Occupancy remains <see cref="LogicalCell"/>. Presentation must not recompute this.
+    /// </summary>
+    public Vector2Int DesiredCell => desiredCell;
+
+    /// <summary>
+    /// Grid cell the piece is still rendered on during a drag hop.
+    /// Occupancy (<see cref="LogicalCell"/>) is assigned to hop <c>to</c> before
+    /// <see cref="AnimateHop"/> moves the mesh; while that hop plays this stays
+    /// on hop <c>from</c> so presentation is not one cell ahead of the visual.
+    /// When no hop is playing, equals <see cref="LogicalCell"/>. Nest-entry travel
+    /// uses the same hop-from rule so the highlight does not jump to the nest cell
+    /// while the mesh is still on the adjacent cell.
+    /// </summary>
+    public Vector2Int VisualGridCell => visualHopActive ? visualHopFrom : logicalCell;
 
     public void SetLevelManager(LevelManager manager)
     {
@@ -290,6 +342,9 @@ public class BlockMover : MonoBehaviour
         dragRoutine = null;
         resolvingAligned = false;
         hasLastMatch = false;
+        visualHopActive = false;
+        matchEntryVisualActive = false;
+        magnetPresenting = false;
         if (activeMatchEffect != null)
         {
             Destroy(activeMatchEffect.gameObject);
@@ -469,7 +524,7 @@ public class BlockMover : MonoBehaviour
             {
                 Vector2Int committed = logicalCell;
                 int remainingSteps = AxisSteps(desiredCell - committed, dragDirection);
-                if (board.HasNestMatch(block, committed) && (remainingSteps > 0 || dragReleased))
+                if (dragReleased && board.HasNestMatch(block, committed))
                 {
                     Vector2Int focus = dragDirection != Vector2Int.zero
                         ? committed + dragDirection
@@ -482,6 +537,12 @@ public class BlockMover : MonoBehaviour
                 {
                     if (dragReleased)
                     {
+                        if (TryGetAdjacentMatchingTarget(board, committed, out Vector2Int releaseNestCell))
+                        {
+                            yield return EnterMatchingTarget(board, rect, committed, releaseNestCell);
+                            break;
+                        }
+
                         if (finalSettleDelay > 0f)
                         {
                             yield return Pause(finalSettleDelay);
@@ -494,14 +555,15 @@ public class BlockMover : MonoBehaviour
                     continue;
                 }
 
-                if (TryGetAdjacentMatchingTarget(board, committed, out Vector2Int startNestCell))
+                if (dragReleased
+                    && TryGetAdjacentMatchingTarget(board, committed, out Vector2Int startNestCell))
                 {
                     yield return EnterMatchingTarget(board, rect, committed, startNestCell);
                     break;
                 }
 
                 Vector2Int next = committed + dragDirection;
-                if (IsMatchingTargetCell(board, next))
+                if (dragReleased && IsMatchingTargetCell(board, next))
                 {
                     yield return EnterMatchingTarget(board, rect, committed, next);
                     break;
@@ -543,7 +605,8 @@ public class BlockMover : MonoBehaviour
                 yield return AnimateHop(board, committed, next, duration, anticipate);
                 block.SetGridPosition(next);
 
-                if (TryGetAdjacentMatchingTarget(board, next, out Vector2Int nestCell))
+                if (dragReleased
+                    && TryGetAdjacentMatchingTarget(board, next, out Vector2Int nestCell))
                 {
                     yield return EnterMatchingTarget(board, rect, next, nestCell);
                     break;
@@ -675,6 +738,10 @@ public class BlockMover : MonoBehaviour
             levelManager.BeginPieceMatchSequence();
         }
 
+        // Nest-entry is not Magnet board movement. Clear presentation so the
+        // destination highlight does not follow the piece into the nest.
+        magnetPresenting = false;
+
         try
         {
             yield return EnterMatchingTargetBody(board, rect, from, to);
@@ -707,6 +774,7 @@ public class BlockMover : MonoBehaviour
         }
 
         Vector2Int occupancyTo = board.HasNestMatch(block, from) ? from : to;
+        bool keepHighlight = !dragReleased || matchEntryVisualActive;
         dragReleased = true;
         LogDrag($"Matching magnet {from} -> {occupancyTo}");
 
@@ -729,34 +797,50 @@ public class BlockMover : MonoBehaviour
         }
 
         logicalCell = occupancyTo;
-
-        block.CancelDragSelectionImmediate();
-        PlayNestEntrySound();
-
-        Vector2 restPosition = board.GridToLocal(from);
-        Vector3 restScale = MotionRestScale(block);
-        IPieceMotion motion = MotionFor(block);
-        SnapMotionToCell(motion, board, from);
-        ApplyMotionRestScale(block, restScale);
-
-        yield return Pause(matchingTargetPause);
-        if (nestTarget != null)
+        if (keepHighlight)
         {
-            nestTarget.HideReadyFeedback();
+            matchEntryVisualActive = true;
+            visualHopFrom = from;
+            visualHopActive = true;
         }
 
-        yield return AnimateAnticipation(board, restPosition, restScale);
-        yield return AnimateNestEntry(board, from, occupancyTo, restScale);
-
-        block.SetGridPosition(occupancyTo, preserveWorldPresentation: true);
-
-        board.CollectNestMatches(block, occupancyTo, nestCellIndices, nestTargets);
-        if (nestCellIndices.Count == 0)
+        try
         {
-            yield break;
-        }
+            block.CancelDragSelectionImmediate();
+            PlayNestEntrySound();
 
-        yield return ResolveCellMatches(board, from, occupancyTo, nestTarget);
+            Vector2 restPosition = board.GridToLocal(from);
+            Vector3 restScale = MotionRestScale(block);
+            IPieceMotion motion = MotionFor(block);
+            SnapMotionToCell(motion, board, from);
+            ApplyMotionRestScale(block, restScale);
+
+            yield return Pause(matchingTargetPause);
+            if (nestTarget != null)
+            {
+                nestTarget.HideReadyFeedback();
+            }
+
+            yield return AnimateAnticipation(board, restPosition, restScale);
+            yield return AnimateNestEntry(board, from, occupancyTo, restScale);
+
+            visualHopActive = false;
+
+            block.SetGridPosition(occupancyTo, preserveWorldPresentation: true);
+
+            board.CollectNestMatches(block, occupancyTo, nestCellIndices, nestTargets);
+            if (nestCellIndices.Count == 0)
+            {
+                yield break;
+            }
+
+            yield return ResolveCellMatches(board, from, occupancyTo, nestTarget);
+        }
+        finally
+        {
+            visualHopActive = false;
+            matchEntryVisualActive = false;
+        }
     }
 
     private IEnumerator EnterChainPartialMatch(
@@ -765,11 +849,20 @@ public class BlockMover : MonoBehaviour
         Vector2Int from,
         Vector2Int focus)
     {
+        bool keepHighlight = !dragReleased || matchEntryVisualActive;
         dragReleased = true;
-        LogDrag($"Chain partial match {from} focus={focus}");
-        yield return MatchFocusedChainCell(board, subject, from, focus, false);
-        EnsureSubjectOccupancy(board, subject);
-        yield return ResolveAlreadyAlignedMatches(board);
+        matchEntryVisualActive = keepHighlight;
+        try
+        {
+            LogDrag($"Chain partial match {from} focus={focus}");
+            yield return MatchFocusedChainCell(board, subject, from, focus, false);
+            EnsureSubjectOccupancy(board, subject);
+            yield return ResolveAlreadyAlignedMatches(board);
+        }
+        finally
+        {
+            matchEntryVisualActive = false;
+        }
     }
 
     private IEnumerator MatchFocusedChainCell(
@@ -1604,6 +1697,7 @@ public class BlockMover : MonoBehaviour
         Vector2Int from,
         Vector2Int to)
     {
+        bool keepHighlight = !dragReleased || matchEntryVisualActive;
         dragReleased = true;
         LogDrag($"Nested inner nest {from} -> {to}");
 
@@ -1613,6 +1707,24 @@ public class BlockMover : MonoBehaviour
         {
             yield break;
         }
+
+        matchEntryVisualActive = keepHighlight;
+        try
+        {
+            yield return EnterNestedInnerThenOuterBody(board, rect, from, to);
+        }
+        finally
+        {
+            matchEntryVisualActive = false;
+        }
+    }
+
+    private IEnumerator EnterNestedInnerThenOuterBody(
+        BoardManager board,
+        RectTransform rect,
+        Vector2Int from,
+        Vector2Int to)
+    {
 
         Target nestTarget = nestTargets[0];
         if (nestTarget != null)
@@ -3285,18 +3397,27 @@ public class BlockMover : MonoBehaviour
             yield break;
         }
 
-        yield return motion.AnimateHop(
-            MotionGridSpace(board),
-            MotionCellSize(board),
-            from,
-            to,
-            duration,
-            anticipate,
-            dragDirection,
-            normalHopAnticipateDuration,
-            normalHopAnticipatePercent,
-            hopTravelScale,
-            hopLiftPercent);
+        visualHopFrom = from;
+        visualHopActive = true;
+        try
+        {
+            yield return motion.AnimateHop(
+                MotionGridSpace(board),
+                MotionCellSize(board),
+                from,
+                to,
+                duration,
+                anticipate,
+                dragDirection,
+                normalHopAnticipateDuration,
+                normalHopAnticipatePercent,
+                hopTravelScale,
+                hopLiftPercent);
+        }
+        finally
+        {
+            visualHopActive = false;
+        }
     }
 
     private IEnumerator AnimateAnticipation(

@@ -28,6 +28,9 @@ public class InputManager : MonoBehaviour
     private LevelManager levelManager;
 
     [SerializeField]
+    private BoosterManager boosterManager;
+
+    [SerializeField]
     private MagnetBooster magnetBooster;
 
     [SerializeField]
@@ -53,6 +56,11 @@ public class InputManager : MonoBehaviour
 
     private void Awake()
     {
+        if (boosterManager == null)
+        {
+            boosterManager = FindFirstObjectByType<BoosterManager>();
+        }
+
         if (magnetBooster == null)
         {
             magnetBooster = FindFirstObjectByType<MagnetBooster>();
@@ -90,16 +98,34 @@ public class InputManager : MonoBehaviour
             return;
         }
 
-        // Magnet selection consumes the press; normal drag must not start.
-        if (magnetBooster != null && magnetBooster.IsSelecting && pressedThisFrame)
+        // Booster targeting consumes the press via BoardInput3D.TryFindBlock.
+        // Normal drag must not start or continue while a booster is Selecting.
+        if (IsBoosterSelecting())
         {
-            Block tapped = FindBlockAt(screenPosition);
-            magnetBooster.TryHandleSelectionPress(tapped);
-            trackedTouchId = -1;
+            if (isPressing)
+            {
+                if (directionLocked && pressedMover != null)
+                {
+                    pressedMover.EndDrag();
+                }
+
+                ClearPress();
+            }
+
+            if (pressedThisFrame)
+            {
+                TryHandleBoosterSelection(FindBlockAt(screenPosition));
+                trackedTouchId = -1;
+            }
+            else if (releasedThisFrame)
+            {
+                trackedTouchId = -1;
+            }
+
             return;
         }
 
-        if (magnetBooster != null && magnetBooster.IsBusy && !magnetBooster.IsSelecting)
+        if (IsBoosterExecuting())
         {
             if (isPressing)
             {
@@ -347,12 +373,17 @@ public class InputManager : MonoBehaviour
 
     private Vector2Int ComputeRequestedCell(Vector2 currentLocal)
     {
-        if (cachedAxisSize <= 0.01f)
+        if (cachedAxisSize <= 0.01f || cachedBoard == null)
         {
             return segmentCell;
         }
 
-        Vector2 localDelta = currentLocal - segmentLocal;
+        // Measure from the segment CELL CENTER, not the raw press point.
+        // Press can be offset within the start cell (and the 30px threshold already
+        // advances the finger); Round(pressDelta / cell) then overshoots DesiredCell
+        // by one. Cell-center origin keeps "finger over cell N" → request N.
+        Vector2 originLocal = cachedBoard.GridToLocal(segmentCell);
+        Vector2 localDelta = currentLocal - originLocal;
         float along = (localDelta.x * lockedDirection.x) + (localDelta.y * lockedDirection.y);
         int steps = Mathf.RoundToInt(along / cachedAxisSize);
         if (steps < 0)
@@ -502,6 +533,66 @@ public class InputManager : MonoBehaviour
         }
 
         return null;
+    }
+
+    private BoosterManager ResolveBoosterManager()
+    {
+        if (boosterManager == null)
+        {
+            boosterManager = FindFirstObjectByType<BoosterManager>();
+        }
+
+        return boosterManager;
+    }
+
+    private MagnetBooster ResolveMagnetBooster()
+    {
+        if (magnetBooster == null)
+        {
+            magnetBooster = FindFirstObjectByType<MagnetBooster>();
+        }
+
+        return magnetBooster;
+    }
+
+    private bool IsBoosterSelecting()
+    {
+        BoosterManager manager = ResolveBoosterManager();
+        if (manager != null)
+        {
+            return manager.IsAnySelecting;
+        }
+
+        MagnetBooster magnet = ResolveMagnetBooster();
+        return magnet != null && magnet.IsSelecting;
+    }
+
+    private bool IsBoosterExecuting()
+    {
+        BoosterManager manager = ResolveBoosterManager();
+        if (manager != null)
+        {
+            return manager.IsAnyExecuting;
+        }
+
+        MagnetBooster magnet = ResolveMagnetBooster();
+        return magnet != null && magnet.IsBusy && !magnet.IsSelecting;
+    }
+
+    private void TryHandleBoosterSelection(Block tapped)
+    {
+        BoosterManager manager = ResolveBoosterManager();
+        if (manager != null)
+        {
+            manager.TryHandleSelectionPress(tapped);
+            return;
+        }
+
+        MagnetBooster magnet = ResolveMagnetBooster();
+        if (magnet != null)
+        {
+            magnet.TryHandleSelectionPress(tapped);
+        }
     }
 
     private void ClearPress()

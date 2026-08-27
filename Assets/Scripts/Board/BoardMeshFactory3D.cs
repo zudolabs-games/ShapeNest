@@ -34,6 +34,116 @@ public static class BoardMeshFactory3D
         return GetRoundedBox(sizeX, sizeY, sizeZ, cornerRadius, 3);
     }
 
+    /// <summary>
+    /// Rounded highlight pad used only by destination-cell presentation.
+    /// Submesh 0 = soft fill, submesh 1 = brighter rim + thin outer lip.
+    /// </summary>
+    public static Mesh GetHighlightTile(float sizeX, float sizeY, float sizeZ, float cornerRadius)
+    {
+        string key = $"hlite_{sizeX:F3}_{sizeY:F3}_{sizeZ:F3}_{cornerRadius:F3}";
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        float hx = sizeX * 0.5f;
+        float hy = Mathf.Max(0.008f, sizeY * 0.5f);
+        float hz = sizeZ * 0.5f;
+        float r = Mathf.Clamp(cornerRadius, 0.01f, Mathf.Min(hx, hz) * 0.45f);
+        float rim = Mathf.Clamp(Mathf.Min(hx, hz) * 0.11f, 0.016f, 0.05f);
+        Vector2[] outer = RoundedRectOutline(hx, hz, r, 4);
+        float innerHx = Mathf.Max(0.02f, hx - rim);
+        float innerHz = Mathf.Max(0.02f, hz - rim);
+        float innerR = Mathf.Clamp(r * 0.72f, 0.008f, Mathf.Min(innerHx, innerHz) * 0.45f);
+        Vector2[] inner = RoundedRectOutline(innerHx, innerHz, innerR, 4);
+
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var fillTris = new List<int>();
+        var rimTris = new List<int>();
+
+        float topY = hy;
+
+        int fillStart = vertices.Count;
+        vertices.Add(new Vector3(0f, topY, 0f));
+        normals.Add(Vector3.up);
+        uvs.Add(new Vector2(0.5f, 0.5f));
+        for (int i = 0; i < inner.Length; i++)
+        {
+            vertices.Add(new Vector3(inner[i].x, topY, inner[i].y));
+            normals.Add(Vector3.up);
+            uvs.Add(new Vector2(inner[i].x / (hx * 2f) + 0.5f, inner[i].y / (hz * 2f) + 0.5f));
+        }
+
+        for (int i = 0; i < inner.Length; i++)
+        {
+            fillTris.Add(fillStart);
+            fillTris.Add(fillStart + 1 + i);
+            fillTris.Add(fillStart + 1 + ((i + 1) % inner.Length));
+        }
+
+        int rimCount = Mathf.Min(outer.Length, inner.Length);
+        for (int i = 0; i < rimCount; i++)
+        {
+            int i1 = (i + 1) % rimCount;
+            int v = vertices.Count;
+            vertices.Add(new Vector3(inner[i].x, topY, inner[i].y));
+            vertices.Add(new Vector3(outer[i].x, topY, outer[i].y));
+            vertices.Add(new Vector3(outer[i1].x, topY, outer[i1].y));
+            vertices.Add(new Vector3(inner[i1].x, topY, inner[i1].y));
+            for (int k = 0; k < 4; k++)
+            {
+                normals.Add(Vector3.up);
+                uvs.Add(Vector2.one * 0.5f);
+            }
+
+            rimTris.Add(v);
+            rimTris.Add(v + 1);
+            rimTris.Add(v + 2);
+            rimTris.Add(v);
+            rimTris.Add(v + 2);
+            rimTris.Add(v + 3);
+        }
+
+        for (int i = 0; i < outer.Length; i++)
+        {
+            int i1 = (i + 1) % outer.Length;
+            Vector2 a = outer[i];
+            Vector2 b = outer[i1];
+            Vector3 edge = new Vector3(b.x - a.x, 0f, b.y - a.y);
+            Vector3 n = Vector3.Cross(Vector3.up, edge).normalized;
+            int v = vertices.Count;
+            vertices.Add(new Vector3(a.x, -hy, a.y));
+            vertices.Add(new Vector3(b.x, -hy, b.y));
+            vertices.Add(new Vector3(b.x, topY, b.y));
+            vertices.Add(new Vector3(a.x, topY, a.y));
+            for (int k = 0; k < 4; k++)
+            {
+                normals.Add(n);
+                uvs.Add(Vector2.zero);
+            }
+
+            rimTris.Add(v);
+            rimTris.Add(v + 1);
+            rimTris.Add(v + 2);
+            rimTris.Add(v);
+            rimTris.Add(v + 2);
+            rimTris.Add(v + 3);
+        }
+
+        var mesh = new Mesh { name = "BoardHighlightTile" };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(fillTris, 0, true);
+        mesh.SetTriangles(rimTris, 1, true);
+        mesh.RecalculateBounds();
+        Cache[key] = mesh;
+        return mesh;
+    }
+
     public static Mesh GetShadowDisc(int segments = 32)
     {
         const string key = "shadow_disc";

@@ -59,6 +59,12 @@ public static class PieceMotionMath
         return t * t;
     }
 
+    public static float EaseInCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * t;
+    }
+
     /// <summary>
     /// Flattened micro-float envelope. 0 at both ends, slight plateau mid-hop.
     /// Sin(π) is a tiny negative in IEEE float; Pow(negative, 0.65) is NaN — clamp first.
@@ -85,5 +91,68 @@ public static class PieceMotionMath
     {
         float u = 1f - t;
         return (u * u * p0) + (2f * u * t * p1) + (t * t * p2);
+    }
+
+    /// <summary>
+    /// World3D carry height above rest seating. Driven by visible piece height
+    /// so adaptive boards keep a readable lift under the near-top-down camera.
+    /// </summary>
+    public static float CarryLiftAmount(float cellAxis, float pieceHeight)
+    {
+        if (!IsFinite(cellAxis) || cellAxis < 0.01f)
+        {
+            cellAxis = 1f;
+        }
+
+        if (!IsFinite(pieceHeight) || pieceHeight < 0.01f)
+        {
+            pieceHeight = cellAxis * 0.22f;
+        }
+
+        float lift = pieceHeight * 0.80f;
+        if (!IsFinite(lift))
+        {
+            lift = 0.07f;
+        }
+
+        float min = Mathf.Max(0.05f, cellAxis * 0.07f);
+        float max = Mathf.Max(0.12f, cellAxis * 0.16f);
+        return Mathf.Clamp(lift, min, max);
+    }
+
+    /// <summary>
+    /// World3D nest-anticipation lift above the planted pose (1.5 × piece height).
+    /// </summary>
+    public static float NestAnticipateLiftAmount(float pieceHeight)
+    {
+        return SafePieceHeight(pieceHeight) * 1.5f;
+    }
+
+    /// <summary>
+    /// World3D nest-jump bezier peak above rest seating (2.5 × piece height).
+    /// </summary>
+    public static float NestJumpPeakHeight(float pieceHeight)
+    {
+        return SafePieceHeight(pieceHeight) * 2.5f;
+    }
+
+    private static float SafePieceHeight(float pieceHeight)
+    {
+        if (!IsFinite(pieceHeight) || pieceHeight < 0.01f)
+        {
+            return 0.22f;
+        }
+
+        return pieceHeight;
+    }
+
+    public static bool IsFinite(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+
+    public static bool IsFinite(Vector3 value)
+    {
+        return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
     }
 }

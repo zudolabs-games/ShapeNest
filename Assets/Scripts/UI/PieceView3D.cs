@@ -40,6 +40,19 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private Block sourceBlock;
     private Vector3 configuredFootprintScale = Vector3.one;
     private int motionLockCount;
+    private float presentationLift;
+    private float carryMeshScale = 1f;
+    private float presentationSquash;
+    private Transform contactShadow;
+    private MeshRenderer contactShadowRenderer;
+    private static Material sharedContactShadowMaterial;
+    private const string DesignerVisualName = "DesignerVisual";
+    private const string DesignerInnerName = "DesignerInner";
+    private GameObject designerVisualInstance;
+    private GameObject designerVisualPrefab;
+    private MeshRenderer designerVisualRenderer;
+    private GameObject designerInnerInstance;
+    private GameObject designerInnerPrefab;
 
     public float PieceHeight => pieceHeight;
     public float SurfaceLift => surfaceLift;
@@ -49,11 +62,36 @@ public class PieceView3D : MonoBehaviour, IPieceView
     public ShapeType ConfiguredInnerShape => configuredInnerShape;
     public Vector3 ConfiguredFootprintScale => configuredFootprintScale;
     public bool IsMotionLocked => motionLockCount > 0;
+    public float CarryMeshScale => carryMeshScale;
+
+    public float PresentationSquash => presentationSquash;
+
+    /// <summary>
+    /// Extra world-Y above rest seating while the piece is carried. Presentation only.
+    /// </summary>
+    public float PresentationLift
+    {
+        get
+        {
+            if (!PieceMotionMath.IsFinite(presentationLift))
+            {
+                return 0f;
+            }
+
+            return Mathf.Max(0f, presentationLift);
+        }
+    }
+
     public MeshRenderer OuterMeshRenderer
     {
         get
         {
             EnsureMeshComponents();
+            if (designerVisualRenderer != null && designerVisualRenderer.enabled)
+            {
+                return designerVisualRenderer;
+            }
+
             return meshRenderer;
         }
     }
@@ -64,6 +102,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
         get
         {
             EnsureMeshComponents();
+            if (designerVisualInstance != null && designerVisualInstance.activeSelf)
+            {
+                return true;
+            }
+
             return meshFilter != null
                 && meshFilter.sharedMesh != null
                 && meshRenderer != null
@@ -103,6 +146,16 @@ public class PieceView3D : MonoBehaviour, IPieceView
         surfaceLift = Mathf.Max(0f, surfaceLift);
     }
 
+    private void OnDisable()
+    {
+        ClearCarryPresentation(applyToTransform: false);
+    }
+
+    private void OnDestroy()
+    {
+        ClearCarryPresentation(applyToTransform: false);
+    }
+
     public void ApplyGridPosition(IGridSpace gridSpace, Vector2Int gridPosition)
     {
         if (gridSpace == null || IsMotionLocked)
@@ -112,8 +165,251 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         Vector3 world = gridSpace.GridToWorld(gridPosition);
         float halfHeight = Mathf.Abs(transform.lossyScale.y) * 0.5f;
-        world.y += surfaceLift + halfHeight;
-        transform.position = world;
+        world.y += surfaceLift + halfHeight + PresentationLift;
+        if (!PieceMotionMath.IsFinite(world))
+        {
+            world = gridSpace.GridToWorld(gridPosition);
+            world.y += surfaceLift + halfHeight;
+        }
+
+        if (PieceMotionMath.IsFinite(world))
+        {
+            transform.position = world;
+        }
+
+        RefreshContactShadow();
+    }
+
+    /// <summary>
+    /// Sets carry height (world Y extra) and mesh-only scale. Does not move the transform.
+    /// Mesh scale is independent of root held/selection scale. Clears squash.
+    /// </summary>
+    public void SetPresentationLift(float lift, float visualScaleMul = 1f)
+    {
+        SetPresentationAnticipation(lift, visualScaleMul, 0f);
+    }
+
+    /// <summary>
+    /// Presentation-only lift, uniform mesh scale, and squash on the mesh root.
+    /// Squash compresses Y and widens XZ. Does not write GridPosition or occupancy.
+    /// </summary>
+    public void SetPresentationAnticipation(float lift, float visualScaleMul, float squash)
+    {
+        if (!PieceMotionMath.IsFinite(lift))
+        {
+            lift = 0f;
+        }
+
+        presentationLift = Mathf.Max(0f, lift);
+        presentationSquash = Mathf.Clamp01(squash);
+        ApplyCarryVisualScale(visualScaleMul);
+        RefreshContactShadow();
+    }
+
+    /// <summary>
+    /// Copies carry lift/scale/shadow from the primary so chain extras stay visually carried.
+    /// Does not write world position.
+    /// </summary>
+    public void MatchCarryPresentation(PieceView3D primary)
+    {
+        if (primary == null || primary == this)
+        {
+            return;
+        }
+
+        SetPresentationAnticipation(
+            primary.PresentationLift,
+            primary.CarryMeshScale,
+            primary.PresentationSquash);
+    }
+
+    /// <summary>
+    /// Zeros carry height and mesh scale. Optionally subtracts remaining lift from world Y.
+    /// </summary>
+    public void ClearCarryPresentation(bool applyToTransform)
+    {
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.CarryId, false);
+        float lift = PresentationLift;
+        presentationLift = 0f;
+        presentationSquash = 0f;
+        ApplyCarryVisualScale(1f);
+        if (applyToTransform && Mathf.Abs(lift) >= 0.00001f)
+        {
+            Vector3 world = transform.position;
+            world.y -= lift;
+            if (PieceMotionMath.IsFinite(world))
+            {
+                transform.position = world;
+            }
+        }
+
+        RefreshContactShadow();
+    }
+
+    private void ApplyCarryVisualScale(float visualScaleMul)
+    {
+        if (visualRoot == null)
+        {
+            EnsureMeshComponents();
+        }
+
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        if (!PieceMotionMath.IsFinite(visualScaleMul) || visualScaleMul < 0.45f || visualScaleMul > 1.35f)
+        {
+            visualScaleMul = 1f;
+        }
+
+        carryMeshScale = visualScaleMul;
+        float squash = Mathf.Clamp01(presentationSquash);
+        float xz = visualScaleMul * (1f + (0.14f * squash));
+        float y = visualScaleMul * (1f - (0.24f * squash));
+        Vector3 meshScale = new Vector3(xz, y, xz);
+        if (PieceMotionMath.IsFinite(meshScale))
+        {
+            visualRoot.localScale = meshScale;
+        }
+    }
+
+    private void RefreshContactShadow()
+    {
+        EnsureContactShadow();
+        if (contactShadow == null)
+        {
+            return;
+        }
+
+        bool show = !configuredAsNest && isActiveAndEnabled;
+        if (contactShadow.gameObject.activeSelf != show)
+        {
+            contactShadow.gameObject.SetActive(show);
+        }
+
+        if (!show)
+        {
+            return;
+        }
+
+        if (contactShadowRenderer != null)
+        {
+            contactShadowRenderer.enabled = true;
+        }
+
+        float lift = PresentationLift;
+        float parentY = Mathf.Abs(transform.localScale.y);
+        if (!PieceMotionMath.IsFinite(parentY) || parentY < 0.0001f)
+        {
+            parentY = 1f;
+        }
+
+        float drop = 0.5f + ((surfaceLift + lift) / parentY);
+        if (!PieceMotionMath.IsFinite(drop))
+        {
+            drop = 0.5f;
+        }
+
+        Vector3 local = new Vector3(0f, -drop, 0f);
+        if (PieceMotionMath.IsFinite(local))
+        {
+            contactShadow.localPosition = local;
+        }
+
+        float blend = 0f;
+        float height = Mathf.Max(pieceHeight, configuredFootprintScale.y);
+        if (height > 0.0001f)
+        {
+            blend = Mathf.Clamp01(lift / Mathf.Max(0.0001f, height * 0.34f));
+        }
+
+        float radius = 0.46f * (1f + (0.42f * blend));
+        Vector3 shadowScale = new Vector3(radius, 0.02f, radius);
+        if (PieceMotionMath.IsFinite(shadowScale))
+        {
+            contactShadow.localScale = shadowScale;
+        }
+    }
+
+    private void EnsureContactShadow()
+    {
+        if (contactShadow != null)
+        {
+            return;
+        }
+
+        Transform existing = transform.Find("ContactShadow3D");
+        if (existing != null)
+        {
+            contactShadow = existing;
+        }
+        else
+        {
+            var go = new GameObject("ContactShadow3D");
+            go.transform.SetParent(transform, false);
+            contactShadow = go.transform;
+        }
+
+        var filter = contactShadow.GetComponent<MeshFilter>();
+        if (filter == null)
+        {
+            filter = contactShadow.gameObject.AddComponent<MeshFilter>();
+        }
+
+        filter.sharedMesh = BoardMeshFactory3D.GetShadowDisc(28);
+        contactShadowRenderer = contactShadow.GetComponent<MeshRenderer>();
+        if (contactShadowRenderer == null)
+        {
+            contactShadowRenderer = contactShadow.gameObject.AddComponent<MeshRenderer>();
+        }
+
+        contactShadowRenderer.sharedMaterial = GetContactShadowMaterial();
+        contactShadowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        contactShadowRenderer.receiveShadows = false;
+        contactShadow.localRotation = Quaternion.identity;
+    }
+
+    private static Material GetContactShadowMaterial()
+    {
+        if (sharedContactShadowMaterial != null)
+        {
+            return sharedContactShadowMaterial;
+        }
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        sharedContactShadowMaterial = new Material(shader)
+        {
+            name = "PieceContactShadow3D_Runtime",
+            color = new Color(0.02f, 0.01f, 0.05f, 0.32f)
+        };
+        if (sharedContactShadowMaterial.HasProperty("_BaseColor"))
+        {
+            sharedContactShadowMaterial.SetColor("_BaseColor", sharedContactShadowMaterial.color);
+        }
+
+        if (sharedContactShadowMaterial.HasProperty("_Metallic"))
+        {
+            sharedContactShadowMaterial.SetFloat("_Metallic", 0f);
+        }
+
+        if (sharedContactShadowMaterial.HasProperty("_Smoothness"))
+        {
+            sharedContactShadowMaterial.SetFloat("_Smoothness", 0f);
+        }
+
+        if (sharedContactShadowMaterial.HasProperty("_Surface"))
+        {
+            sharedContactShadowMaterial.SetFloat("_Surface", 1f);
+            sharedContactShadowMaterial.SetOverrideTag("RenderType", "Transparent");
+            sharedContactShadowMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            sharedContactShadowMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            sharedContactShadowMaterial.SetInt("_ZWrite", 0);
+            sharedContactShadowMaterial.renderQueue = 3000;
+            sharedContactShadowMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+
+        return sharedContactShadowMaterial;
     }
 
     public void BeginMotionLock()
@@ -189,13 +485,21 @@ public class PieceView3D : MonoBehaviour, IPieceView
         configuredAsNest = asNest;
         pieceHeight = Mathf.Max(0.01f, height);
 
-        Mesh mesh = asNest ? ShapeMeshFactory3D.GetNestMesh(shape) : ShapeMeshFactory3D.GetSolidMesh(shape);
-        if (meshFilter != null)
+        if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
         {
-            meshFilter.sharedMesh = mesh;
+            ApplyDesignerVisual(prefab);
         }
+        else
+        {
+            ClearDesignerVisual();
+            Mesh mesh = asNest ? ShapeMeshFactory3D.GetNestMesh(shape) : ShapeMeshFactory3D.GetSolidMesh(shape);
+            if (meshFilter != null)
+            {
+                meshFilter.sharedMesh = mesh;
+            }
 
-        SetMaterial(material);
+            SetMaterial(material);
+        }
 
         // Blocks sit proudly on the cell; nests sit slightly recessed as destinations.
         surfaceLift = asNest ? -0.02f : 0.025f;
@@ -205,6 +509,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
         configuredFootprintScale = transform.localScale;
         hasRestScale = false;
         CaptureRestScale();
+        ClearCarryPresentation(applyToTransform: false);
         RefreshPickCollider();
         EnsurePresentationVisible();
     }
@@ -222,6 +527,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
             if (nestedInnerRoot != null)
             {
                 nestedInnerRoot.gameObject.SetActive(false);
+            ClearDesignerInner();
             }
 
             return;
@@ -230,20 +536,28 @@ public class PieceView3D : MonoBehaviour, IPieceView
         hasNestedInner = true;
         configuredInnerShape = innerShape;
         nestedInnerRoot.gameObject.SetActive(true);
-        Mesh mesh = asNest
-            ? ShapeMeshFactory3D.GetNestMesh(innerShape)
-            : ShapeMeshFactory3D.GetSolidMesh(innerShape);
-        if (nestedInnerFilter != null)
+        if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(innerShape, asNest, out GameObject prefab))
         {
-            nestedInnerFilter.sharedMesh = mesh;
+            ApplyDesignerInner(prefab);
         }
-
-        if (nestedInnerRenderer != null && material != null)
+        else
         {
-            nestedInnerRenderer.sharedMaterial = material;
-            nestedInnerRenderer.enabled = true;
-            nestedInnerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            nestedInnerRenderer.receiveShadows = true;
+            ClearDesignerInner();
+            Mesh mesh = asNest
+                ? ShapeMeshFactory3D.GetNestMesh(innerShape)
+                : ShapeMeshFactory3D.GetSolidMesh(innerShape);
+            if (nestedInnerFilter != null)
+            {
+                nestedInnerFilter.sharedMesh = mesh;
+            }
+
+            if (nestedInnerRenderer != null && material != null)
+            {
+                nestedInnerRenderer.sharedMaterial = material;
+                nestedInnerRenderer.enabled = true;
+                nestedInnerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                nestedInnerRenderer.receiveShadows = true;
+            }
         }
 
         float scale = Mathf.Clamp(relativeScale, 0.4f, 0.7f);
@@ -272,9 +586,13 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         if (meshRenderer != null)
         {
-            meshRenderer.enabled = true;
-            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            meshRenderer.receiveShadows = true;
+            bool showProcedural = designerVisualInstance == null;
+            meshRenderer.enabled = showProcedural;
+            if (showProcedural)
+            {
+                meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                meshRenderer.receiveShadows = true;
+            }
         }
 
         if (!HasValidPresentationScale)
@@ -296,9 +614,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
             nestedInnerRoot.gameObject.SetActive(true);
             if (nestedInnerRenderer != null)
             {
-                nestedInnerRenderer.enabled = true;
+                nestedInnerRenderer.enabled = designerInnerInstance == null;
             }
         }
+
+        RefreshContactShadow();
     }
 
     public void BindSourceBlock(Block block)
@@ -439,6 +759,140 @@ public class PieceView3D : MonoBehaviour, IPieceView
             {
                 DestroyImmediate(innerCollider);
             }
+        }
+    }
+
+    private void ApplyDesignerVisual(GameObject prefab)
+    {
+        EnsureMeshComponents();
+        if (prefab == designerVisualPrefab && designerVisualInstance != null)
+        {
+            SetProceduralMeshVisible(false);
+            return;
+        }
+
+        ClearDesignerVisual();
+        designerVisualPrefab = prefab;
+        designerVisualInstance = Instantiate(prefab, visualRoot, false);
+        designerVisualInstance.name = DesignerVisualName;
+        designerVisualInstance.transform.localPosition = Vector3.zero;
+        designerVisualInstance.transform.localRotation = Quaternion.identity;
+        designerVisualInstance.transform.localScale = Vector3.one;
+        StripColliders(designerVisualInstance);
+        designerVisualRenderer = designerVisualInstance.GetComponentInChildren<MeshRenderer>(true);
+        SetProceduralMeshVisible(false);
+    }
+
+    private void ClearDesignerVisual()
+    {
+        if (designerVisualInstance != null)
+        {
+            DestroyVisualObject(designerVisualInstance);
+        }
+
+        designerVisualInstance = null;
+        designerVisualPrefab = null;
+        designerVisualRenderer = null;
+        SetProceduralMeshVisible(true);
+    }
+
+    private void ApplyDesignerInner(GameObject prefab)
+    {
+        EnsureNestedInner();
+        if (prefab == designerInnerPrefab && designerInnerInstance != null)
+        {
+            if (nestedInnerRenderer != null)
+            {
+                nestedInnerRenderer.enabled = false;
+            }
+
+            return;
+        }
+
+        ClearDesignerInner();
+        designerInnerPrefab = prefab;
+        designerInnerInstance = Instantiate(prefab, nestedInnerRoot, false);
+        designerInnerInstance.name = DesignerInnerName;
+        designerInnerInstance.transform.localPosition = Vector3.zero;
+        designerInnerInstance.transform.localRotation = Quaternion.identity;
+        designerInnerInstance.transform.localScale = Vector3.one;
+        StripColliders(designerInnerInstance);
+        if (nestedInnerRenderer != null)
+        {
+            nestedInnerRenderer.enabled = false;
+        }
+    }
+
+    private void ClearDesignerInner()
+    {
+        if (designerInnerInstance != null)
+        {
+            DestroyVisualObject(designerInnerInstance);
+        }
+
+        designerInnerInstance = null;
+        designerInnerPrefab = null;
+        if (nestedInnerRenderer != null)
+        {
+            nestedInnerRenderer.enabled = true;
+        }
+    }
+
+    private void SetProceduralMeshVisible(bool visible)
+    {
+        if (meshRenderer == null)
+        {
+            return;
+        }
+
+        meshRenderer.enabled = visible;
+        if (visible)
+        {
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            meshRenderer.receiveShadows = true;
+        }
+    }
+
+    private static void StripColliders(GameObject root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            if (colliders[i] == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(colliders[i]);
+            }
+            else
+            {
+                DestroyImmediate(colliders[i]);
+            }
+        }
+    }
+
+    private static void DestroyVisualObject(GameObject target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(target);
+        }
+        else
+        {
+            DestroyImmediate(target);
         }
     }
 
