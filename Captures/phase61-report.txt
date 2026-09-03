@@ -1,0 +1,81 @@
+Phase 61 — Continuous Drag Direction Control / Reference-Style Touch Feel
+Unity 6000.3.8f1
+
+=== CODE VALIDATION ===
+CHANGED FILES:
+- Assets/Scripts/Input/InputManager.cs
+- Assets/Scenes/SampleScene.unity (directionChangeCellFraction 0.30 → 0.18)
+- Assets/Editor/Phase61PlayModeVerify.cs (+ .meta)
+
+CONTROL BEHAVIOR:
+- Continuous multi-direction drag in ONE held touch
+- After each LogicalCell commit: TryReanchorAfterCommit advances step origin
+- Direction changes measure from lastCommittedScreenPosition (not PointerDown)
+- Fresh segment on SetDragDirection; requests via SetDragRequest only
+- Blocked / forbidden directions do NOT EndDrag or ClearPressState
+- First-cell lock anchors at threshold-crossing point (same-frame request works)
+
+THRESHOLDS:
+- DragThresholdPixels=20 (unchanged)
+- FirstStepCellFraction=0.38 (unchanged)
+- CellStrideFraction=0.92 (unchanged)
+- DirectionChangeCellFraction=0.18 (was 0.30)
+- ReverseFlipCellFraction=0.42 (was 0.72)
+- PerpendicularDeadbandCellFraction=0.12 (was 0.20)
+- DirectionDominanceRatio=1.32 (unchanged)
+- DirectionSteerDominanceRatio=1.28 (was 1.42)
+
+NO SECOND MOVEMENT SYSTEM: confirmed (InputManager → SetDragRequest/SetDragDirection only)
+BLOCKMOVER AUTHORITY: preserved
+VisualCenterBoardPlaneOffsetLocal=0.12 preserved
+
+=== COMPILE ===
+Assembly-CSharp: 0 errors (8 pre-existing warnings)
+Assembly-CSharp-Editor: 0 errors (2 pre-existing warnings)
+
+=== PLAY MODE ===
+Status: PARTIAL / INCOMPLETE (later MCP re-run stuck in playmode_transition)
+Menu to re-run: Shape Nest → Phase 61 Verify Drag Controls
+
+Observed from completed automated run (honest):
+PASS T1 — pick
+PASS T2 — small drag starts (req cell advanced; GridPosition changed)
+FAIL T3 — RIGHT (pick miss after prior move on same board)
+PASS T4 — LEFT (realDrag + gridChanged)
+PASS T5 — UP (realDrag + gridChanged)
+PASS T6 — DOWN (realDrag + gridChanged)
+PASS T7 — long 3-cell (realDrag + gridChanged)
+FAIL T8–T11 / T33 — no open R→D→L→U path on FirstMove board (Master load path needs re-run)
+FAIL T12–T13 — no reverse/perp path found on depleted FirstMove
+PASS T14 — blocked direction does not cancel drag (CONT dir switched while held)
+FAIL T15–T16 — pick miss
+PASS T17 — fixed forbidden rejected
+PASS T18 — chain
+PASS T19 — nested
+PASS T20–T21 — booster gate / Magnet
+PENDING T22–T24 — Shuffle/Undo/Hammer not fully logged in that run
+PASS T25–T32 — release/cleanup/no duplicate/no flash
+
+REMAINING ISSUE:
+- Continuous multi-direction path tests need a board with open R→D→L→U (Campaign_15).
+  Re-run the menu item after Unity compiles the latest Phase61PlayModeVerify
+  (loads Master for multi-direction / steer tests).
+- Occasional pick miss when the same level is reused without reload (T3/T15/T16).
+
+=== CAPTURES ===
+Captures/phase61-master.png
+Captures/phase61-before.png
+Captures/phase61-right.png
+Captures/phase61-left.png
+Captures/phase61-up.png
+Captures/phase61-down.png
+Captures/phase61-reversal.png
+Captures/phase61-blocked.png
+Captures/phase61-fixed-direction.png
+Captures/phase61-chain.png
+Captures/phase61-nested.png
+Captures/phase61-booster-gate.png
+Captures/phase61-cleanup.png
+(phase61-multi-direction.png / long-drag may be missing until T8–T11 pass)
+
+RESULT: CODE COMPLETE / PLAY MODE PARTIAL — re-run menu for full T1–T33

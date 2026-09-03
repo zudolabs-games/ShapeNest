@@ -22,10 +22,10 @@ public class IceView3D : MonoBehaviour
     private float thickness = 0.12f;
 
     [SerializeField]
-    private float footprintPadding = 0.06f;
+    private float footprintPadding = 0.05f;
 
     [SerializeField]
-    private float heightOverBlock = 0.04f;
+    private float heightOverBlock = 0.045f;
 
     private IceState source;
     private static Material sharedIceMaterial;
@@ -43,6 +43,10 @@ public class IceView3D : MonoBehaviour
     private float layoutSizeX = 1f;
     private float layoutSizeZ = 1f;
     private float layoutScale = 1f;
+    private float layoutBlockHeight = 0.36f;
+    private float layoutPieceCenterY;
+    private ShapeType layoutShape = ShapeType.Square;
+    private bool layoutIsChain;
     private float presentedThickness;
     private float presentedAlpha = 0.62f;
     private Color presentedEmission = new Color(0.25f, 0.75f, 1.1f) * 0.35f;
@@ -333,27 +337,37 @@ public class IceView3D : MonoBehaviour
         float cell = presenter.CellWorldSize;
         layoutScale = cell / BoardAdaptivePresentation3D.ReferenceCellSize;
         float pad = footprintPadding * layoutScale;
-        layoutSizeX = (max.x - min.x + 1) * cell + pad * 2f;
-        layoutSizeZ = (max.y - min.y + 1) * cell + pad * 2f;
+        layoutIsChain = (max.x - min.x) + (max.y - min.y) > 0;
+        layoutShape = block.GetOuterShape(block.AnchorCellIndex);
+
+        float pieceFootprint = cell * BoardAdaptivePresentation3D.BlockFootprintRatio;
+        if (block.WorldView != null)
+        {
+            pieceFootprint = Mathf.Max(0.05f, block.WorldView.ConfiguredFootprintScale.x);
+        }
+
+        layoutSizeX = (max.x - min.x) * cell + pieceFootprint + pad * 2f;
+        layoutSizeZ = (max.y - min.y) * cell + pieceFootprint + pad * 2f;
 
         float surfaceY = presenter.CellSurfaceWorldY;
         float blockHeight = BoardAdaptivePresentation3D.BlockHeightRatio * cell;
+        float surfaceLift = 0.025f;
         if (block.WorldView != null)
         {
             blockHeight = block.WorldView.PieceHeight;
+            surfaceLift = block.WorldView.SurfaceLift;
         }
 
-        float stageThickness = presentedThickness > 0.001f
-            ? presentedThickness
-            : ThicknessForDurability(Mathf.Max(1, source.Durability));
-        float blockTop = surfaceY + blockHeight + heightOverBlock * layoutScale;
-        center.y = blockTop + stageThickness * 0.5f;
+        layoutBlockHeight = blockHeight;
+        layoutPieceCenterY = surfaceY + surfaceLift + blockHeight * 0.5f;
+        center.y = layoutPieceCenterY;
         transform.position = center;
         if (shell != null)
         {
             shell.localPosition = Vector3.zero;
         }
 
+        ApplyShellMesh();
         return true;
     }
 
@@ -375,20 +389,24 @@ public class IceView3D : MonoBehaviour
     private float ThicknessForDurability(int durability)
     {
         int stage = Mathf.Clamp(durability, 1, 3);
-        return thickness * layoutScale * (0.75f + 0.12f * stage);
+        float cover = layoutBlockHeight + (thickness * 0.4f + heightOverBlock) * layoutScale * 2f;
+        return Mathf.Max(0.04f, cover * (0.94f + 0.03f * stage));
     }
 
     private static float AlphaForDurability(int durability)
     {
+        // Phase 52K: frosted shell — intact ice more opaque; cracked ice clearer so shape shows.
         int stage = Mathf.Clamp(durability, 1, 3);
-        return stage == 3 ? 0.62f : stage == 2 ? 0.5f : 0.4f;
+        return stage == 3 ? 0.58f : stage == 2 ? 0.48f : 0.38f;
     }
 
+    /// <summary>
+    /// Emission disabled for Phase 52K frosted look — kept for tween signature compatibility.
+    /// </summary>
     private static Color EmissionForDurability(int durability)
     {
-        int stage = Mathf.Clamp(durability, 1, 3);
-        float crack = (3 - stage) / 2f;
-        return new Color(0.25f, 0.75f, 1.1f) * (0.35f + crack * 0.25f);
+        _ = durability;
+        return Color.black;
     }
 
     private void ApplyAppearanceImmediate(int durabilityStage, float alpha, Color emission)
@@ -398,13 +416,16 @@ public class IceView3D : MonoBehaviour
             return;
         }
 
+        _ = emission;
         shellRenderer.sharedMaterial = GetSharedIceMaterial();
         var block = new MaterialPropertyBlock();
         shellRenderer.GetPropertyBlock(block);
-        Color c = new Color(0.45f, 0.92f, 1f, alpha);
+        // Soft icy tint — underlying ShapeVisuals3D piece colors stay recognizable.
+        Color c = new Color(0.55f, 0.88f, 1f, alpha);
         block.SetColor("_BaseColor", c);
         block.SetColor("_Color", c);
-        block.SetColor("_EmissionColor", emission);
+        block.SetColor("_EmissionColor", Color.black);
+
         shellRenderer.SetPropertyBlock(block);
         EnsureCrackOverlays(Mathf.Clamp(durabilityStage, 1, 3));
     }
@@ -451,7 +472,7 @@ public class IceView3D : MonoBehaviour
         line.transform.SetParent(parent, false);
         line.transform.localPosition = localPos;
         line.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-        line.transform.localScale = new Vector3(0.72f, 0.02f, 0.035f);
+        line.transform.localScale = new Vector3(0.55f, 0.015f, 0.028f);
         Collider col = line.GetComponent<Collider>();
         if (col != null)
         {
@@ -465,11 +486,27 @@ public class IceView3D : MonoBehaviour
             var mat = new Material(shader)
             {
                 name = "IceCrack3D",
-                color = new Color(0.45f, 0.7f, 0.9f, 0.65f)
+                color = new Color(0.72f, 0.86f, 0.95f, 0.32f)
             };
             if (mat.HasProperty("_BaseColor"))
             {
                 mat.SetColor("_BaseColor", mat.color);
+            }
+
+            if (mat.HasProperty("_Metallic"))
+            {
+                mat.SetFloat("_Metallic", 0f);
+            }
+
+            if (mat.HasProperty("_Smoothness"))
+            {
+                mat.SetFloat("_Smoothness", 0.35f);
+            }
+
+            if (mat.HasProperty("_EmissionColor"))
+            {
+                mat.DisableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", Color.black);
             }
 
             if (mat.HasProperty("_Surface"))
@@ -512,7 +549,7 @@ public class IceView3D : MonoBehaviour
                 GameObject cube = new GameObject("IceShell");
                 cube.transform.SetParent(transform, false);
                 var filter = cube.AddComponent<MeshFilter>();
-                filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.18f, 3);
+                filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.20f, 3);
                 cube.AddComponent<MeshRenderer>();
                 shell = cube.transform;
             }
@@ -531,6 +568,35 @@ public class IceView3D : MonoBehaviour
         {
             shellRenderer.sharedMaterial = GetSharedIceMaterial();
         }
+
+        if (shellRenderer != null)
+        {
+            shellRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            shellRenderer.receiveShadows = true;
+        }
+    }
+
+    private void ApplyShellMesh()
+    {
+        if (shell == null || ShapeNestVisualCatalog3D.TryGetIcePrefab(out _))
+        {
+            return;
+        }
+
+        MeshFilter filter = shell.GetComponent<MeshFilter>();
+        if (filter == null)
+        {
+            filter = shell.gameObject.AddComponent<MeshFilter>();
+        }
+
+        if (layoutIsChain)
+        {
+            // Slightly softer corners for molded ice around chains.
+            filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.20f, 3);
+            return;
+        }
+
+        filter.sharedMesh = ShapeMeshFactory3D.GetSolidMesh(layoutShape);
     }
 
     private static BoardPresenter3D FindPresenter()
@@ -564,6 +630,12 @@ public class IceView3D : MonoBehaviour
         max = new Vector2Int(maxX, maxY);
     }
 
+    /// <summary>Clears cached ice material so presentation retunes pick up after domain reload.</summary>
+    public static void InvalidateSharedIceMaterial()
+    {
+        sharedIceMaterial = null;
+    }
+
     public static Material GetSharedIceMaterial()
     {
         if (sharedIceMaterial != null)
@@ -572,10 +644,11 @@ public class IceView3D : MonoBehaviour
         }
 
         Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        // Phase 52K: frosted translucent plastic — not clear glass, no emission, Metallic 0.
         sharedIceMaterial = new Material(shader)
         {
             name = "Ice3D_Runtime",
-            color = new Color(0.45f, 0.92f, 1f, 0.55f)
+            color = new Color(0.55f, 0.88f, 1f, 0.58f)
         };
         if (sharedIceMaterial.HasProperty("_BaseColor"))
         {
@@ -584,18 +657,18 @@ public class IceView3D : MonoBehaviour
 
         if (sharedIceMaterial.HasProperty("_Smoothness"))
         {
-            sharedIceMaterial.SetFloat("_Smoothness", 0.95f);
+            sharedIceMaterial.SetFloat("_Smoothness", 0.48f);
         }
 
         if (sharedIceMaterial.HasProperty("_Metallic"))
         {
-            sharedIceMaterial.SetFloat("_Metallic", 0.12f);
+            sharedIceMaterial.SetFloat("_Metallic", 0f);
         }
 
         if (sharedIceMaterial.HasProperty("_EmissionColor"))
         {
-            sharedIceMaterial.EnableKeyword("_EMISSION");
-            sharedIceMaterial.SetColor("_EmissionColor", new Color(0.3f, 0.85f, 1.2f) * 0.45f);
+            sharedIceMaterial.DisableKeyword("_EMISSION");
+            sharedIceMaterial.SetColor("_EmissionColor", Color.black);
         }
 
         if (sharedIceMaterial.HasProperty("_Surface"))

@@ -1,0 +1,15 @@
+Phase 55 — Magnet Selection Overlay + Eligible Highlighting
+(Pending Play Mode — run Shape Nest → Phase 55 Verify Magnet Selection)
+
+Implementation summary:
+- MagnetBooster: Hammer-style selection overlay via SyncSelectionOverlay; IsMagnetEligibleVisual uses TryBuildMagnetPlan + CanFullyResolveChain; no charge on enter; invalid tap feedback; HasAnyMagnetEligibleBlock gate on ActivateMagnet
+- BoosterSelectionOverlay: extended for Magnet selecting (MagnetButton hole + eligible piece spotlight holes)
+- Magnet gameplay (BFS, BlockMover, charges) unchanged
+
+Files changed:
+- Assets/Scripts/Boosters/MagnetBooster.cs
+- Assets/Scripts/UI/BoosterSelectionOverlay.cs
+- Assets/Editor/Phase55PlayModeVerify.cs
+
+Compile: pending (Unity project already open — batch compile blocked)
+Play Mode: pending — run Shape Nest → Phase 55 Verify Magnet Selection

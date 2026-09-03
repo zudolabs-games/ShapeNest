@@ -1,0 +1,67 @@
+Phase 52D — 3D Block/Nest Contact & Depth Polish
+Unity 6000.3.8f1
+
+## Goal
+Seated contact + depth readability without moving gameplay transforms.
+
+## Files changed
+- Assets/Scripts/Board/BoardMeshFactory3D.cs
+- Assets/Scripts/UI/PieceView3D.cs
+- Assets/Scripts/UI/ShapeVisuals3D.cs
+- Assets/Scripts/Board/BoardPresentationController.cs (key light soft-shadow strength only)
+
+## Exact presentation values changed
+
+### Contact shadow (PieceView3D)
+- Mesh: hard GetShadowDisc → GetSoftContactShadowDisc(36, 4) with radial vertex-alpha falloff
+- Material: URP Particles/Unlit (vertex-color soft) tint
+  - Block: RGBA(0.04, 0.02, 0.10, 0.34)
+  - Nest: RGBA(0.03, 0.015, 0.08, 0.40)
+- Align XZ with visualRoot board-plane offset (same ComputeVisualCenterOffsetLocal)
+- Block radius base 0.50 → 0.48; nest 0.40 → 0.36
+- Shadow Y scale 0.018 → 0.012
+
+### Nested inner (presentation scale only)
+- localScale Y factor 0.78 → 0.72 (sits flatter inside outer; XZ centering unchanged)
+
+### Materials (ShapeVisuals3D) — subtle
+- BlockSmoothness 0.62 → 0.64
+- NestSmoothness 0.56 → 0.58
+- NestCavitySmoothness 0.28 → 0.26
+- Nest cavity darken 0.28 → 0.32 (same hue)
+
+### Lighting (BoardPresentationController ApplyMode)
+- Key intensity 1.38 → 1.40
+- Soft shadowStrength 0.48 → 0.52
+- Key rotation unchanged Euler(52, 318, 0)
+
+## Confirmed unchanged
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- NestFootprintRatio / NestHeightRatio / nest_v8 geometry footprint
+- PieceView3D root / GridPosition / ApplyGridPosition
+- Chain connector endpoint logic
+- Block / BlockMover / InputManager / matching / Magnet / Hammer / Ice / Shutter gameplay
+- No sprite piece visuals reintroduced
+- No emission / no metallic increase
+
+## Gameplay files untouched
+No edits to Block.cs, BlockMover.cs, InputManager.cs, BoardManager.cs, MagnetBooster, HammerBooster, Target matching, Ice/Shutter gameplay.
+
+## Validation
+- Compile: OK, 0 errors
+- Console: 0 errors / 0 warnings after play
+- Soft shadow verts=145 with colors; block/nest shadow XZ aligned to Mesh visualRoot (0 mismatches)
+- Levels: Master, nested, chain cascade, chain planning, chain intro, ice, shutter
+- VC=0.12 throughout
+
+## Captures
+- Captures/phase52d-before-master.png
+- Captures/phase52d-after-master.png
+- Captures/phase52d-after-nested.png
+- Captures/phase52d-after-chain.png
+
+## Tradeoffs
+- Soft vertex-color shadows need Particles/Unlit (falls back to Unlit/Sprites/Lit). If a device lacks vertex-color multiply, shadow may look flatter but still present.
+- Nested inner slightly flatter (0.72 Y) for seating; does not change centering offsets.
+
+STOP after Phase 52D.

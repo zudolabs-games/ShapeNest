@@ -1,0 +1,12 @@
+PHASE 71B LIVE VERIFY
+ORANGE Pentagon:Cyan L=(4, 4) V=(4, 4) dist=0.000 lock=False good=True
+ORANGE Pentagon:Cyan L=(4, 5) V=(4, 5) dist=0.000 lock=False good=True
+ORANGE PASS
+YELLOW Square:Purple L=(1, 0) V=(1, 0) dist=0.000 lock=False good=True
+YELLOW Square:Purple L=(1, 1) V=(1, 1) dist=0.000 lock=False good=True
+YELLOW Square:Purple L=(1, 2) V=(1, 2) dist=0.000 lock=False good=True
+YELLOW PASS
+DIAMOND Diamond:Red L=(1, 7) V=(1, 7) dist=0.000 lock=False good=True
+DIAMOND Diamond:Red L=(1, 8) V=(1, 8) dist=0.000 lock=False good=True
+DIAMOND PASS
+RESULT: PASS

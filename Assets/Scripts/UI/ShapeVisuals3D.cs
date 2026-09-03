@@ -2,15 +2,39 @@ using UnityEngine;
 
 /// <summary>
 /// Presentation-only materials for World3D shapes.
-/// Phase 13: dark-board / bright glossy toy palette.
-/// Shared runtime materials (one per ShapeType).
+/// Shared runtime URP Lit materials (one per ShapeType + one chain connector).
+/// Phase 52B–52I: molded-plastic response — non-metallic, moderate smoothness, no emission.
 /// </summary>
 public static class ShapeVisuals3D
 {
+    /// <summary>Phase 52I: solid movable pieces — soft plastic highlight for side-face depth.</summary>
+    public const float BlockMetallic = 0f;
+    public const float BlockSmoothness = 0.67f;
+
+    /// <summary>Phase 52I: recessed sockets — rim catches soft plastic highlight.</summary>
+    public const float NestMetallic = 0f;
+    public const float NestSmoothness = 0.62f;
+
+    /// <summary>Phase 52I: darker matte cavity floor/walls (same hue family).</summary>
+    public const float NestCavityMetallic = 0f;
+    public const float NestCavitySmoothness = 0.22f;
+
+    /// <summary>Phase 52I: chain bars share the same plastic family as blocks.</summary>
+    public const float ConnectorMetallic = 0f;
+    public const float ConnectorSmoothness = 0.64f;
+
     private static Material[] blockMaterials;
     private static Material[] nestMaterials;
+    private static Material[] nestCavityMaterials;
+    private static Material[][] nestMaterialSets;
     private static Material chainConnectorMaterial;
     private static bool initialized;
+    private static readonly System.Collections.Generic.Dictionary<int, Material> overrideBlockMaterials =
+        new System.Collections.Generic.Dictionary<int, Material>();
+    private static readonly System.Collections.Generic.Dictionary<int, Material> overrideNestMaterials =
+        new System.Collections.Generic.Dictionary<int, Material>();
+    private static readonly System.Collections.Generic.Dictionary<int, Material[]> overrideNestMaterialSets =
+        new System.Collections.Generic.Dictionary<int, Material[]>();
 
     /// <summary>
     /// Saturated toy palette (ShapeType order). Used as primary Phase 13 look.
@@ -22,25 +46,80 @@ public static class ShapeVisuals3D
         new Color(1.00f, 0.32f, 0.38f, 1f), // Triangle — coral/red
         new Color(0.35f, 0.95f, 0.42f, 1f), // Diamond — lime green
         new Color(0.28f, 0.55f, 1.00f, 1f), // Hexagon — vivid blue
-        new Color(0.95f, 0.35f, 0.95f, 1f)  // Star — magenta
+        new Color(0.95f, 0.35f, 0.95f, 1f), // Star — magenta
+        new Color(1.00f, 0.55f, 0.12f, 1f)  // Pentagon — orange
     };
 
     public static Material BlockMaterial(ShapeType shape, ShapeNestTheme theme = null)
     {
+        return BlockMaterial(shape, ShapeColor.Default, theme);
+    }
+
+    public static Material BlockMaterial(ShapeType shape, ShapeColor color, ShapeNestTheme theme = null)
+    {
         Ensure(theme);
-        return blockMaterials[(int)shape];
+        if (color == ShapeColor.Default)
+        {
+            return blockMaterials[(int)shape];
+        }
+
+        return ResolveOverrideMaterial(shape, color, isNest: false, theme);
     }
 
     public static Material NestMaterial(ShapeType shape, ShapeNestTheme theme = null)
     {
+        return NestMaterial(shape, ShapeColor.Default, theme);
+    }
+
+    public static Material NestMaterial(ShapeType shape, ShapeColor color, ShapeNestTheme theme = null)
+    {
         Ensure(theme);
-        return nestMaterials[(int)shape];
+        if (color == ShapeColor.Default)
+        {
+            return nestMaterials[(int)shape];
+        }
+
+        return ResolveOverrideMaterial(shape, color, isNest: true, theme);
+    }
+
+    /// <summary>Phase 52C: darker cavity material for nest submesh 1 (same hue as rim).</summary>
+    public static Material NestCavityMaterial(ShapeType shape, ShapeNestTheme theme = null)
+    {
+        Ensure(theme);
+        return nestCavityMaterials[(int)shape];
+    }
+
+    /// <summary>Rim + cavity shared materials for procedural nest meshes (submesh 0/1).</summary>
+    public static Material[] NestMaterialSet(ShapeType shape, ShapeNestTheme theme = null)
+    {
+        return NestMaterialSet(shape, ShapeColor.Default, theme);
+    }
+
+    public static Material[] NestMaterialSet(ShapeType shape, ShapeColor color, ShapeNestTheme theme = null)
+    {
+        Ensure(theme);
+        if (color == ShapeColor.Default)
+        {
+            return nestMaterialSets[(int)shape];
+        }
+
+        return ResolveOverrideNestMaterialSet(shape, color, theme);
     }
 
     public static Color AccentColor(ShapeType shape, ShapeNestTheme theme = null)
     {
+        return AccentColor(shape, ShapeColor.Default, theme);
+    }
+
+    public static Color AccentColor(ShapeType shape, ShapeColor color, ShapeNestTheme theme = null)
+    {
         Ensure(theme);
-        return blockMaterials[(int)shape].color;
+        if (color == ShapeColor.Default)
+        {
+            return blockMaterials[(int)shape].color;
+        }
+
+        return ResolveOverrideMaterial(shape, color, isNest: false, theme).color;
     }
 
     /// <summary>
@@ -57,12 +136,22 @@ public static class ShapeVisuals3D
         initialized = false;
         blockMaterials = null;
         nestMaterials = null;
+        nestCavityMaterials = null;
+        nestMaterialSets = null;
         chainConnectorMaterial = null;
+        overrideBlockMaterials.Clear();
+        overrideNestMaterials.Clear();
+        overrideNestMaterialSets.Clear();
     }
 
     private static void Ensure(ShapeNestTheme theme)
     {
-        if (initialized && blockMaterials != null && nestMaterials != null && chainConnectorMaterial != null)
+        if (initialized
+            && blockMaterials != null
+            && nestMaterials != null
+            && nestCavityMaterials != null
+            && nestMaterialSets != null
+            && chainConnectorMaterial != null)
         {
             return;
         }
@@ -71,26 +160,36 @@ public static class ShapeVisuals3D
         int count = System.Enum.GetValues(typeof(ShapeType)).Length;
         blockMaterials = new Material[count];
         nestMaterials = new Material[count];
+        nestCavityMaterials = new Material[count];
+        nestMaterialSets = new Material[count][];
 
         for (int i = 0; i < count; i++)
         {
             var shape = (ShapeType)i;
             Color blockColor = ResolveBlockColor(shape, theme);
-            Color nestColor = ResolveNestColor(shape, blockColor);
+            Color nestRim = ResolveNestColor(shape, blockColor);
+            Color nestCavity = ResolveNestCavityColor(nestRim, blockColor);
 
-            // Clean puzzle plastic — saturated, moderate gloss, no cartoon glow.
-            blockMaterials[i] = CreateLit(lit, "Block3D_" + shape, blockColor, metallic: 0.04f, smoothness: 0.58f, emission: Color.black);
-            nestMaterials[i] = CreateLit(lit, "Nest3D_" + shape, nestColor, metallic: 0.04f, smoothness: 0.38f, emission: Color.black);
+            // Molded puzzle plastic — bevels catch key+fill light without mirror sheen.
+            blockMaterials[i] = CreateLit(lit, "Block3D_" + shape, blockColor, BlockMetallic, BlockSmoothness);
+            nestMaterials[i] = CreateLit(lit, "Nest3D_" + shape, nestRim, NestMetallic, NestSmoothness);
+            nestCavityMaterials[i] = CreateLit(
+                lit,
+                "NestCavity3D_" + shape,
+                nestCavity,
+                NestCavityMetallic,
+                NestCavitySmoothness);
+            nestMaterialSets[i] = new[] { nestMaterials[i], nestCavityMaterials[i] };
         }
 
         Color linkColor = theme != null ? theme.accent : new Color(0.55f, 0.48f, 0.78f, 1f);
         linkColor.a = 1f;
-        chainConnectorMaterial = CreateLit(lit, "ChainLink3D", linkColor, metallic: 0.04f, smoothness: 0.5f, emission: Color.black);
+        chainConnectorMaterial = CreateLit(lit, "ChainLink3D", linkColor, ConnectorMetallic, ConnectorSmoothness);
 
         initialized = true;
     }
 
-    private static Material CreateLit(Shader shader, string name, Color color, float metallic, float smoothness, Color emission)
+    private static Material CreateLit(Shader shader, string name, Color color, float metallic, float smoothness)
     {
         var material = new Material(shader)
         {
@@ -112,13 +211,105 @@ public static class ShapeVisuals3D
             material.SetFloat("_Smoothness", smoothness);
         }
 
+        // Normal pieces must not rely on emission; keep keyword off.
         if (material.HasProperty("_EmissionColor"))
         {
-            material.EnableKeyword("_EMISSION");
-            material.SetColor("_EmissionColor", emission);
+            material.SetColor("_EmissionColor", Color.black);
+            material.DisableKeyword("_EMISSION");
+        }
+
+        if (material.HasProperty("_SpecularHighlights"))
+        {
+            material.SetFloat("_SpecularHighlights", 1f);
+        }
+
+        if (material.HasProperty("_EnvironmentReflections"))
+        {
+            // Soft local specular from lights; avoid busy env reflections on mobile.
+            material.SetFloat("_EnvironmentReflections", 0f);
         }
 
         return material;
+    }
+
+    private static Color ResolvePaletteColor(ShapeColor color, ShapeType shapeFallback)
+    {
+        switch (color)
+        {
+            case ShapeColor.Yellow:
+                return new Color(1.00f, 0.82f, 0.18f, 1f);
+            case ShapeColor.Cyan:
+                return new Color(0.20f, 0.78f, 1.00f, 1f);
+            case ShapeColor.Pink:
+                return new Color(0.98f, 0.42f, 0.72f, 1f);
+            case ShapeColor.Purple:
+                return new Color(0.72f, 0.28f, 0.92f, 1f);
+            case ShapeColor.Green:
+                return new Color(0.35f, 0.95f, 0.42f, 1f);
+            case ShapeColor.Red:
+                return new Color(0.95f, 0.22f, 0.28f, 1f);
+            case ShapeColor.Orange:
+                return new Color(1.00f, 0.55f, 0.12f, 1f);
+            case ShapeColor.White:
+                return new Color(0.94f, 0.96f, 0.98f, 1f);
+            case ShapeColor.Blue:
+                return new Color(0.28f, 0.55f, 1.00f, 1f);
+            default:
+                int index = Mathf.Clamp((int)shapeFallback, 0, FallbackBlockColors.Length - 1);
+                return FallbackBlockColors[index];
+        }
+    }
+
+    private static int OverrideMaterialKey(ShapeType shape, ShapeColor color, bool isNest)
+    {
+        return ((int)color << 8) | ((int)shape << 4) | (isNest ? 1 : 0);
+    }
+
+    private static Material ResolveOverrideMaterial(ShapeType shape, ShapeColor color, bool isNest, ShapeNestTheme theme)
+    {
+        Ensure(theme);
+        int key = OverrideMaterialKey(shape, color, isNest);
+        var cache = isNest ? overrideNestMaterials : overrideBlockMaterials;
+        if (cache.TryGetValue(key, out Material existing) && existing != null)
+        {
+            return existing;
+        }
+
+        Color blockColor = ResolvePaletteColor(color, shape);
+        Color nestRim = ResolveNestColor(shape, blockColor);
+        Color resolved = isNest ? nestRim : blockColor;
+        float metallic = isNest ? NestMetallic : BlockMetallic;
+        float smoothness = isNest ? NestSmoothness : BlockSmoothness;
+        Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        string prefix = isNest ? "Nest3D_" : "Block3D_";
+        Material created = CreateLit(lit, prefix + shape + "_" + color, resolved, metallic, smoothness);
+        cache[key] = created;
+        return created;
+    }
+
+    private static Material[] ResolveOverrideNestMaterialSet(ShapeType shape, ShapeColor color, ShapeNestTheme theme)
+    {
+        Ensure(theme);
+        int key = OverrideMaterialKey(shape, color, isNest: true);
+        if (overrideNestMaterialSets.TryGetValue(key, out Material[] existing) && existing != null)
+        {
+            return existing;
+        }
+
+        Material rim = ResolveOverrideMaterial(shape, color, isNest: true, theme);
+        Color blockColor = ResolvePaletteColor(color, shape);
+        Color nestRim = ResolveNestColor(shape, blockColor);
+        Color nestCavity = ResolveNestCavityColor(nestRim, blockColor);
+        Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Material cavity = CreateLit(
+            lit,
+            "NestCavity3D_" + shape + "_" + color,
+            nestCavity,
+            NestCavityMetallic,
+            NestCavitySmoothness);
+        Material[] set = { rim, cavity };
+        overrideNestMaterialSets[key] = set;
+        return set;
     }
 
     private static Color ResolveBlockColor(ShapeType shape, ShapeNestTheme theme)
@@ -148,10 +339,20 @@ public static class ShapeVisuals3D
 
     private static Color ResolveNestColor(ShapeType shape, Color blockColor)
     {
-        // Same family as block, darker socket look.
-        Color nest = Darken(Saturate(blockColor, 1.15f, 0.82f), 0.18f);
+        // Same hue family as block — rim stays the established nest identity color.
+        _ = shape;
+        Color nest = Darken(Saturate(blockColor, 1.12f, 0.78f), 0.22f);
         nest.a = 1f;
         return nest;
+    }
+
+    private static Color ResolveNestCavityColor(Color nestRim, Color blockColor)
+    {
+        // Darker recess in the same family — not a new hue.
+        _ = blockColor;
+        Color cavity = Darken(nestRim, 0.36f);
+        cavity.a = 1f;
+        return cavity;
     }
 
     private static Color Saturate(Color color, float satMul, float valueTarget)

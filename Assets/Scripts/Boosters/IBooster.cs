@@ -6,7 +6,9 @@ using System;
 public enum BoosterType
 {
     Magnet = 0,
-    Hammer = 1
+    Hammer = 1,
+    Shuffle = 2,
+    Undo = 3
 }
 
 /// <summary>

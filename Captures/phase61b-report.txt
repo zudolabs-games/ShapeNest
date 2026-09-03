@@ -1,0 +1,70 @@
+Phase 61B — Final Drag Feel + Haptic Polish
+===========================================
+Date: 2026-09-01
+Unity: 6000.3.8f1 (Editor)
+
+Audit findings
+--------------
+1. BlockMover DragRoutine already chains hops with no intentional idle wait when
+   desiredCell still has remaining axis steps. InputManager request timing was
+   not the remaining dead-feel source.
+2. Residual stop-start between consecutive cells came from presentation handoff:
+   - continuation cruise still mixed ~5% EaseOutSine (linearWeight 0.95)
+   - HopSettlePortion = 0.18 of every hop (including continuations) added a
+     settle squash pulse that reads as a brief pause before the next hop.
+3. secondsPerCell = 0.105 is already in a good responsive range — deliberately
+   NOT lowered again.
+4. Haptic still fires only from BlockMover.PlayHopSound after TryMoveBlock
+   success. Intensity was fixed light (Android 12ms / amp 40; iOS impact style 0).
+
+What changed
+------------
+HapticFeedback:
+- Added serialized gridCellMoveIntensity = 1.2 (+20% vs Phase 61A baseline 1.0)
+- Dedicated Android gridMoveEffect scaled from (12ms,40) → (~14ms, ~48)
+- PlayGridCellMove uses gridMoveEffect; grab/blocked lightEffect unchanged
+- iOS remains light impact style 0 (discrete styles; medium would overshoot)
+- Exposed GridCellMoveIntensity + Phase61AGridMoveIntensityBaseline for tests
+- Editor / unsupported platforms remain safe no-ops (counters still increment)
+
+WorldPieceMotion (player hop presentation only):
+- continuation linearWeight: 0.95 → 0.98
+- turn linearWeight: 0.80 → 0.88
+- continuation settlePortion: 0.18 → 0.08 (first hop settle unchanged at 0.18)
+- softenTurn remains false; first-hop cubic path unchanged
+
+What was deliberately NOT changed
+---------------------------------
+- secondsPerCell (0.105)
+- normalHopAnticipateDuration (0.03)
+- InputManager Phase 61 direction params (20 / 0.38 / 0.92 / 0.18 / 0.42 / 0.12 / 1.32 / 1.28)
+- BlockMover movement / occupancy / matching / boosters / gameplay rules
+- VisualCenterBoardPlaneOffsetLocal = 0.12
+- Architecture: InputManager → SetDragRequest → BlockMover only
+
+Files changed
+-------------
+- Assets/Scripts/Feedback/HapticFeedback.cs
+- Assets/Scripts/UI/WorldPieceMotion.cs
+- Assets/Editor/Phase61BPlayModeVerify.cs (+ .meta)
+- Assembly-CSharp-Editor.csproj (compile include)
+- Captures/phase61b-report.txt (this file)
+
+Compile
+-------
+dotnet build Assembly-CSharp.csproj: SUCCESS (0 errors; pre-existing warnings)
+dotnet build Assembly-CSharp-Editor.csproj: SUCCESS (0 errors; pre-existing warnings only)
+
+Play Mode
+---------
+PENDING — run menu: Shape Nest → Phase 61B Verify Drag Feel Polish
+Do not claim Play Mode success until that menu completes.
+
+T1–T24
+------
+PENDING (Play Mode)
+
+Remaining
+---------
+Manual Play Mode verification for T1–T24 + captures.
+Do NOT start Phase 62 / Swap / new boosters.

@@ -1,0 +1,81 @@
+Phase 52J — 3D Board Composition & Visual Hierarchy Polish
+Unity 6000.3.8f1
+
+STATUS: COMPLETE (presentation-only).
+Phase 52I lighting/shadows/piece materials preserved.
+Phase 52G selection + Phase 52H nest-entry preserved.
+
+## Goal
+Clearer visual hierarchy: quieter background → physical board well → readable cells → hero pieces.
+Minimal board/environment material polish only.
+
+## Files changed
+- Assets/Scripts/Board/BoardPresenter3D.cs (slab / frame / cell materials only)
+- Assets/Scripts/Board/BoardEnvironment3D.cs (backdrop + under-board shadow alpha only)
+- Assets/Editor/Phase52JPlayModeVerify.cs (new)
+
+## Exact values changed (before → after)
+
+### Board slab (BoardPresenter3D)
+- Color (0.09, 0.08, 0.24) → (0.07, 0.06, 0.20)
+- Smoothness 0.28 → 0.24
+
+### Board frame (BoardPresenter3D)
+- Tune color (0.16, 0.12, 0.36) → (0.17, 0.13, 0.37)
+- Wall apply color (0.18, 0.13, 0.38) → (0.19, 0.14, 0.39)
+- Smoothness 0.34 → 0.32
+
+### Cell tiles (BoardPresenter3D)
+- Color (0.18, 0.15, 0.39) → (0.20, 0.16, 0.41)
+- Smoothness 0.37 → 0.34
+- Geometry / spacing / layout unchanged
+
+### Background (BoardEnvironment3D)
+- Clear/floor (0.11, 0.07, 0.34) → (0.09, 0.055, 0.28)
+- Under-board shadow alpha 0.72 → 0.78
+- Ambient left at Phase 52I (0.18, 0.15, 0.31)
+
+### Explicitly NOT changed
+- Lighting (key 1.38 / soft 0.50 / fill 0.52 / rotations)
+- ShapeVisuals3D piece/nest/connector materials (BlockSmoothness 0.67, Metallic 0, Emission OFF)
+- Contact shadow system (Phase 52I)
+- Camera position / pitch / framing
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- Piece roots / GridPosition / footprint / mesh geometry
+- Chains / connectors / BlockMover / boosters / matching
+
+## Confirmations
+- VisualCenterBoardPlaneOffsetLocal = 0.12 (verified in Play Mode)
+- Roots / GridPosition untouched
+- Chains / connector endpoints untouched
+- Camera untouched
+- Gameplay untouched
+- Phase 52G PlayTapFeedback present
+- Phase 52H PlayNestSocketPulse present
+- Piece materials remain Phase 52I values
+
+## Compile
+- Unity compile: OK, 0 errors
+- Console: 0 errors after play
+
+## Play Mode
+- Master / chain / nested / ice / shutter loads OK
+- Hammer Selecting → Executing OK
+- Ambient retained; clear color quieter (0.09, 0.055, 0.28)
+- Verifier RESULT ok
+
+## Captures
+- Captures/phase52j-master.png
+- Captures/phase52j-all-shapes.png
+- Captures/phase52j-chain.png
+- Captures/phase52j-nested.png
+- Captures/phase52j-ice.png
+- Captures/phase52j-shutter.png
+- Captures/phase52j-hammer.png
+- Captures/phase52j-report.txt
+
+Hierarchy intent:
+  BACKGROUND (quieter) → BOARD SLAB (deeper well) → FRAME LIP → CELL SLOTS → PIECES (hero)
+
+STOP after Phase 52J.
+Do not start Shuffle, Undo, Swap, or new gameplay.

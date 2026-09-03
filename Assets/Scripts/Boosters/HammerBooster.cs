@@ -157,10 +157,8 @@ public class HammerBooster : MonoBehaviour, IBooster
         {
             SetPhase(HammerPhase.Idle);
         }
-        else
-        {
-            BoosterSelectionOverlay.HideExisting();
-        }
+
+        BoosterSelectionOverlay.HideExisting(true);
 
         if (!string.IsNullOrEmpty(reason))
         {
@@ -185,32 +183,47 @@ public class HammerBooster : MonoBehaviour, IBooster
     [ContextMenu("Activate Hammer")]
     public void ActivateHammer()
     {
+        TryBeginActivation(out _);
+    }
+
+    /// <summary>
+    /// Begins Hammer selection using the same gates as <see cref="ActivateHammer"/>.
+    /// Cancel-while-selecting counts as success (no failure reason).
+    /// </summary>
+    public bool TryBeginActivation(out BoosterFailureReason failure)
+    {
+        failure = BoosterFailureReason.None;
+
         if (phase == HammerPhase.Executing)
         {
-            return;
+            failure = BoosterFailureReason.Busy;
+            return false;
         }
 
         if (phase == HammerPhase.Selecting)
         {
             CancelHammer("Cancelled");
-            return;
+            return true;
         }
 
         if (levelManager != null && !levelManager.IsGameplayInputAllowed)
         {
             Log("Hammer ignored: gameplay input not allowed");
-            return;
+            failure = BoosterFailureReason.Unavailable;
+            return false;
         }
 
         if (hammerCharges <= 0)
         {
             Log("Hammer ignored: no charges");
-            return;
+            failure = BoosterFailureReason.NoCharges;
+            return false;
         }
 
         SetPhase(HammerPhase.Selecting);
         HideSmashView();
         Log($"Hammer selecting (charges={hammerCharges}). Tap a block.");
+        return true;
     }
 
     public void ToggleHammer()
@@ -264,6 +277,12 @@ public class HammerBooster : MonoBehaviour, IBooster
         if (!CanHammerBlock(block, out string failReason))
         {
             Log($"Hammer failed: {failReason}");
+            if (block != null)
+            {
+                block.PlayInvalidInteractionFeedback();
+            }
+
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Hammer, BoosterFailureReason.InvalidTarget);
             return false;
         }
 
@@ -304,7 +323,7 @@ public class HammerBooster : MonoBehaviour, IBooster
         }
 
         BoardManager board = boardManager != null ? boardManager : block.Board;
-        if (board != null && board.IsBlockUnderClosedShutter(block))
+        if (board != null && board.IsBlockUnderImpassableCell(block))
         {
             return false;
         }
@@ -347,7 +366,7 @@ public class HammerBooster : MonoBehaviour, IBooster
             return false;
         }
 
-        if (board.IsBlockUnderClosedShutter(block))
+        if (board.IsBlockUnderImpassableCell(block))
         {
             failReason = "block under closed shutter";
             return false;

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Frames the World3D board camera. Phase 13B/C: near-straight orthographic composition.
+/// Frames the World3D board camera. Phase 51: slight pitch so 3D piece thickness is readable.
 /// Phase 14: final framing centers the adaptively sized board inside Gameplay Area.
 /// </summary>
 [DisallowMultipleComponent]
@@ -18,7 +18,7 @@ public class BoardCamera3D : MonoBehaviour
     [SerializeField]
     [Tooltip("Pitch above the board in degrees (0 = horizontal, 90 = top-down).")]
     [Range(25f, 90f)]
-    private float lookPitch = 88f;
+    private float lookPitch = 66f;
 
     [SerializeField]
     [Min(0.1f)]
@@ -199,12 +199,12 @@ public class BoardCamera3D : MonoBehaviour
     }
 
     /// <summary>
-    /// Phase 13C/14: straight 2.5D board. Fill targets are fallbacks only.
+    /// Phase 51: slight downward pitch so extruded pieces show side faces. Fill targets are fallbacks only.
     /// </summary>
     public void ApplyArtDirectionDefaults()
     {
         useOrthographic = true;
-        lookPitch = 88f;
+        lookPitch = 66f;
         distanceMultiplier = 1.15f;
         orthographicSpanFactor = 0.85f;
         targetVerticalFill = 0.56f;

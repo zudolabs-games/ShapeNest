@@ -31,7 +31,7 @@ internal static class ShapeNestAutoMatchTests
         Check(builder, ref passed, ref failed, "D chain middle split keeps survivors", TestD_ChainMiddleSplit());
         Check(builder, ref passed, ref failed, "E cascade order after middle match", TestE_ChainCascadeOrder());
         Check(builder, ref passed, ref failed, "F nested is two occupying matches", TestF_NestedTwoPasses());
-        Check(builder, ref passed, ref failed, "F2 nested chain keeps cell after inner", TestF2_NestedChainInnerKeepsCell());
+        Check(builder, ref passed, ref failed, "F2 nested outer promote keeps cell", TestF2_NestedChainOuterPromotesInner());
         Check(builder, ref passed, ref failed, "F3 outer destination uses targetWorld", TestF3_OuterUsesPreservedTargetWorld());
         Check(builder, ref passed, ref failed, "G nested-in-chain split after outer consume", TestG_NestedInChain());
         Check(builder, ref passed, ref failed, "H partial alignment only", TestH_PartialAlignment());
@@ -42,6 +42,8 @@ internal static class ShapeNestAutoMatchTests
         Check(builder, ref passed, ref failed, "Seq2 skip key is per-cell", TestSeq2_SkipKeyPerCell());
         Check(builder, ref passed, ref failed, "Seq3 middle split leaves two survivors", TestSeq3_MiddleSplitSurvivors());
         Check(builder, ref passed, ref failed, "Seq4 end consume keeps connected pair", TestSeq4_EndConsumeKeepsPair());
+        Check(builder, ref passed, ref failed, "M multi-cell target partial consume", TestM_MultiCellTargetPartialConsume());
+        Check(builder, ref passed, ref failed, "N unrelated same-shape target survives", TestN_UnrelatedSameShapeSurvives());
 
         builder.Insert(0, $"Auto-match tests: {passed} passed, {failed} failed\n");
         return builder.ToString();
@@ -137,7 +139,7 @@ internal static class ShapeNestAutoMatchTests
         return bothAtOnce;
     }
 
-    private static bool TestF2_NestedChainInnerKeepsCell()
+    private static bool TestF2_NestedChainOuterPromotesInner()
     {
         var cell = new ShapeCellData
         {
@@ -146,13 +148,15 @@ internal static class ShapeNestAutoMatchTests
             innerShapes = new List<ShapeType> { ShapeType.Triangle }
         };
 
-        if (!ShapeLayout.TryConsumeLayer(cell, ShapeType.Triangle))
+        // Outer-first: Triangle is not matchable while nested under Square.
+        if (ShapeLayout.TryConsumeLayer(cell, ShapeType.Triangle, out _))
         {
             return false;
         }
 
-        // After inner consume the chain cell remains; only the active layer changes.
-        if (ShapeLayout.ActiveShape(cell, ShapeType.Square) != ShapeType.Square
+        if (!ShapeLayout.TryConsumeLayer(cell, ShapeType.Square, out bool remains)
+            || !remains
+            || ShapeLayout.ActiveShape(cell, ShapeType.Square) != ShapeType.Triangle
             || ShapeLayout.LayerCount(cell) != 1)
         {
             return false;
@@ -315,6 +319,82 @@ internal static class ShapeNestAutoMatchTests
             && components[0][0].shapeType == ShapeType.Circle
             && components[0][1].shapeType == ShapeType.Triangle
             && components[0][1].localPosition == new Vector2Int(1, 0);
+    }
+
+    private static bool TestM_MultiCellTargetPartialConsume()
+    {
+        var go = new GameObject("AutoMatch_MultiCellTarget");
+        go.AddComponent<RectTransform>();
+        go.AddComponent<UIPieceView>();
+        Target target = go.AddComponent<Target>();
+        target.ApplyLayout(
+            ShapeType.Triangle,
+            new List<ShapeCellData>
+            {
+                new ShapeCellData { localPosition = Vector2Int.zero, shapeType = ShapeType.Triangle },
+                new ShapeCellData { localPosition = new Vector2Int(1, 0), shapeType = ShapeType.Triangle }
+            },
+            PieceComposition.Simple,
+            ShapeType.Triangle);
+        target.Initialize(null, new Vector2Int(2, 2));
+
+        bool consumed = target.TryConsumeLayerAtWorld(
+            new Vector2Int(2, 2),
+            ShapeType.Triangle,
+            out bool complete);
+        bool ok = consumed && !complete && target.CellCount == 1;
+        Object.DestroyImmediate(go);
+        return ok;
+    }
+
+    private static bool TestN_UnrelatedSameShapeSurvives()
+    {
+        var root = new GameObject("AutoMatch_Board");
+        BoardManager board = root.AddComponent<BoardManager>();
+        board.ApplyGridSize(5, 5);
+
+        var goA = new GameObject("TargetA");
+        goA.AddComponent<RectTransform>();
+        goA.AddComponent<UIPieceView>();
+        Target a = goA.AddComponent<Target>();
+        a.ApplyLayout(
+            ShapeType.Triangle,
+            new List<ShapeCellData>
+            {
+                new ShapeCellData { localPosition = Vector2Int.zero, shapeType = ShapeType.Triangle },
+                new ShapeCellData { localPosition = new Vector2Int(0, 1), shapeType = ShapeType.Triangle }
+            },
+            PieceComposition.Simple,
+            ShapeType.Triangle);
+        a.Initialize(board, new Vector2Int(0, 0));
+
+        var goB = new GameObject("TargetB");
+        goB.AddComponent<RectTransform>();
+        goB.AddComponent<UIPieceView>();
+        Target b = goB.AddComponent<Target>();
+        b.ApplyLayout(
+            ShapeType.Triangle,
+            new List<ShapeCellData>
+            {
+                new ShapeCellData { localPosition = Vector2Int.zero, shapeType = ShapeType.Triangle },
+                new ShapeCellData { localPosition = new Vector2Int(1, 0), shapeType = ShapeType.Triangle }
+            },
+            PieceComposition.Simple,
+            ShapeType.Triangle);
+        b.Initialize(board, new Vector2Int(3, 3));
+
+        bool consumed = a.TryConsumeLayerAtWorld(new Vector2Int(0, 0), ShapeType.Triangle, out bool complete);
+        bool ok = consumed
+            && !complete
+            && a.CellCount == 1
+            && b.CellCount == 2
+            && board.GetTargetAt(new Vector2Int(3, 3)) == b
+            && board.GetTargetAt(new Vector2Int(4, 3)) == b;
+
+        Object.DestroyImmediate(goA);
+        Object.DestroyImmediate(goB);
+        Object.DestroyImmediate(root);
+        return ok;
     }
 
     private static void Split(

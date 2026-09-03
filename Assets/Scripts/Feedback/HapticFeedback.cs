@@ -15,9 +15,18 @@ public class HapticFeedback : MonoBehaviour
     [Tooltip("When off, haptic calls are ignored. Audio and gameplay are unchanged.")]
     private bool enableHaptics = true;
 
+    /// <summary>Phase 61A baseline multiplier for successful grid-cell moves.</summary>
+    public const float Phase61AGridMoveIntensityBaseline = 1.0f;
+
+    [SerializeField]
+    [Range(0.5f, 2f)]
+    [Tooltip("Relative strength for PlayGridCellMove. Phase 61A = 1.0. Phase 61B target ≈ 1.2 (+20%).")]
+    private float gridCellMoveIntensity = 1.2f;
+
 #if UNITY_ANDROID && !UNITY_EDITOR
     private AndroidJavaObject vibrator;
     private AndroidJavaObject lightEffect;
+    private AndroidJavaObject gridMoveEffect;
     private AndroidJavaObject mediumEffect;
     private AndroidJavaObject strongEffect;
     private AndroidJavaObject timeUpEffect;
@@ -42,22 +51,46 @@ public class HapticFeedback : MonoBehaviour
         set => enableHaptics = value;
     }
 
-    private void Awake()
+    /// <summary>Configured grid-move strength (1.0 = Phase 61A baseline).</summary>
+    public float GridCellMoveIntensity => gridCellMoveIntensity;
+
+    /// <summary>Test-only: successful grid-cell move haptic invocations since last reset.</summary>
+    public int GridMoveHapticCount { get; private set; }
+
+    /// <summary>Test-only: total named haptic method invocations since last reset.</summary>
+    public int TotalHapticInvokeCount { get; private set; }
+
+    public void ResetTestCounters()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        InitializeAndroid();
-#endif
+        GridMoveHapticCount = 0;
+        TotalHapticInvokeCount = 0;
     }
 
-    private void OnDestroy()
+    /// <summary>
+    /// Subtle confirmation for one successful logical grid-cell translation.
+    /// Called only from BlockMover after occupancy commit — not from presentation.
+    /// </summary>
+    public void PlayGridCellMove()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        DisposeAndroid();
+        GridMoveHapticCount++;
+        TotalHapticInvokeCount++;
+        if (!enableHaptics)
+        {
+            return;
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        // Discrete UIKit styles: stay on light impact for ~15–25% polish (style 1 is a larger jump).
+        ShapeNest_PlayImpact(0);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        long fallbackMs = (long)Mathf.Max(8f, 8f * gridCellMoveIntensity);
+        PlayAndroid(gridMoveEffect != null ? gridMoveEffect : lightEffect, fallbackMs);
 #endif
     }
 
     public void PlayGrab()
     {
+        TotalHapticInvokeCount++;
         if (!enableHaptics)
         {
             return;
@@ -72,20 +105,27 @@ public class HapticFeedback : MonoBehaviour
 
     public void PlayHop()
     {
-        if (!enableHaptics)
-        {
-            return;
-        }
+        // Legacy alias — same subtle grid-move pulse (keeps older callers working).
+        PlayGridCellMove();
+    }
 
-#if UNITY_IOS && !UNITY_EDITOR
-        ShapeNest_PlayImpact(0);
-#elif UNITY_ANDROID && !UNITY_EDITOR
-        PlayAndroid(lightEffect, 12L);
+    private void Awake()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        InitializeAndroid();
+#endif
+    }
+
+    private void OnDestroy()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        DisposeAndroid();
 #endif
     }
 
     public void PlayNestEntry()
     {
+        TotalHapticInvokeCount++;
         if (!enableHaptics)
         {
             return;
@@ -247,6 +287,13 @@ public class HapticFeedback : MonoBehaviour
                 using (AndroidJavaClass vibrationEffectClass = new AndroidJavaClass("android.os.VibrationEffect"))
                 {
                     lightEffect = vibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", 12L, 40);
+                    // Phase 61B: ~20% stronger than Phase 61A light pulse (12ms/40 → scaled).
+                    long gridMs = (long)Mathf.Clamp(Mathf.RoundToInt(12f * gridCellMoveIntensity), 8, 24);
+                    int gridAmp = Mathf.Clamp(Mathf.RoundToInt(40f * gridCellMoveIntensity), 1, 255);
+                    gridMoveEffect = vibrationEffectClass.CallStatic<AndroidJavaObject>(
+                        "createOneShot",
+                        gridMs,
+                        gridAmp);
                     mediumEffect = vibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", 18L, 90);
                     strongEffect = vibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", 28L, 180);
                     timeUpEffect = vibrationEffectClass.CallStatic<AndroidJavaObject>("createOneShot", 24L, 140);
@@ -289,11 +336,13 @@ public class HapticFeedback : MonoBehaviour
     {
         androidReady = false;
         lightEffect?.Dispose();
+        gridMoveEffect?.Dispose();
         mediumEffect?.Dispose();
         strongEffect?.Dispose();
         timeUpEffect?.Dispose();
         vibrator?.Dispose();
         lightEffect = null;
+        gridMoveEffect = null;
         mediumEffect = null;
         strongEffect = null;
         timeUpEffect = null;

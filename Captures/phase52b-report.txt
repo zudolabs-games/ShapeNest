@@ -1,0 +1,71 @@
+Phase 52B — 3D Materials & Lighting Polish
+Unity 6000.3.8f1
+
+1. Existing material system
+- ShapeVisuals3D shared runtime URP Lit materials (one per ShapeType for blocks/nests + one chain connector)
+- Created once and cached; Invalidate() on ApplyMode
+- Colors from theme sprite sampling + FallbackBlockColors (unchanged hue identity)
+
+2. Existing lighting setup
+- BoardKeyLight (Directional): soft shadows
+- BoardFillLight (Directional): no shadows
+- Flat ambient via BoardEnvironment3D / RenderSettings
+
+3. Material changes (ShapeVisuals3D)
+- Blocks: Metallic 0, Smoothness 0.62 (was ~0.05 / 0.64)
+- Nests: Metallic 0, Smoothness 0.48 (was ~0.06 / 0.42); cavity darken 0.22 (was 0.18)
+- Connector: Metallic 0, Smoothness 0.60 (was ~0.06 / 0.62)
+- Emission keyword disabled (no emission faking)
+- Environment reflections off for mobile-clean specular from lights only
+
+4. Lighting changes (BoardPresentationController ApplyMode)
+- Key: intensity 1.38 (was 1.55), soft strength 0.48 (was 0.72), rot Euler(52,318,0)
+- Fill: intensity 0.42 (was 0.35), color cooler lift, rot Euler(28,145,0)
+
+5. Shadow / ambient
+- Ambient lifted to (0.16,0.13,0.28) for side-face readability
+- Contact shadows: slightly stronger alpha 0.38; nests now get tighter contact disc; block radius ~0.50
+- Soft cast shadows retained on pieces/connectors; strength reduced for softer grounding
+
+6. Connector material
+- Same plastic family as blocks (metallic 0, smoothness 0.60)
+- Endpoints / length / rotation / thickness untouched
+
+7. Nest materials
+- Darker same-hue rim/cavity; matte smoothness; contact shadow under nests
+
+8. Files modified
+- Assets/Scripts/UI/ShapeVisuals3D.cs
+- Assets/Scripts/Board/BoardPresentationController.cs
+- Assets/Scripts/Board/BoardEnvironment3D.cs
+- Assets/Scripts/UI/PieceView3D.cs (contact shadow presentation only)
+- Assets/Scripts/Board/BoardPresenter3D.cs (board/frame/cell metallic 0, calmer smoothness)
+
+9. Positioning untouched
+- VisualCenterBoardPlaneOffsetLocal = 0.12f confirmed
+- No ApplyGridPosition / root / visualRoot / camera / cell size / connector endpoint logic changes
+
+10. Gameplay untouched
+- No Block/BlockMover/InputManager/BoardManager/boosters/matching changes
+
+11. Play Mode tests
+- Campaign_15_Master materials + lighting
+- Campaign_08 chain connectors
+- Campaign_10 nested
+- Campaign_12 ice
+- Campaign_13 shutter
+- Hammer Selecting activate/cancel (overlay still works)
+
+12. Compile: success, 0 errors
+
+13. Console: no errors after compile/play
+
+14. Captures
+- Captures/phase52b-t1-master.png
+- Captures/phase52b-t-chain-3.png
+- Captures/phase52b-t5-nested.png
+- Captures/phase52b-t9-ice.png
+- Captures/phase52b-t10-shutter.png
+- Captures/phase52b-t7-hammer-selecting.png
+
+STOP after Phase 52B.

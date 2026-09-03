@@ -1,0 +1,60 @@
+Phase 51E Play Mode verification
+VisualCenterYOffsetLocal=-0.720 nest=-0.640
+before ref Captures/phase51e-before-t1-all-shapes.png
+Unity 6000.3.8f1
+LOAD Campaign_15_Master (all shapes) ok
+  cell=0.646
+SHOT Captures/phase51e-t1-all-shapes.png
+T1 all-shapes views=12 meshOk=12 thin=0 spritesOnPiece=0 shapes=Diamond,Circle,Triangle,Hexagon,Star,Square
+T1 visualOffset views=12 localY range=[-0.7200,-0.6400]
+T1 rootSeating blocks=6 maxRootYErr=0.0000
+T1 centering views=12 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.0000 maxWorldDxz=0.0000 cell=0.646 frac=0.000
+factory solid Square verts=58 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Square verts=85 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Circle verts=674 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Circle verts=1009 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Triangle verts=44 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5200, 0.5000, 0.4503)
+factory nest Triangle verts=64 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5200, 0.5000, 0.4503)
+factory solid Diamond verts=58 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Diamond verts=85 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Hexagon verts=86 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.4460, 0.5000, 0.5150)
+factory nest Hexagon verts=127 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.4460, 0.5000, 0.5150)
+factory solid Star verts=142 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5400, 0.5000, 0.5136)
+factory nest Star verts=211 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5400, 0.5000, 0.5136)
+SHOT angled-live Captures/phase51e-t2-angled.png
+moved Circle (3, 0) -> (3, 1)
+T3 move: TryMoveBlock succeeded
+SHOT Captures/phase51e-t3-after-move.png
+LOAD Campaign_07_ChainIntro ok
+  cell=0.646
+SHOT Captures/phase51e-t-chain-2.png
+T4 chain connectors=1
+T4 chain views=6 meshOk=6 thin=0 spritesOnPiece=0 shapes=Square,Circle,Diamond
+T4 chain-2 chains=1 maxYSpread=0.0000 maxPlanarRelErr=0.0000
+T4 centering views=6 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.0000 maxWorldDxz=0.0000 cell=0.762 frac=0.000
+LOAD Campaign_10_ShapeInShape ok
+  cell=0.762
+SHOT Captures/phase51e-t5-nested.png
+T5 nested nestedInners=2
+T5 nested views=4 meshOk=4 thin=0 spritesOnPiece=0 shapes=Hexagon,Square
+T5 centering views=4 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.0000 maxWorldDxz=0.0000 cell=0.762 frac=0.000
+LOAD Campaign_12_Ice ok
+  cell=0.762
+SHOT Captures/phase51e-t9-ice.png
+T9 ice iceViews=1
+T9 centering views=8 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.0000 maxWorldDxz=0.0000 cell=0.646 frac=0.000
+LOAD Campaign_13_Shutter ok
+  cell=0.646
+SHOT Captures/phase51e-t10-shutter.png
+T10 shutter shutterViews=1
+LOAD Campaign_08_ChainCascade ok
+  cell=0.646
+SHOT Captures/phase51e-t-chain-3.png
+T chain-3 chains=1 maxYSpread=0.0000 maxPlanarRelErr=0.0000
+SHOT Captures/phase51e-t7-magnet-board.png
+T7 magnet selecting=True
+SHOT Captures/phase51e-t7-magnet-selecting.png
+T7 magnet cancelled
+T8 hammer Diamond accepted=True phase=Executing
+SHOT Captures/phase51e-t8-hammer.png
+RESULT ok

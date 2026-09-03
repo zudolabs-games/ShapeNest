@@ -38,17 +38,17 @@ public class MatchEffect : MonoBehaviour
     private Image outlineImage;
 
     [SerializeField]
-    private Color glowColor = new Color(1f, 0.95f, 0.7f, 1f);
+    private Color glowColor = new Color(1f, 0.97f, 0.88f, 0.85f);
 
     [SerializeField]
-    [Range(1.05f, 1.1f)]
+    [Range(1.04f, 1.1f)]
     [Tooltip("Peak piece scale at match contact, relative to captured rest scale.")]
-    private float impactScale = 1.08f;
+    private float impactScale = 1.06f;
 
     [SerializeField]
     [Min(0.01f)]
     [Tooltip("Duration of the contact click pulse.")]
-    private float impactDuration = 0.12f;
+    private float impactDuration = 0.10f;
 
     [SerializeField]
     [Min(0.01f)]
@@ -62,8 +62,8 @@ public class MatchEffect : MonoBehaviour
 
     [SerializeField]
     [Range(0.2f, 1f)]
-    [Tooltip("Peak glow opacity.")]
-    private float glowPeakAlpha = 0.85f;
+    [Tooltip("Peak glow opacity. Phase 52L: softer so 3D mesh bursts read as primary impact.")]
+    private float glowPeakAlpha = 0.55f;
 
     [SerializeField]
     [Min(0.01f)]
@@ -182,6 +182,14 @@ public class MatchEffect : MonoBehaviour
         KillSequenceOnly();
         float contactDuration = Mathf.Max(impactDuration, glowDuration);
         playSequence = DOTween.Sequence().SetLink(gameObject);
+
+        // Short contact flash at impact start — existing PlayNestMatch still fires on finalize.
+        playSequence.AppendCallback(() =>
+        {
+            BoardVfx3D.PlayNestMatchImpactFlash(
+                resolvedWorldPosition,
+                ShapeVisuals3D.AccentColor(presentedShape));
+        });
 
         playSequence.Append(TweenAnimationUtility.Progress(contactDuration, t =>
         {
@@ -345,11 +353,13 @@ public class MatchEffect : MonoBehaviour
     private void EvaluateGlow(float t, out float scale, out float alpha)
     {
         t = Mathf.Clamp01(t);
+        // Phase 52L: soft-cap so legacy prefab glowPeakAlpha cannot overpower mesh VFX.
+        float peak = Mathf.Min(glowPeakAlpha, 0.55f);
         if (t < 0.28f)
         {
             float u = Mathf.SmoothStep(0f, 1f, t / 0.28f);
             scale = Mathf.LerpUnclamped(0.94f, 1f, u) * glowScale;
-            alpha = Mathf.LerpUnclamped(0f, glowPeakAlpha, u);
+            alpha = Mathf.LerpUnclamped(0f, peak, u);
             return;
         }
 
@@ -357,13 +367,13 @@ public class MatchEffect : MonoBehaviour
         {
             float u = Mathf.SmoothStep(0f, 1f, (t - 0.28f) / 0.2f);
             scale = Mathf.LerpUnclamped(1f, 1.04f, u) * glowScale;
-            alpha = glowPeakAlpha;
+            alpha = peak;
             return;
         }
 
         float fade = Mathf.SmoothStep(0f, 1f, (t - 0.48f) / 0.52f);
         scale = Mathf.LerpUnclamped(1.04f, 1f, fade) * glowScale;
-        alpha = Mathf.LerpUnclamped(glowPeakAlpha, 0f, fade);
+        alpha = Mathf.LerpUnclamped(peak, 0f, fade);
     }
 
     private static float ImpactMultiplier(float elapsed, float duration, float peak)

@@ -1,0 +1,79 @@
+PHASE 71A — FORENSIC EVIDENCE CAPTURE
+=====================================
+
+Source: Phase71APlayProbe Play Mode dump (Level 43 / Campaign_43_Reference index 42)
+
+PLAYER DRAG PATH (CellCount>1) — NEVER ENTERS PHASE 70B
+------------------------------------------------------
+InputManager.OnPointerReleased
+→ BlockMover.EndDrag
+→ DragRoutine
+→ EnterMatchingTarget
+→ EnterMatchingTargetBody
+   if (CellCount > 1) → EnterChainPartialMatch   *** BRANCH ***
+      → MatchFocusedChainCell
+         → CollectChainFocusedMatch
+            → KeepOnlyNearestMatch / KeepOnlyCellAtWorld  *** REDUCES TO 1 ***
+         → PlayChainCellNestEntry (ONE cell)
+         → ConsumeAndRebuild (ONE nestCellIndices entry)
+
+AUTO-MATCH PATH
+---------------
+LevelManager alignedMatchRoutine
+→ CollectAlignedMovementGroups
+→ PlayResolvedMovementGroup
+   Count==1 → MatchFocusedChainCell
+   Count>=2 → PlayMatchingSubsetAlignedMatch (Phase 70B ONLY HERE)
+
+SOURCE SCAN
+-----------
+EnterMatchingTargetBody contains EnterChainPartialMatch=True
+EnterMatchingTargetBody contains PlayMatchingSubsetAlignedMatch=False
+
+WHITE TRIANGLE @ grid=(1,4)
+---------------------------
+A index=0 world=(1,4) Triangle:White
+B index=1 world=(2,4) Triangle:White
+C index=2 world=(1,5) Triangle:White
+D index=3 world=(2,5) Triangle:White
+
+SUBSET VALIDATION
+-----------------
+A+B→TargetA d=(0,5) CanTranslateMatchingSubset=True  CanTranslateBlock=False
+C+D→TargetA d=(0,5) CanTranslateMatchingSubset=False CanTranslateBlock=False (off-board)
+A+C→TargetB d=(3,0) CanTranslateMatchingSubset=True  CanTranslateBlock=True
+B+D→TargetB d=(3,0) CanTranslateMatchingSubset=True  CanTranslateBlock=True
+  (B+D dest cells currently occupied by Orange Pentagon targets — identity mismatch for White)
+
+AUTO-MATCH AT AUTHORED REST
+---------------------------
+actions=0 groups=0
+→ Phase 70B unreachable until adjacency/last-match produces groups
+
+FOCUSED REDUCTION SIMULATION (drag toward Target A focus=(1,9))
+---------------------------------------------------------------
+candidates=2 (cell0→(1,9), cell1→(2,9))
+KeepOnlyNearest RESULT: KEEP cell=0, DROPPED=1
+FIRST INCORRECT STATE: multi-cell set reduced to 1 cell
+
+BOARD BLOCKERS (north path blocked)
+-----------------------------------
+(1,6)/(1,7)/(1,8) Orange Pentagon block
+(2,7)/(2,8) Star block
+White triangle cannot hop north from authored pose (CanTranslate (1,5)=False)
+
+NESTED SAMPLE (Orange Pentagon 3-cell)
+--------------------------------------
+cell[1], cell[2] have NestedInner3D parented under PieceView3D (idle — expected)
+Logical vs visual XY aligned; Y err≈0.13 (piece height offset, not a match bug)
+
+LOGICAL VS VISUAL (white, idle)
+-------------------------------
+Logical occupancy CORRECT at authored cells
+Visual world XY matches grid; not mid-match divergence at idle
+
+WHY 70B DID NOT FIX PLAYER BUG
+------------------------------
+70B only wired PlayResolvedMovementGroup (auto-match).
+Player drag multi-cell always uses EnterChainPartialMatch→MatchFocusedChainCell.
+Auto-match also returns 0 groups at authored white-triangle rest.

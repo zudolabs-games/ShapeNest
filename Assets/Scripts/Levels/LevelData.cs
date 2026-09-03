@@ -29,6 +29,9 @@ public class LevelData : ScriptableObject
     public List<LevelTargetData> targets = new List<LevelTargetData>();
     public List<LevelShutterData> shutters = new List<LevelShutterData>();
 
+    [Tooltip("Permanent impassable board cells (absolute grid coordinates).")]
+    public List<Vector2Int> blockedCells = new List<Vector2Int>();
+
     public int ResolvedGridWidth => gridWidth < 1 ? 5 : gridWidth;
     public int ResolvedGridHeight => gridHeight < 1 ? 5 : gridHeight;
 

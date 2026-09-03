@@ -1,0 +1,7 @@
+block cells=4 grid=(1, 4)
+subset01=True whole=False
+midSample siblingsStill=True rigid=True
+survivorCells=2 siblingsStayLogical=True
+targetsConsumed=True (19=True 29=True)
+consumeSucceeded=True
+RESULT: PASS (PASS)

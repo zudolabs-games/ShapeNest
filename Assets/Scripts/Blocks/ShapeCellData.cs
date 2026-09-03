@@ -11,8 +11,14 @@ public class ShapeCellData
     public Vector2Int localPosition;
     public ShapeType shapeType;
 
-    [Tooltip("Inner nested shapes, innermost first. Empty means a simple cell of Shape Type (the outer/remaining shape).")]
+    [Tooltip("Optional outer color override. Default uses the shape-type palette.")]
+    public ShapeColor outerColor = ShapeColor.Default;
+
+    [Tooltip("Nested layers under Shape Type, next-to-promote first (outermost remaining child). Empty means a simple cell.")]
     public List<ShapeType> innerShapes = new List<ShapeType>();
+
+    [Tooltip("Optional inner colors parallel to Inner Shapes. Default uses the inner shape-type palette.")]
+    public List<ShapeColor> innerShapeColors = new List<ShapeColor>();
 }
 
 /// <summary>
@@ -79,7 +85,9 @@ public static class ShapeLayout
             {
                 localPosition = Vector2Int.zero,
                 shapeType = fallback,
-                innerShapes = new List<ShapeType>()
+                outerColor = ShapeColor.Default,
+                innerShapes = new List<ShapeType>(),
+                innerShapeColors = new List<ShapeColor>()
             });
             return;
         }
@@ -101,7 +109,9 @@ public static class ShapeLayout
             {
                 localPosition = cell.localPosition,
                 shapeType = cell.shapeType,
-                innerShapes = CloneInners(cell.innerShapes)
+                outerColor = cell.outerColor,
+                innerShapes = CloneInners(cell.innerShapes),
+                innerShapeColors = CloneInnerColors(cell.innerShapeColors)
             });
         }
 
@@ -111,7 +121,9 @@ public static class ShapeLayout
             {
                 localPosition = Vector2Int.zero,
                 shapeType = fallback,
-                innerShapes = new List<ShapeType>()
+                outerColor = ShapeColor.Default,
+                innerShapes = new List<ShapeType>(),
+                innerShapeColors = new List<ShapeColor>()
             });
         }
     }
@@ -273,19 +285,74 @@ public static class ShapeLayout
         return copy;
     }
 
-    public static ShapeType ActiveShape(ShapeCellData cell, ShapeType fallback)
+    public static List<ShapeColor> CloneInnerColors(IReadOnlyList<ShapeColor> source)
     {
-        if (cell == null)
+        var copy = new List<ShapeColor>();
+        if (source == null)
         {
-            return fallback;
+            return copy;
         }
 
-        if (cell.innerShapes != null && cell.innerShapes.Count > 0)
+        for (int i = 0; i < source.Count; i++)
+        {
+            copy.Add(source[i]);
+        }
+
+        return copy;
+    }
+
+    public static ShapeColor EffectiveOuterColor(ShapeCellData cell)
+    {
+        return cell != null ? cell.outerColor : ShapeColor.Default;
+    }
+
+    public static ShapeColor EffectiveInnerColor(ShapeCellData cell, int innerIndex)
+    {
+        if (cell?.innerShapeColors != null
+            && innerIndex >= 0
+            && innerIndex < cell.innerShapeColors.Count)
+        {
+            return cell.innerShapeColors[innerIndex];
+        }
+
+        return ShapeColor.Default;
+    }
+
+    public static ShapeColor ActiveInnerColor(ShapeCellData cell)
+    {
+        if (cell?.innerShapes != null && cell.innerShapes.Count > 0)
+        {
+            return EffectiveInnerColor(cell, 0);
+        }
+
+        return ShapeColor.Default;
+    }
+
+    /// <summary>
+    /// Gameplay matching identity for a cell: the outermost remaining layer (<see cref="ShapeCellData.shapeType"/>).
+    /// Nested children live in <see cref="ShapeCellData.innerShapes"/> and are not matchable until promoted.
+    /// </summary>
+    public static ShapeType ActiveShape(ShapeCellData cell, ShapeType fallback)
+    {
+        return cell != null ? cell.shapeType : fallback;
+    }
+
+    /// <summary>
+    /// Immediate nested child shown inside the outer shell, or the outer itself when none remain.
+    /// </summary>
+    public static ShapeType NestedChildShape(ShapeCellData cell, ShapeType fallback)
+    {
+        if (cell?.innerShapes != null && cell.innerShapes.Count > 0)
         {
             return cell.innerShapes[0];
         }
 
-        return cell.shapeType;
+        return ActiveShape(cell, fallback);
+    }
+
+    public static ShapeColor NestedChildColor(ShapeCellData cell)
+    {
+        return EffectiveInnerColor(cell, 0);
     }
 
     public static int LayerCount(ShapeCellData cell)
@@ -353,35 +420,92 @@ public static class ShapeLayout
         }
     }
 
-    public static bool TryConsumeLayer(ShapeCellData cell, ShapeType offered)
+    /// <summary>
+    /// Consumes the outermost matching layer when offered ShapeType + Color both agree.
+    /// When inner layers remain, promotes the next inner shape/color into
+    /// <see cref="ShapeCellData.shapeType"/> / <see cref="ShapeCellData.outerColor"/>
+    /// and returns true with <paramref name="cellRemains"/> = true.
+    /// </summary>
+    public static bool TryConsumeLayer(
+        ShapeCellData cell,
+        MatchIdentity offered,
+        out bool cellRemains)
     {
-        if (cell == null || ActiveShape(cell, offered) != offered)
+        cellRemains = false;
+        if (cell == null || !ShapeMatch.AreMatchingLayers(ShapeMatch.FromCell(cell), offered))
         {
             return false;
         }
 
         if (cell.innerShapes != null && cell.innerShapes.Count > 0)
         {
+            cell.shapeType = cell.innerShapes[0];
             cell.innerShapes.RemoveAt(0);
+            if (cell.innerShapeColors != null && cell.innerShapeColors.Count > 0)
+            {
+                cell.outerColor = cell.innerShapeColors[0];
+                cell.innerShapeColors.RemoveAt(0);
+            }
+            else
+            {
+                cell.outerColor = ShapeColor.Default;
+            }
+
+            cellRemains = true;
             return true;
         }
 
+        cellRemains = false;
         return true;
     }
 
-    public static bool IsCellFullyConsumed(ShapeCellData cell, ShapeType offered)
+    public static bool TryConsumeLayer(
+        ShapeCellData cell,
+        ShapeType offered,
+        ShapeColor offeredColor,
+        out bool cellRemains)
+    {
+        return TryConsumeLayer(cell, new MatchIdentity(offered, offeredColor), out cellRemains);
+    }
+
+    /// <summary>
+    /// Shape-only helper for tests/legacy. Uses the cell's own configured color so
+    /// peel still requires the offered shape to be the active outer layer.
+    /// </summary>
+    public static bool TryConsumeLayer(ShapeCellData cell, ShapeType offered, out bool cellRemains)
+    {
+        return TryConsumeLayer(cell, offered, EffectiveOuterColor(cell), out cellRemains);
+    }
+
+    /// <summary>Backward-compatible wrapper. Prefer the out-bool overload.</summary>
+    public static bool TryConsumeLayer(ShapeCellData cell, ShapeType offered)
+    {
+        return TryConsumeLayer(cell, offered, out _);
+    }
+
+    public static bool TryConsumeLayer(ShapeCellData cell, MatchIdentity offered)
+    {
+        return TryConsumeLayer(cell, offered, out _);
+    }
+
+    public static bool IsCellFullyConsumed(ShapeCellData cell, MatchIdentity offered)
     {
         if (cell == null)
         {
             return true;
         }
 
-        if (cell.innerShapes != null && cell.innerShapes.Count > 0)
+        if (!ShapeMatch.AreMatchingLayers(ShapeMatch.FromCell(cell), offered))
         {
             return false;
         }
 
-        return cell.shapeType == offered;
+        return cell.innerShapes == null || cell.innerShapes.Count == 0;
+    }
+
+    public static bool IsCellFullyConsumed(ShapeCellData cell, ShapeType offered)
+    {
+        return IsCellFullyConsumed(cell, new MatchIdentity(offered, EffectiveOuterColor(cell)));
     }
 
     /// <summary>
@@ -461,7 +585,9 @@ public static class ShapeLayout
                 {
                     localPosition = worlds[i] - anchor,
                     shapeType = source.shapeType,
-                    innerShapes = CloneInners(source.innerShapes)
+                    outerColor = source.outerColor,
+                    innerShapes = CloneInners(source.innerShapes),
+                    innerShapeColors = CloneInnerColors(source.innerShapeColors)
                 });
             }
 
@@ -471,15 +597,46 @@ public static class ShapeLayout
     }
 
     /// <summary>
-    /// Collects every matchable layer shape from a piece (innermost first per cell, then outer).
+    /// Collects matchable identities for a single cell (outer then nested children).
+    /// </summary>
+    public static void CollectResolvableIdentitiesForCell(
+        ShapeCellData cell,
+        ShapeType fallback,
+        List<MatchIdentity> destination)
+    {
+        if (destination == null)
+        {
+            return;
+        }
+
+        if (cell == null)
+        {
+            destination.Add(new MatchIdentity(fallback, ShapeColor.Default));
+            return;
+        }
+
+        destination.Add(ShapeMatch.FromCell(cell, fallback));
+        if (cell.innerShapes == null)
+        {
+            return;
+        }
+
+        for (int j = 0; j < cell.innerShapes.Count; j++)
+        {
+            destination.Add(new MatchIdentity(cell.innerShapes[j], EffectiveInnerColor(cell, j)));
+        }
+    }
+
+    /// <summary>
+    /// Collects every matchable layer identity from a piece (outer then nested children per cell).
     /// Applies legacy ShapeInShape conversion so validation matches runtime spawn behavior.
     /// </summary>
-    public static void CollectResolvableLayers(
+    public static void CollectResolvableIdentities(
         IReadOnlyList<ShapeCellData> cells,
         ShapeType fallback,
         PieceComposition composition,
         ShapeType outerShape,
-        List<ShapeType> destination)
+        List<MatchIdentity> destination)
     {
         if (destination == null)
         {
@@ -494,19 +651,44 @@ public static class ShapeLayout
             ShapeCellData cell = working != null && i < working.Count ? working[i] : null;
             if (cell == null)
             {
-                destination.Add(fallback);
+                destination.Add(new MatchIdentity(fallback, ShapeColor.Default));
                 continue;
             }
 
-            if (cell.innerShapes != null)
+            destination.Add(ShapeMatch.FromCell(cell, fallback));
+            if (cell.innerShapes == null)
             {
-                for (int j = 0; j < cell.innerShapes.Count; j++)
-                {
-                    destination.Add(cell.innerShapes[j]);
-                }
+                continue;
             }
 
-            destination.Add(cell.shapeType);
+            for (int j = 0; j < cell.innerShapes.Count; j++)
+            {
+                destination.Add(new MatchIdentity(cell.innerShapes[j], EffectiveInnerColor(cell, j)));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects every matchable layer shape from a piece (outer then nested children per cell).
+    /// Applies legacy ShapeInShape conversion so validation matches runtime spawn behavior.
+    /// </summary>
+    public static void CollectResolvableLayers(
+        IReadOnlyList<ShapeCellData> cells,
+        ShapeType fallback,
+        PieceComposition composition,
+        ShapeType outerShape,
+        List<ShapeType> destination)
+    {
+        if (destination == null)
+        {
+            return;
+        }
+
+        var identities = new List<MatchIdentity>();
+        CollectResolvableIdentities(cells, fallback, composition, outerShape, identities);
+        for (int i = 0; i < identities.Count; i++)
+        {
+            destination.Add(identities[i].Shape);
         }
     }
 

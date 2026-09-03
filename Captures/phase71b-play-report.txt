@@ -1,0 +1,8 @@
+PHASE 71B — PLAY MODE NESTED EXTRACTION
+======================================
+block=-621270 cell=1 source=(1, 7) outer=-622804 innerChild=-622840
+before innerPos=(-0.825, 0.325, 4.158) outerPos=(-0.825, 0.325, 4.199)
+detached=True sameObject=True notChildOfOuter=True
+during innerPos=(-0.832, 0.325, 4.210) outerPos=(0.675, 0.325, 6.699) innerXZDrift=0.0526 followError=2.874 outerMoved=True
+INNER stayed at SOURCE while OUTER world position changed.
+RESULT: PASS (PASS)

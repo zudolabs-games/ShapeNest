@@ -1,0 +1,31 @@
+Phase 58A — Drag Control Reliability & Feel
+Unity editor session note (auto)
+
+VisualCenterBoardPlaneOffsetLocal=0.12
+Control: InputManager screen drag → BlockMover (no second mover)
+Pick: BoardInput3D physics → PieceView3D (collider aligned to visualRoot)
+
+Audit / root cause of prior T1 failure:
+- PieceView3D BoxCollider stayed at local center (0,0,0) while the visible mesh
+  (visualRoot) was shifted by VisualCenterBoardPlaneOffsetLocal (0.12).
+- Screen projection / press points therefore did not reliably hit the pick volume
+  for the visible piece, especially under verifier camera/pixel-rect conditions.
+- Confirmed live after fix: collider center=(0.00, 0.00, -0.12) matching visual offset.
+- Prior verifier also allowed some tests to PASS without GridPosition changing.
+
+Changed:
+- Assets/Scripts/UI/PieceView3D.cs — AlignPickColliderToVisual + PickWorldCenter
+- Assets/Scripts/Board/BoardInput3D.cs — SyncTransforms, skip settled, PickCamera
+- Assets/Scripts/Input/InputManager.cs — project PickWorldCenter; reverse-steer hysteresis
+- Assets/Editor/Phase58PlayModeVerify.cs — realDrag+gridChanged assertions; phase58a captures
+
+Threshold: 28px | first hop: max(28, 0.55×cell) | BlockMover.secondsPerCell unchanged
+
+Validation:
+- Assembly-CSharp: PASS (0 errors; pre-existing warnings only)
+- Assembly-CSharp-Editor: PASS (0 errors; pre-existing warnings only)
+- Play Mode: PENDING — Unity editor play mode stuck at Time.time=0 / frame=1 in this session
+- Verifier: PENDING — run Shape Nest → Phase 58 Verify Drag Controls after Play Mode is healthy
+- Console: no compile errors after reimport
+
+RESULT pending-play-mode

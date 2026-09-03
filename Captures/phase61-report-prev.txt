@@ -1,0 +1,150 @@
+Phase 61 — Continuous Drag Direction Control / Reference-Style Touch Feel
+Unity 6000.3.8f1
+VisualCenterBoardPlaneOffsetLocal=0.12
+DragThresholdPixels=20.0
+Threshold=20 | firstStep=0.38 | stride=0.92 | change=0.18 | reverse=0.42 | perpDeadband=0.12
+Phase 61: continuous direction change + re-anchor after LogicalCell commit
+Control: InputManager → SetDragRequest → BlockMover (no second mover)
+Pick: BoardInput3D physics → PieceView3D
+LOAD FirstMove
+SHOT Captures/phase61-master.png
+SHOT Captures/phase61-before.png
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+PASS T1 — valid piece can be picked | realDrag=True gridChanged=False
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 0) dir=(1, 0) steps=1 req=(1, 0) requests=1
+PASS T2 — small drag starts movement | realDrag=True gridChanged=True
+PICK screen=(363.41, 669.89) grid=(0, 0) pickWorld=(-0.86, 0.60, 1.12)
+PICK direct=(0, 0)
+PICK FAILED — no BindPressOnBlock fallback
+REALDRAG fail: pick miss (0, 0)
+FAIL T3 — drag RIGHT (drag did not start) | realDrag=False gridChanged=False
+FAIL T3 — drag RIGHT one cell | realDrag=False gridChanged=True
+SHOT Captures/phase61-right.png
+PICK screen=(371.71, 658.92) grid=(1, 0) pickWorld=(-0.82, 0.46, 1.12)
+PICK direct=(1, 0)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(1, 0) dir=(-1, 0) steps=1 req=(0, 0) requests=1
+PASS T4 — drag LEFT one cell | realDrag=True gridChanged=True
+SHOT Captures/phase61-left.png
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 0) dir=(0, 1) steps=1 req=(0, 1) requests=1
+PASS T5 — drag UP one cell | realDrag=True gridChanged=True
+SHOT Captures/phase61-up.png
+PICK screen=(203.42, 812.66) grid=(0, 1) pickWorld=(-1.65, 0.46, 1.94)
+PICK direct=(0, 1)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 1) dir=(0, -1) steps=1 req=(0, 0) requests=1
+PASS T6 — drag DOWN one cell | realDrag=True gridChanged=True
+SHOT Captures/phase61-down.png
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 0) dir=(1, 0) steps=3 req=(3, 0) requests=1
+PASS T7 — long drag moves multiple cells (3) | realDrag=True gridChanged=True
+FAIL T8 — RIGHT→DOWN one touch (no open path) | realDrag=False gridChanged=False
+FAIL T9 — DOWN→LEFT one touch (no open path) | realDrag=False gridChanged=False
+FAIL T10 — LEFT→UP one touch (no open path) | realDrag=False gridChanged=False
+FAIL T11 — RIGHT→DOWN→LEFT→UP continuous (no open path) | realDrag=False gridChanged=False
+FAIL T33 — multi-direction path sequence (no open path) | realDrag=False gridChanged=False
+FAIL T12 — reverse direction without release | realDrag=False gridChanged=False
+SHOT Captures/phase61-reversal.png
+FAIL T13 — perpendicular change without exaggerated movement | realDrag=False gridChanged=False
+PICK screen=(708.29, 658.92) grid=(3, 0) pickWorld=(0.82, 0.46, 1.12)
+PICK direct=(3, 0)
+PICK ok offset=(0.00, 0.00)
+CONT dir=(0, -1) steps=2 req=(3, -1) locked=(0, -1)
+PASS T14 — blocked direction does not cancel drag | realDrag=True gridChanged=False
+SHOT Captures/phase61-blocked.png
+PICK screen=(708.29, 658.92) grid=(3, 0) pickWorld=(0.82, 0.46, 1.12)
+PICK direct=(3, 0)
+PICK FAILED — no BindPressOnBlock fallback
+FAIL T15 — blocked then valid (pick failed) | realDrag=False gridChanged=False
+PICK screen=(708.29, 658.92) grid=(3, 0) pickWorld=(0.82, 0.46, 1.12)
+PICK direct=(3, 0)
+PICK FAILED — no BindPressOnBlock fallback
+FAIL T16 — no diagonal (pick failed) | realDrag=False gridChanged=False
+LOAD FixedDirection
+PICK screen=(183.09, 1160.11) grid=(0, 4) pickWorld=(-1.74, 0.40, 3.82)
+PICK direct=(0, 4)
+PICK ok offset=(0.00, 0.00)
+REALDRAG no-lock dir=(-1, 0) allowed=False reject=
+PASS T17 — fixed-direction forbidden move rejected | realDrag=True gridChanged=False
+PICK screen=(183.09, 1160.11) grid=(0, 4) pickWorld=(-1.74, 0.40, 3.82)
+PICK direct=(0, 4)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 4) dir=(1, 0) steps=1 req=(1, 4) requests=1
+PASS T16 — fixed-direction allowed move | realDrag=True gridChanged=True
+SHOT Captures/phase61-fixed-direction.png
+LOAD Chain
+PICK screen=(371.71, 1120.14) grid=(1, 3) pickWorld=(-0.82, 0.46, 3.59)
+PICK direct=(1, 3)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(1, 3) dir=(1, 0) steps=1 req=(2, 3) requests=1
+PASS T18 — chain moves as one Block (offsets ok=True) | realDrag=True gridChanged=True
+SHOT Captures/phase61-chain.png
+LOAD Nested
+PICK screen=(371.71, 1120.14) grid=(1, 3) pickWorld=(-0.82, 0.46, 3.59)
+PICK direct=(1, 3)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(1, 3) dir=(1, 0) steps=1 req=(2, 3) requests=1
+PASS T19 — nested piece remains visually synchronized | realDrag=True gridChanged=True
+SHOT Captures/phase61-nested.png
+LOAD Boosters
+PICK screen=(183.09, 1160.11) grid=(0, 4) pickWorld=(-1.74, 0.40, 3.82)
+PICK direct=(0, 4)
+PICK FAILED — no BindPressOnBlock fallback
+REALDRAG fail: pick miss (0, 4)
+PASS T20 — booster selection blocks normal drag | realDrag=True gridChanged=False
+SHOT Captures/phase61-booster-gate.png
+PASS T21 — Magnet selection regression | realDrag=True gridChanged=False
+T21 charges=3
+LOAD Cleanup
+PASS T25 — release stops issuing movement | realDrag=True gridChanged=False
+PASS T26 — last valid GridPosition preserved on release (session ended) | realDrag=True gridChanged=False
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+PASS T27 — restart during drag cleanup | realDrag=True gridChanged=False
+PICK screen=(203.42, 658.94) grid=(0, 0) pickWorld=(-1.65, 0.47, 1.11)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+LOAD AfterLevelChange
+PASS T28 — level change during drag cleanup | realDrag=True gridChanged=False
+PASS T29 — no stale drag state after interruption | realDrag=True gridChanged=False
+PASS T32 — no duplicate movement system (BlockMover present; InputManager does not set Transform) | realDrag=True gridChanged=False
+PASS T30 — no duplicate movement system
+PASS T31 — no destination flash introduced (Phase 53F path unchanged) | realDrag=True gridChanged=False
+PASS T32 — no direct Transform movement from InputManager | realDrag=True gridChanged=False
+SHOT Captures/phase61-cleanup.png
+
+Audit / limitation fixed:
+- Mid-drag direction used sticky hysteresis (change 0.30, reverse 0.72, deadband 0.20)
+  and measured from PointerDown / along-axis steer without re-anchor after commit.
+- Phase 61: re-anchor after LogicalCell commit; direction from lastCommittedScreen;
+  change=0.18 reverse=0.42 perpDeadband=0.12 steerDominance=1.28.
+- Blocked direction does not EndDrag / ClearPressState.
+
+Control parameters:
+- DragThresholdPixels=20
+- FirstStepCellFraction=0.38
+- CellStrideFraction=0.92
+- DirectionChangeCellFraction=0.18
+- ReverseFlipCellFraction=0.42
+- PerpendicularDeadbandCellFraction=0.12
+- DirectionDominanceRatio=1.32 | DirectionSteerDominanceRatio=1.28
+VisualCenterBoardPlaneOffsetLocal=0.12 preserved
+BlockMover remains ONLY movement sequencer — InputManager only SetDragRequest/SetDragDirection
+
+Files:
+- Assets/Scripts/Input/InputManager.cs
+- Assets/Scenes/SampleScene.unity (directionChangeCellFraction=0.18)
+- Assets/Editor/Phase61PlayModeVerify.cs
+RESULT failed
+lastError=T3 failed

@@ -1,0 +1,99 @@
+Phase 52G — Interaction Feel Polish
+Unity 6000.3.8f1
+
+STATUS: COMPLETE (presentation-only). Phase 52E movement baseline intact. Phase 52F visual baseline intact.
+
+## Goal
+Improve the feel of selecting/dragging 3D blocks without changing gameplay destinations, durations, occupancy, matching, chains, boosters, or camera framing.
+
+## Files changed
+- Assets/Scripts/UI/PieceView3D.cs
+- Assets/Scripts/Blocks/Block.cs (presentation selection only)
+- Assets/Scripts/Input/InputManager.cs (invalid settled nudge only)
+- Assets/Scripts/Board/BoardCellDestinationHighlight3D.cs (subtle breath pulse only)
+- Assets/Scripts/Animation/TweenAnimationUtility.cs (InteractionId constant)
+- Assets/Editor/Phase52GPlayModeVerify.cs (new verifier)
+
+## Interaction effects added
+
+### Tap / select (PieceView3D + Block.ShowDragSelection)
+- PlayTapFeedback: micro lift pulse on visualRoot
+  - peak local Y ≈ 0.055 → settle to held lift
+  - durations: 0.05s up + 0.07s down (ease-out cubic)
+- SetHeldBlend (mesh/visualRoot only — NOT root footprint scale):
+  - scale peak: 1.04 (InteractionScalePeak)
+  - lift: 0.045 world-local on visualRoot (InteractionLiftLocal)
+  - soft contact shadow radius boost: +0.10 * heldBlend
+- Block dragSelectScale default: 1.02 → 1.04
+- Block dragSelectDuration default: 0.07 → 0.10
+- Held blend applied to all world views (primary + chain extras)
+- Nested inner localPosition follows visualRoot (including micro-lift) so outer/inner stay aligned
+
+### Drag start
+- Existing WorldPieceMotion pickup (PickupDuration=0.08, CarryScaleBoost=0.05) unchanged
+- Before first hop creates WorldPieceMotion, held scale/lift provides immediate pickup feel
+- When carry PresentationLift > 0.02, interactionLiftLocal clears so lifts do not stack
+
+### Drag follow / release
+- Destination calculation unchanged (BoardCellDestinationHighlight3D / BlockMover)
+- Release: HideDragSelection eases held blend/scale back; existing hop/settle path remains Phase 52E
+
+### Destination highlight polish
+- Subtle breath scale: amplitude 0.028, ~0.55 Hz (LateUpdate)
+- Activation / cell selection / validity rules unchanged
+
+### Invalid interaction
+- Settled block press: PlayInvalidInteractionFeedback → PlayInvalidNudge
+  - mesh scale 1.00 → 0.97 → 1.00 over 0.10s
+- Does not consume charges or alter input routing
+
+## Measured Play Mode values (WorldView bound)
+- SetHeldBlend(1): meshScaleX=1.040, meshLocalY=0.045
+- VisualCenterBoardPlaneOffsetLocal=0.12 (unchanged)
+- Magnet activate/cancel OK; Hammer selection accepted
+- Destination highlight component present during IsDragAiming
+
+## Confirmations
+- VisualCenterBoardPlaneOffsetLocal remains 0.12f
+- Gameplay untouched: Block.GridPosition, BoardManager occupancy/matching/pathfinding,
+  BlockMover destinations & secondsPerCell, chain detection/endpoints/connectors,
+  Magnet/Hammer/Ice/Shutter gameplay, target collection, level completion
+- Destination calculation untouched (highlight still reads VisualGridCell / IsDragAiming)
+- Chain endpoints / MatchCarryPresentation contract unchanged
+- Phase 52E WorldPieceMotion hop timings/easing constants unchanged
+  (PickupDuration 0.08, SettleDuration 0.10, CarryScaleBoost 0.05, hop portions unchanged)
+- Camera framing/angle, cell pitch, hierarchy, Canvas structure unchanged
+- No emission / neon / material replacement / new input or drag systems
+
+## Compile
+- Unity compile: OK, 0 errors
+- Console: 0 errors after play sessions
+- Note: Unity-generated "Build FAILED" with exit 0 / 0 errors is not treated as failure
+
+## Play Mode tests
+1. Single-block tap select — held 1.04 / lift 0.045 applied
+2. Drag begin — IsDragAiming true; held presentation present
+3–4. Valid/invalid destination — gameplay path unchanged
+5–6. Empty/nest — no gameplay change; settled invalid nudge only
+7–9. Chain select — extras receive SetHeldBlend; alignment preserved
+10. Nested — inner follows visualRoot lift (no separation)
+11–12. Ice / Shutter — regression captures retained
+13–14. Magnet / Hammer — selection works; no interaction polish leakage into targeting rules
+15–19. Match / nest entry / completion / restart / transition — not re-authored; presentation-only phase
+
+## Captures
+- Captures/phase52g-before-interaction.png
+- Captures/phase52g-tap-feedback.png
+- Captures/phase52g-drag.png
+- Captures/phase52g-destination.png
+- Captures/phase52g-chain.png
+- Captures/phase52g-nested.png
+- Captures/phase52g-hammer.png
+- Captures/phase52g-magnet.png
+- Captures/phase52g-ice.png
+- Captures/phase52g-shutter.png
+- Captures/phase52g-report.txt
+
+STOP after Phase 52G.
+Do not start Phase 52H.
+Do not implement Shuffle, Undo, Swap, or any new gameplay feature.

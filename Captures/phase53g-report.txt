@@ -1,0 +1,50 @@
+Phase 53G Result: PENDING (Play Mode verifier not run — Unity project already open)
+
+Button feedback: PENDING
+Charge synchronization: PASS (code inspection)
+Zero-charge behavior: PASS (code inspection)
+Busy protection: PASS (code inspection)
+Cleanup: PASS (code inspection)
+Restart cleanup: PASS (code inspection — OnDestroy tween cleanup added)
+Level-change cleanup: PASS (code inspection — T16/T17 extended)
+Chain: PENDING
+Nested: PENDING
+Ice: PASS (T10 unchanged)
+Shutter: PASS (T11 unchanged)
+Magnet: PENDING
+Hammer: PENDING
+Destination flash regression: PENDING
+
+T33: PENDING
+T34: PENDING
+T35: PENDING
+T36: PENDING
+T37: PENDING
+T38: PENDING
+T39: PENDING
+T40: PENDING
+
+VisualCenterBoardPlaneOffsetLocal = 0.12
+Shuffle animation = AnimateShuffleMove
+Shuffle stagger = 0.018s
+Destination flash = (verify via Play Mode)
+Runtime ShuffleButton creation = disabled
+
+Compile result:
+- EXIT_CODE=0
+- Errors=0
+- Warnings=7 (pre-existing, unrelated to Phase 53G)
+
+Unity Play Mode:
+- Batch run blocked: another Unity instance has the project open.
+- Run manually: Shape Nest → Phase 53 Verify Shuffle Booster
+- Report will update Captures/phase53g-report.txt on completion.
+
+Phase 53G changes (minimal):
+1. ShuffleBoosterButton.OnDestroy — KillPressTween + RestorePressScale (restart/scene teardown cleanup)
+2. Phase53PlayModeVerify — T33–T40, destination-flash regression, phase53g captures/report
+
+Phase 53F preserved (no changes):
+- BeginShufflePresentationHold / RestoreShuffleViewsAtFrom / EndShufflePresentationHold
+- SnapWorldPresentationToGrid / motion-lock / FROM anchor capture
+- WorldPieceMotion.AnimateShuffleMove (9%/82%/9%, 0.018s stagger)

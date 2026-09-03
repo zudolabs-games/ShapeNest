@@ -1,0 +1,79 @@
+Phase 54 — Undo Booster
+Status: PENDING Play Mode verification (not executed in this session)
+
+Audit:
+- Commit point for player moves: BlockMover.TryBeginDrag calls BoardUndoHistory.BeginPendingCapture; DragRoutine finalize commits when logicalCell != dragSessionStart and no match entered
+- Match entry (EnterMatchingTarget) discards pending snapshot — matches are not undoable
+- Magnet presentation moves use magnetPresenting flag; player drag path is separate
+- Shuffle: CaptureActiveSnapshot immediately before logical apply (after plan validated)
+- Magnet/Hammer: intentionally non-undoable (destructive/complex match paths)
+- Ice/Shutter: unchanged by pure moves/shuffle; not stored in snapshot (durability preserved on Block instances)
+- Level load/restart: LevelManager clears BoardUndoHistory on LoadLevel
+
+Implementation:
+- BoardUndoHistory: one-step pre-action snapshot (Dictionary<Block, Vector2Int> for all non-settled blocks)
+- UndoBooster: IBooster, charge consumed only after successful ApplyLogicalRestore + animation start
+- UndoBoosterButton: wired to existing BoostersContainer/UndoButton (replaced misplaced HammerBoosterButton)
+- Restoration: UnregisterBlock → TryRegisterBlock → SetGridPosition(preserveWorldPresentation) → motion-lock → snap views at FROM → AnimateShuffleMove to restored cells
+- Keyboard: U activates Undo via BoosterManager
+
+Files changed:
+- Assets/Scripts/Boosters/BoardUndoHistory.cs (new)
+- Assets/Scripts/Boosters/UndoBooster.cs (new)
+- Assets/Scripts/UI/UndoBoosterButton.cs (new)
+- Assets/Scripts/Boosters/IBooster.cs (BoosterType.Undo)
+- Assets/Scripts/Boosters/BoosterManager.cs (EnsureUndo)
+- Assets/Scripts/Blocks/BlockMover.cs (pending/commit/discard hooks)
+- Assets/Scripts/Boosters/ShuffleBooster.cs (snapshot before shuffle)
+- Assets/Scripts/Levels/LevelManager.cs (clear history on load)
+- Assets/Scenes/SampleScene.unity (UndoButton → UndoBoosterButton)
+- Assets/Editor/Phase54PlayModeVerify.cs (new)
+- Assembly-CSharp.csproj (new compile entries)
+
+Undo snapshot contents:
+- Block instance → GridPosition anchor for every active non-settled block on board at pre-action time
+
+Undoable actions:
+- Successful player drag that changes GridPosition without entering match
+- Successful Shuffle that changes arrangement
+
+Non-undoable:
+- Failed/cancelled moves, taps, match sequences, Magnet, Hammer, level load/restart, board busy
+
+Charge behavior:
+- Initial undoCharges = 3 (same convention as other boosters)
+- Consumed only after successful logical restore in ExecuteUndo
+- No charge when: no history, busy, zero charges, failed apply
+
+Cleanup behavior:
+- BoardUndoHistory.ClearAll on level load
+- UndoBooster.ResetUndoState stops coroutines and releases motion locks
+- Successful undo consumes active snapshot
+
+Animation behavior:
+- Reuses Shuffle presentation pattern (motion lock, snap at FROM, AnimateShuffleMove to restored TO)
+- No new animation system; VisualCenterBoardPlaneOffsetLocal unchanged
+
+Compile:
+- dotnet build Assembly-CSharp.csproj --no-restore
+- Exit code: 0
+- Errors: 0
+- Warnings: 7 (pre-existing, unrelated)
+
+Console:
+- Not inspected (Unity Editor not run in this session)
+
+T1–T25:
+- NOT EXECUTED — run via Unity menu: Shape Nest / Phase 54 Verify Undo Booster
+
+Captures:
+- NOT GENERATED — pending Play Mode run
+
+Known limitations:
+- One-step undo only (by design)
+- Magnet and Hammer actions are not undoable
+- Match-accompanying moves are not undoable
+- Play Mode verification required to confirm T1–T25 and generate captures
+
+Preserved:
+- BlockMover rules, Shuffle algorithm, Magnet/Hammer, camera, board layout, Phase 51–53 systems

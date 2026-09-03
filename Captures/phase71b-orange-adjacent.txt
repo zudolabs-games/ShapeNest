@@ -1,0 +1,15 @@
+=== ORANGE ADJACENT FULL BOARD ===
+placed=(4, 3) ok=True subsetRight=True
+  i=0 world=(4, 3) active=Pentagon:Orange hasInner=False
+  i=1 world=(4, 4) active=Pentagon:Orange hasInner=True
+  i=2 world=(4, 5) active=Pentagon:Orange hasInner=True
+S5 grid=(4, 4) pending=True |i0 L=(4, 4) V=(4, 4) act=Pentagon:Cyan nestChild=False resid=True |i1 L=(4, 5) V=(4, 5) act=Pentagon:Cyan nestChild=False resid=True
+steps=8 AFTER cells=2 grid=(4, 4) settled=False
+  LIVE Pentagon:Cyan L=(4, 4) V=(2, 7) inner=False go=True
+  LIVE Pentagon:Cyan L=(4, 5) V=(2, 8) inner=False go=True
+NEST (5, 3) tgt=False occ=-
+NEST (5, 4) tgt=False occ=-
+NEST (5, 5) tgt=False occ=-
+SRC (4, 3) occ=-
+SRC (4, 4) occ=Pentagon:Cyan
+SRC (4, 5) occ=Pentagon:Cyan

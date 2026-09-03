@@ -1,0 +1,8 @@
+register=False grid=(1, 0)
+AFTER steps=4 grid=(1, 0) cells=3 settled=False
+  c0 w=(1, 0) active=Square:Purple inner=False pending=False nestedChild=False residual=False rs=(0, 0) view=(-0.88, 0.53, 0.33)
+  c1 w=(1, 1) active=Square:Yellow inner=True pending=False nestedChild=True residual=False rs=(0, 0) view=(-0.83, 0.33, 0.88)
+  c2 w=(1, 2) active=Square:Yellow inner=True pending=False nestedChild=True residual=False rs=(0, 0) view=(-0.83, 0.33, 1.44)
+yellowT0 still=False
+near00 Square:Purple at (1, 0) view=(-0.88, 0.53, 0.33)
+near00 Square:Yellow at (1, 1) view=(-0.83, 0.33, 0.88)

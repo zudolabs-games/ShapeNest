@@ -1,0 +1,92 @@
+Phase 52N — Final 3D VFX Cohesion + Polish
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+STATUS: COMPLETE (presentation-only)
+Stop — do not start Phase 52O / Shuffle / Undo / Swap.
+
+==================================================
+FILES CHANGED
+==================================================
+- Assets/Scripts/Board/BoardVfx3D.cs ONLY
+
+MatchEffect.cs: untouched (glow soft-cap ≤0.55 already present from 52L)
+
+==================================================
+WHAT CHANGED (BoardVfx3D presentation only)
+==================================================
+Colors (cohesive molded-plastic palette):
+- Match: SoftAccent → cream blend (not neon accent)
+- Ice: pale blue-white frost/mist (less cyan)
+- Shutter: warm pale plastic + soft dust (+ thin release ring)
+- Hammer: SoftAccent / SoftCream flash (less white blast)
+
+Counts / intensity (lower, still readable):
+- Match flash 6→5, burst 10→8
+- Ice frost 11→8, mist 5→4
+- Shutter 8→6 / 5→4
+- Hammer impact 14–20 → 10–15
+
+Rings: thinner, lower alpha, slightly smaller board-relative scale
+Size curve: softer rise → settle → fade (no harsh pop)
+Helpers: SoftCream / SoftAccent
+
+==================================================
+EXPLICITLY UNTOUCHED
+==================================================
+- Call sites / public API names
+- Hammer fragment lifetime 0.50f
+- 52L-FIX velocity: Ice/Shutter X/Y/Z all TwoConstants (Y upward ranges unchanged)
+- MatchEffect glow soft-cap ≤0.55
+- Gameplay: Block/BoardManager/BlockMover/InputManager/Magnet/Hammer/IceState/ShutterState
+- VC=0.12, camera, hierarchy, 52G–52M presentation systems
+
+==================================================
+VFX ENTRY POINTS TESTED
+==================================================
+- PlayNestMatchImpactFlash / PlayNestMatch
+- PlayHammerImpact (+ chain smash)
+- PlayIceMelt (via IceView3D SyncFromSource melt)
+- PlayShutterOpen (via ShutterView3D open)
+- Velocity TwoConstants probe during Ice+Shutter
+
+==================================================
+VELOCITY CURVE MODES
+==================================================
+IceMelt / ShutterOpen:
+- X = TwoConstants (0,0)
+- Y = TwoConstants (existing upward ranges)
+- Z = TwoConstants (0,0)
+NO mixed Constant/TwoConstants.
+
+==================================================
+COMPILE / CONSOLE
+==================================================
+- Unity compile: 0 errors
+- Console after full VFX probe: 0 errors, 0 warnings
+- "Particle Velocity curves must all be in the same mode": ABSENT
+
+==================================================
+REGRESSION CHECKS
+==================================================
+- VC=0.12 ok
+- Hammer Ice reject: smashed=False
+- Hammer chain smash: True (charges before=3)
+- Magnet present=True
+- Hammer Selecting: phase=Selecting
+- Ice melt anim=True
+- Shutter opening=True
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52n-master.png
+- Captures/phase52n-match.png
+- Captures/phase52n-chain.png
+- Captures/phase52n-hammer.png
+- Captures/phase52n-ice.png
+- Captures/phase52n-shutter.png
+- Captures/phase52n-nested.png
+- Captures/phase52n-report.txt
+
+RESULT ok

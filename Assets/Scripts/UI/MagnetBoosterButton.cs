@@ -88,18 +88,26 @@ public class MagnetBoosterButton : MonoBehaviour
 
         if (magnetBooster.MagnetCharges <= 0 && !magnetBooster.IsSelecting)
         {
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Magnet, BoosterFailureReason.NoCharges);
             Refresh();
             return;
         }
 
+        BoosterFailureReason reason;
+        bool activated;
         BoosterManager manager = FindFirstObjectByType<BoosterManager>();
         if (manager != null)
         {
-            manager.TryActivate(BoosterType.Magnet);
+            activated = manager.TryActivate(BoosterType.Magnet, out reason);
         }
         else
         {
-            magnetBooster.ToggleMagnet();
+            activated = magnetBooster.TryBeginActivation(out reason);
+        }
+
+        if (!activated)
+        {
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Magnet, reason);
         }
 
         Refresh();
@@ -127,7 +135,7 @@ public class MagnetBoosterButton : MonoBehaviour
         bool selecting = magnetBooster != null && magnetBooster.IsSelecting;
         bool executing = magnetBooster != null && magnetBooster.Phase == MagnetBooster.MagnetPhase.Executing;
         bool hasCharges = charges > 0;
-        bool interactable = hasCharges || selecting;
+        bool interactable = !executing;
 
         if (chargeText != null)
         {

@@ -1,0 +1,131 @@
+Phase 52K — 3D Ice + Shutter Presentation Polish
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+GOAL
+Make Ice and Shutter feel like native molded-plastic 3D board elements.
+Presentation-only. Gameplay untouched.
+
+FILES CHANGED
+- Assets/Scripts/Board/IceView3D.cs
+- Assets/Scripts/Board/ShutterView3D.cs
+- Assets/Editor/Phase52KPlayModeVerify.cs (+ .meta) — verification only
+
+FILES NOT CHANGED (confirmed)
+- IceState.cs
+- ShutterState.cs
+- Block.cs
+- BlockMover.cs
+- BoardManager.cs
+- InputManager.cs
+- MagnetBooster.cs
+- HammerBooster.cs
+- BoardAdaptivePresentation3D.cs (VC constant)
+- BoardPresenter3D.cs / BoardEnvironment3D.cs / BoardCamera3D.cs
+- ShapeVisuals3D.cs / PieceView3D.cs (piece materials / selection)
+- Unity hierarchy unchanged
+
+==================================================
+ICE — BEFORE → AFTER
+==================================================
+Geometry (preserved behavior; slight presentation knobs):
+- shape-matched shell for single cells: PRESERVED (ShapeMeshFactory3D.GetSolidMesh)
+- rounded box for chains: PRESERVED (BoardMeshFactory3D.GetRoundedBox)
+- thickness default: 0.12 (kept; shell height from block + heightOverBlock)
+- footprintPadding: 0.06 → 0.05
+- heightOverBlock: 0.04 → 0.045 (slightly taller frosted shell for camera-readable sides)
+- chain corner radius: 0.18 → 0.20
+- shell cast shadows: On (subtle thickness cue)
+
+Material (shared Ice3D_Runtime / URP Lit transparent):
+- Base color: (0.45, 0.92, 1.00, 0.55) → (0.55, 0.88, 1.00, 0.58)
+- Metallic: 0.12 → 0.00
+- Smoothness: 0.95 (glass) → 0.48 (frosted)
+- Emission keyword: ON → OFF
+- Emission color: cyan glow → black (disabled)
+- Durability alphas: 0.62 / 0.50 / 0.40 → 0.58 / 0.48 / 0.38
+- Crack overlays: softer frost lines (alpha 0.55 → 0.32), Metallic 0, no emission
+- Melt / durability tween timings: UNCHANGED (0.22s / 0.34s)
+- BoardVfx3D.PlayIceMelt: REUSED (no second melt system)
+
+==================================================
+SHUTTER — BEFORE → AFTER
+==================================================
+Geometry:
+- Cube plates → rounded box plates (corner radius 0.14, segments 3)
+- plateHeight: 0.10 → 0.13
+- footprintFactor: 0.96 → 0.94
+- plateLift: 0.34 UNCHANGED
+- slats: rounded ridges, scale (0.92,0.12,0.08) → (0.90,0.16,0.10)
+- cast shadows: On
+
+Material (molded-plastic family, Metallic 0, no emission):
+Plate:
+- color: (0.92, 0.72, 0.18) → (0.86, 0.62, 0.22)
+- Metallic: 0.18 → 0.00
+- Smoothness: 0.62 → 0.58
+Slat:
+- color: (1.00, 0.86, 0.35) → (0.94, 0.76, 0.34)
+- Metallic: 0.22 → 0.00
+- Smoothness: 0.70 → 0.55
+
+Open animation duration / triggers: UNCHANGED (0.32s, ConsumeSuccessfulMatch → SyncFromSource)
+BoardVfx3D.PlayShutterOpen: REUSED
+
+==================================================
+PRESERVATION CONFIRMATIONS
+==================================================
+- VisualCenterBoardPlaneOffsetLocal = 0.12 (UNCHANGED)
+- Piece roots / GridPosition / occupancy / BoardManager / BlockMover / InputManager: UNCHANGED
+- IceState / ShutterState logic: UNCHANGED
+- Chains / connectors / Magnet / Hammer eligibility: UNCHANGED
+- Phase 52G selection (1.04 / lift 0.045 / invalid nudge): UNCHANGED
+- Phase 52H nest entry / socket pulse: UNCHANGED
+- Phase 52I shadows / lighting baseline: UNCHANGED
+- Phase 52J board hierarchy colors: UNCHANGED
+- ShapeVisuals3D BlockSmoothness=0.67 BlockMetallic=0 (piece colors preserved)
+- Camera framing / pitch: UNCHANGED
+- No sprites as primary Ice/Shutter visuals
+- No new Canvas / camera / board / input systems
+
+==================================================
+PLAY MODE VALIDATION
+==================================================
+A. Master: pieces unchanged (BlockSmoothness 0.67 / Metallic 0) — capture phase52k-master.png
+B. Ice level (Campaign_12): frosted hexagon shell, shape readable through ice — phase52k-after-ice.png
+C. Ice chain: no iced chain in Campaign_12; chain layout path preserved; Campaign_08 chain regression — phase52k-ice-chain.png
+D. Ice melt: ConsumeSuccessfulMatch → SyncFromSource melt tween + PlayIceMelt — phase52k-ice-melt.png
+E. Shutter closed: thick warm molded plates + ridges — phase52k-after-shutter.png
+F. Shutter open: existing open tween — phase52k-shutter-open.png
+G. Nested: ShapeInShape — phase52k-nested.png
+H. Hammer: TryUseHammerOnBlock on frozen Hexagon → smashed=False eligible=False phase=Selecting — phase52k-hammer-reject.png
+I. Magnet: present=True (no route/charge changes)
+J. Drag/selection: 52G values untouched in PieceView3D
+
+Live material probe (Play Mode):
+- Ice: color RGBA(0.55,0.88,1,0.58) metallic=0 smooth=0.48 emissionKeyword=False
+- Shutter plate: metallic=0 smooth=0.58 color RGBA(0.86,0.62,0.22,1)
+
+==================================================
+COMPILE / CONSOLE
+==================================================
+- Compile: 0 new errors
+- Console: 0 new runtime errors after presentation changes
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52k-before-ice.png (Phase 52J baseline archive; prior auto ice shot was level-complete overlay)
+- Captures/phase52k-after-ice.png (live Game View — frosted ice)
+- Captures/phase52k-ice-chain.png
+- Captures/phase52k-ice-melt.png
+- Captures/phase52k-before-shutter.png (Phase 52J shutter baseline)
+- Captures/phase52k-after-shutter.png (live Game View — molded shutter)
+- Captures/phase52k-shutter-open.png
+- Captures/phase52k-nested.png
+- Captures/phase52k-hammer-reject.png
+- Captures/phase52k-master.png
+- Captures/phase52k-report.txt (this file)
+
+RESULT
+Phase 52K complete. STOP — do not start Phase 52L / VFX overhaul / Shuffle / Undo / Swap.

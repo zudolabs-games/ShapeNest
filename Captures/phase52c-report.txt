@@ -1,0 +1,54 @@
+Phase 52C — 3D Nest & Target Polish
+Unity 6000.3.8f1
+
+## Summary
+Nests now read as physical 3D sockets: beveled rim (plastic highlight) + darker recessed cavity (same hue), wider opening so blocks fit, deeper floor. Footprint, world position, and gameplay unchanged.
+
+## Inspection
+- ShapeMeshFactory3D: hollow beveled prism with nest floor (single material previously)
+- ShapeVisuals3D: one NestMaterial per shape
+- PieceView3D: GetNestMesh + NestMaterial; nest surfaceLift -0.02; no visualRoot board-plane offset
+- MatchEffect / BoardVfx3D: left intact
+
+## Changes
+1. Nest mesh nest_v8_
+   - Outer footprint unchanged (still unit AABB after normalize)
+   - Inner opening 0.31 → 0.42 (block fits cavity vs NestFootprint 0.80 / BlockFootprint 0.67)
+   - Floor deeper: Lerp 0.20 → 0.10 with -0.001 Y bias (anti z-fight)
+   - Two submeshes: rim (0) / cavity walls+floor (1)
+   - Slightly stronger nest bevels for rim readability
+
+2. Materials (ShapeVisuals3D)
+   - Nest rim: same ResolveNestColor (darken 0.22), smoothness 0.56
+   - Nest cavity: Darken(rim, 0.28), smoothness 0.28
+   - NestMaterialSet[shape] = { rim, cavity }
+
+3. PieceView3D
+   - SetMaterial / ConfigureNestedInner assign NestMaterialSet for nests
+
+## Unchanged (confirmed)
+- NestFootprintRatio = 0.80
+- NestHeightRatio = 0.18
+- VisualCenterBoardPlaneOffsetLocal = 0.12
+- Target / matching / occupancy / boosters / camera / cell size
+- MatchEffect / BoardVfx3D
+
+## Files modified
+- Assets/Scripts/UI/ShapeMeshFactory3D.cs
+- Assets/Scripts/UI/ShapeVisuals3D.cs
+- Assets/Scripts/UI/PieceView3D.cs
+
+## Validation
+- Compile: OK, 0 errors
+- All 6 shapes: subMeshCount=2, unit bounds height 1
+- Campaign_10 nested: nests dual materials, scale (0.61, 0.14, 0.61)
+- Master / chain / ice / shutter: dual mats applied
+- Hammer/Magnet/match timing: not modified
+
+## Captures
+- Captures/phase52c-before-nest.png (pre-52C reference from 51I)
+- Captures/phase52c-t5-nested.png
+- Captures/phase52c-t1-all-nests.png
+- Captures/phase52c-t-chain-nests.png
+
+STOP after Phase 52C.

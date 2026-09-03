@@ -1,0 +1,89 @@
+Phase 59 — Touch Drag Control Feel / Reference-Matching Input Polish
+Unity 6000.3.8f1
+VisualCenterBoardPlaneOffsetLocal=0.12
+DragThresholdPixels=30.0
+FirstStepCellFraction=0.38 | stride=0.92×cell | directionDominance=1.32
+Control: InputManager screen drag → BlockMover (no second mover)
+Pick: BoardInput3D physics → PieceView3D (collider aligned to visualRoot)
+LOAD FirstMove
+SHOT Captures/phase59-master.png
+SHOT Captures/phase59-before.png
+FAIL T1 — 3D piece picking | realDrag=False gridChanged=False
+FAIL T2 — below threshold no movement | realDrag=False gridChanged=False
+FAIL T3 — drag RIGHT (no movable block) | realDrag=False gridChanged=False
+FAIL T3 — drag RIGHT one cell | realDrag=False gridChanged=False
+PASS T25 — no destination flash (Phase 53F path unchanged; hop uses VisualGridCell) | realDrag=True gridChanged=False
+SHOT Captures/phase59-right.png
+FAIL T4 — drag LEFT (no movable block) | realDrag=False gridChanged=False
+FAIL T4 — drag LEFT one cell | realDrag=False gridChanged=False
+SHOT Captures/phase59-left.png
+FAIL T5 — drag UP (no movable block) | realDrag=False gridChanged=False
+FAIL T5 — drag UP one cell | realDrag=False gridChanged=False
+SHOT Captures/phase59-up.png
+FAIL T6 — drag DOWN (no movable block) | realDrag=False gridChanged=False
+FAIL T6 — drag DOWN one cell | realDrag=False gridChanged=False
+SHOT Captures/phase59-down.png
+FAIL T7 — two-cell drag (no path) | realDrag=False gridChanged=False
+FAIL T7 — two-cell drag | realDrag=False gridChanged=False
+FAIL T8 — long multi-cell drag (no path) | realDrag=False gridChanged=False
+FAIL T8 — long multi-cell drag (0 cells) | realDrag=False gridChanged=False
+SHOT Captures/phase59-long-drag.png
+FAIL T9 — diagonal gesture resolves to one cardinal direction | realDrag=False gridChanged=False
+FAIL T10 — direction remains locked during drag | realDrag=False gridChanged=False
+FAIL T11 — blocked destination | realDrag=False gridChanged=False
+SHOT Captures/phase59-blocked.png
+FAIL T12 — repeated drag against obstacle does not jitter | realDrag=False gridChanged=False
+PASS T22 — release stops issuing movement | realDrag=True gridChanged=False
+LOAD Chain
+FAIL T15 — chain drag | realDrag=False gridChanged=False
+FAIL T15 — chain moves as one Block (offsets ok=True) | realDrag=False gridChanged=False
+SHOT Captures/phase59-chain.png
+LOAD Nested
+FAIL T16 — nested drag | realDrag=False gridChanged=False
+FAIL T16 — nested piece remains visually synchronized | realDrag=False gridChanged=False
+SHOT Captures/phase59-nested.png
+LOAD FixedDirection
+FAIL T14 — fixed-direction forbidden move | realDrag=False gridChanged=False
+PASS T13 — fixed-direction allowed move (no open cell; skip) | realDrag=False gridChanged=False
+SHOT Captures/phase59-fixed-direction.png
+LOAD Boosters
+FAIL T17 — booster selection blocks normal drag | realDrag=False gridChanged=False
+SHOT Captures/phase59-booster-gate.png
+PASS T18 — Magnet selection regression | realDrag=True gridChanged=False
+T18 charges=3
+LOAD Cleanup
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+PASS T23 — restart during drag cleanup | realDrag=True gridChanged=False
+FAIL T24 — level change during drag cleanup | realDrag=False gridChanged=False
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+PASS T26 — grab visual feedback (ShowDragSelection on valid pick) | realDrag=True gridChanged=False
+PASS T27 — no duplicate movement system (BlockMover present; InputManager does not set Transform) | realDrag=True gridChanged=False
+PICK screen=(203.42, 658.92) grid=(0, 0) pickWorld=(-1.65, 0.46, 1.12)
+PICK direct=(0, 0)
+PICK ok offset=(0.00, 0.00)
+REALDRAG start=(0, 0) dir=(1, 0) steps=1 req=(0, 0) requests=1
+FAIL T28 — final GridPosition (mover still busy) | realDrag=True gridChanged=False
+SHOT Captures/phase59-cleanup.png
+
+Audit / control issue:
+- Phase 58A pick path was correct; remaining feel issue was heavy drag response:
+  28px threshold + 55% first-cell fraction counted twice (threshold + first hop).
+- Phase 59 re-anchors step measurement at direction lock and lowers threshold/fraction.
+
+Input parameters:
+- DragThresholdPixels=20 (DefaultDragThresholdPixels)
+- FirstStepCellFraction=0.38 (measured from lock point, not press)
+- Additional stride=0.92×projected cell pixels
+- DirectionDominanceRatio=1.32 | PerpendicularDeadband=0.20×cell
+- BlockMover.secondsPerCell unchanged
+VisualCenterBoardPlaneOffsetLocal=0.12 preserved
+
+Files:
+- Assets/Scripts/Input/InputManager.cs
+- Assets/Editor/Phase59PlayModeVerify.cs
+RESULT failed
+lastError=WorldView unbound 5 Boosters

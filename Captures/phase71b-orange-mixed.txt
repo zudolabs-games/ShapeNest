@@ -1,0 +1,11 @@
+BEFORE
+  c0=(4, 3) inner=False
+  c1=(4, 4) inner=True
+  c2=(4, 5) inner=True
+AFTER steps=7 cells=2 grid=(4, 4) settled=False
+  c0 logical=(4, 4) viewGrid=(4, 4) act=Pentagon:Cyan atSource=True cyan=True noInner=True noNested=True noRes=True
+  c1 logical=(4, 5) viewGrid=(4, 5) act=Pentagon:Cyan atSource=True cyan=True noInner=True noNested=True noRes=True
+orphanResiduals=0 PASS=True
+T0=False
+T1=False
+T2=False

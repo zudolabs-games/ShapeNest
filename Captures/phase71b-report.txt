@@ -1,0 +1,24 @@
+PHASE 71B — NESTED OUTER → INNER EXTRACTION
+===========================================
+  T1: nestedGate=True chain=True no70BInDragBody=True
+  T2: nested before=0 after=0 hasNested=False
+  T3: detached=True parentIsHost=True noChildOnOuter=True xzDrift=0.0000
+  T4: hideThenSnapThenPromote=True hide=True snap=True promote=True
+  T5: orange/cyan/yellow/purple/green/red/cyan/pink identity ok=True
+  T6: PlayResolved→subset=True avoidsWhole=True subsetMethod=True
+  T7: TryConsumeLayerAtWorld=True
+  T8: PinResiduals=True DetachAndAnchor=True
+  T9: sequential=True forcedSeat=True killTweens=True mixedRebuild=True
+
+1 1-cell nested uses chain path (occupancy stays source): PASS
+2 ConfigureNestedInner(false) does not allocate: PASS
+3 Detach reparents inner off traveler: PASS
+4 Reveal hides then SnapWorldPresentationToGrid: PASS
+5 Phase 65 identities (O→C Y→P G→R C→P): PASS
+6 Phase 70B subset routing untouched: PASS
+7 Phase 63 exact-cell consume API: PASS
+8 Residual pin-to-source helper: PASS
+9 Sequential reveal + forced SOURCE seat: PASS
+
+RESULT: PASS
+Note: Full Level 43 Orange→Cyan Play Mode travel is reported separately by Phase71BPlayProbe.

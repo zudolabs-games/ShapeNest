@@ -1,0 +1,70 @@
+Phase 52F — 3D Visual Polish & Depth
+Unity 6000.3.8f1
+
+STATUS: COMPLETE (presentation-only). Phase 52E movement baseline intact.
+
+## Files changed
+- Assets/Scripts/UI/ShapeMeshFactory3D.cs
+- Assets/Scripts/UI/ShapeVisuals3D.cs
+- Assets/Scripts/Board/BoardPresenter3D.cs
+- Assets/Scripts/Board/BoardPresentationController.cs (lighting only)
+- Assets/Scripts/Board/BoardEnvironment3D.cs (ambient only)
+- Assets/Scripts/UI/PieceView3D.cs (contact shadow presentation only)
+
+## Material changes (ShapeVisuals3D)
+- BlockSmoothness 0.64 → 0.66 (Metallic 0, no emission)
+- NestSmoothness 0.58 → 0.60
+- NestCavitySmoothness 0.26 → 0.24; cavity darken 0.32 → 0.34
+- ConnectorSmoothness 0.60 → 0.63
+- Shape colors unchanged; shared/cached URP Lit retained
+
+## Bevel changes (ShapeMeshFactory3D)
+- solid_v7 → solid_v8; nest_v8 → nest_v9 (same cavity 0.42 / dual-submesh)
+- Subtle bevel increases (e.g. Square 0.08→0.095, Circle 0.10→0.11)
+- Footprint / pivot / height convention unchanged
+
+## Board changes (BoardPresenter3D)
+- Cell color (0.24,0.20,0.48) → (0.20,0.17,0.42); smoothness 0.36 → 0.40
+- Slab/frame slightly darker/calmer
+- Cell pitch / layout / positions unchanged
+
+## Shadow changes (PieceView3D — Phase 52D soft disc kept)
+- Block tint alpha 0.34 → 0.30; nest 0.40 → 0.36
+- Radius base block 0.48 → 0.50; nest 0.36 → 0.38
+- Still XZ-aligned to visualRoot (VisualCenterBoardPlaneOffsetLocal)
+
+## Lighting changes
+- Key intensity 1.40 → 1.36; soft strength 0.52 → 0.46; rotation unchanged
+- Fill intensity 0.42 → 0.48
+- Ambient (0.16,0.13,0.28) → (0.17,0.14,0.30)
+- Camera framing unchanged
+
+## Confirmations
+- VisualCenterBoardPlaneOffsetLocal = 0.12f (unchanged)
+- Piece roots / ApplyGridPosition / GridPosition untouched
+- Chain endpoints / connector length/rotation logic untouched
+- WorldPieceMotion / BlockMover timings untouched (52E intact)
+- Gameplay / boosters / matching / occupancy untouched
+
+## Compile
+- Unity compile: OK, 0 errors
+- Console: 0 errors / 0 warnings after play
+- Note: Unity-generated "Build FAILED" with exit 0 / 0 errors is not treated as failure
+
+## Play Mode
+- Master / all shapes / chain / nested / ice / shutter
+- Magnet + Hammer select/cancel verified
+- Shadow XZ alignment mismatch = 0
+
+## Captures
+- Captures/phase52f-before-master.png
+- Captures/phase52f-after-master.png
+- Captures/phase52f-all-shapes.png
+- Captures/phase52f-chain.png
+- Captures/phase52f-nested.png
+- Captures/phase52f-ice.png
+- Captures/phase52f-shutter.png
+- Captures/phase52f-hammer.png
+- Captures/phase52f-report.txt
+
+STOP after Phase 52F.

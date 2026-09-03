@@ -1,0 +1,72 @@
+Phase 51F Play Mode verification
+board-plane offset local=0.240 (Y=0, nests unchanged)
+before ref Captures/phase51f-before-t1-all-shapes.png
+Unity 6000.3.8f1
+LOAD Campaign_15_Master (all shapes) ok
+  cell=0.762
+SHOT Captures/phase51f-t1-all-shapes.png
+T1 all-shapes views=2 meshOk=2 thin=0 spritesOnPiece=0 shapes=Circle
+T1 visualOffset views=2 localY range=[0.0000,0.0000]
+T1 rootSeating blocks=1 maxRootYErr=0.0000
+T1 offset Block3D_Circle_-254942 shape=Circle nest=False dxz=(0.000, -0.122) meshC=(0.000, 0.000, 0.000) meshLocal=(0.000, 0.000, -0.240)
+T1 centering views=2 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.2400 maxWorldDxz=0.1225 cell=0.762 frac=0.161
+factory solid Square verts=58 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Square verts=85 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Circle verts=674 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Circle verts=1009 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Triangle verts=44 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5200, 0.5000, 0.4503)
+factory nest Triangle verts=64 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5200, 0.5000, 0.4503)
+factory solid Diamond verts=58 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory nest Diamond verts=85 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5000, 0.5000, 0.5000)
+factory solid Hexagon verts=86 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.4460, 0.5000, 0.5150)
+factory nest Hexagon verts=127 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.4460, 0.5000, 0.5150)
+factory solid Star verts=142 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5400, 0.5000, 0.5136)
+factory nest Star verts=211 minY=-0.5000 center=(0.0000, 0.0000, 0.0000) extents=(0.5400, 0.5000, 0.5136)
+SHOT angled-live Captures/phase51f-t2-angled.png
+moved Circle (3, 0) -> (3, 1)
+T3 move: TryMoveBlock succeeded
+SHOT Captures/phase51f-t3-after-move.png
+LOAD Campaign_07_ChainIntro ok
+  cell=0.762
+SHOT Captures/phase51f-t-chain-2.png
+T4 chain connectors=0
+T4 chain views=2 meshOk=2 thin=0 spritesOnPiece=0 shapes=Circle
+T4 chain-2 chains=0 maxYSpread=0.0000 maxPlanarRelErr=0.0000
+T4 offset Block3D_Circle_-254942 shape=Circle nest=False dxz=(0.000, -0.122) meshC=(0.000, 0.000, 0.000) meshLocal=(0.000, 0.000, -0.240)
+T4 centering views=2 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.2400 maxWorldDxz=0.1225 cell=0.762 frac=0.161
+LOAD Campaign_10_ShapeInShape ok
+  cell=0.762
+SHOT Captures/phase51f-t5-nested.png
+T5 nested nestedInners=0
+T5 nested views=2 meshOk=2 thin=0 spritesOnPiece=0 shapes=Circle
+T5 offset Block3D_Circle_-254942 shape=Circle nest=False dxz=(0.000, -0.122) meshC=(0.000, 0.000, 0.000) meshLocal=(0.000, 0.000, -0.240)
+T5 centering views=2 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.2400 maxWorldDxz=0.1225 cell=0.762 frac=0.161
+LOAD Campaign_12_Ice ok
+  cell=0.762
+SHOT Captures/phase51f-t9-ice.png
+T9 ice iceViews=0
+T9 offset Block3D_Circle_-254942 shape=Circle nest=False dxz=(0.000, -0.122) meshC=(0.000, 0.000, 0.000) meshLocal=(0.000, 0.000, -0.240)
+T9 centering views=2 maxMeshBoundsXZ=0.0000 maxMeshChildXZ=0.2400 maxWorldDxz=0.1225 cell=0.762 frac=0.161
+LOAD Campaign_13_Shutter ok
+  cell=0.762
+SHOT Captures/phase51f-t10-shutter.png
+T10 shutter shutterViews=0
+LOAD Campaign_08_ChainCascade ok
+  cell=0.762
+SHOT Captures/phase51f-t-chain-3.png
+T chain-3 chains=0 maxYSpread=0.0000 maxPlanarRelErr=0.0000
+SHOT Captures/phase51f-t7-magnet-board.png
+T7 magnet selecting=True
+SHOT Captures/phase51f-t7-magnet-selecting.png
+T7 magnet cancelled
+T8 hammer Diamond accepted=True phase=Executing
+SHOT Captures/phase51f-t8-hammer.png
+RESULT ok
+
+--- Phase 51F final metrics (synced presentation) ---
+Removed Phase 51E VisualCenterYOffsetLocal=-0.72 / Nest=-0.64
+New: VisualCenterBoardPlaneOffsetLocal=0.24 along board-plane screen-down (world -Z)
+visualRoot.localPosition blocks=(0, 0, -0.24) nests=(0, 0, 0)
+bottomGap to CellSurfaceWorldY = 0.025 (surfaceLift) for all seated blocks; clipped=0
+rootY identical across chain/block views (spread=0)
+PieceView3D roots unchanged; only visualRoot local XZ shifted

@@ -69,12 +69,12 @@ public class Block : MonoBehaviour
     [SerializeField]
     [Range(1f, 1.08f)]
     [Tooltip("Subtle scale multiplier while pressed. Keep close to 1.")]
-    private float dragSelectScale = 1.02f;
+    private float dragSelectScale = 1.04f;
 
     [SerializeField]
     [Min(0.01f)]
     [Tooltip("Time to ease into and out of drag selection scale.")]
-    private float dragSelectDuration = 0.07f;
+    private float dragSelectDuration = 0.10f;
 
     private BoardManager boardManager;
     public bool isSettled { get; set; }
@@ -101,6 +101,7 @@ public class Block : MonoBehaviour
     private int cachedCellCount = 1;
 
     private HashSet<int> cellsHiddenForTravel = new HashSet<int>();
+    private readonly HashSet<int> pendingLayerExtractionCells = new HashSet<int>();
 
     public ShapeType ShapeType
     {
@@ -258,6 +259,25 @@ public class Block : MonoBehaviour
         return cachedShapes[index];
     }
 
+    /// <summary>Gameplay match identity for the active (outermost) layer of a cell.</summary>
+    public MatchIdentity GetActiveIdentity(int index)
+    {
+        return new MatchIdentity(GetActiveShape(index), GetOuterColor(index));
+    }
+
+    /// <summary>Immediate nested child for presentation. Distinct from <see cref="GetActiveShape"/>.</summary>
+    public ShapeType GetNestedInnerShape(int index)
+    {
+        ShapeCellData cell = GetCell(index);
+        return ShapeLayout.NestedChildShape(cell, GetActiveShape(index));
+    }
+
+    public ShapeColor GetNestedInnerColor(int index)
+    {
+        ShapeCellData cell = GetCell(index);
+        return ShapeLayout.NestedChildColor(cell);
+    }
+
     /// <summary>Visual outer layer for a cell. Distinct from <see cref="GetActiveShape"/> when nested.</summary>
     public ShapeType GetOuterShape(int index)
     {
@@ -267,6 +287,18 @@ public class Block : MonoBehaviour
         }
 
         return cachedOuters[index];
+    }
+
+    public ShapeColor GetOuterColor(int index)
+    {
+        ShapeCellData cell = GetCell(index);
+        return ShapeLayout.EffectiveOuterColor(cell);
+    }
+
+    public ShapeColor GetInnerColor(int index)
+    {
+        ShapeCellData cell = GetCell(index);
+        return ShapeLayout.ActiveInnerColor(cell);
     }
 
     public ShapeCellData GetCell(int index)
@@ -393,10 +425,40 @@ public class Block : MonoBehaviour
         BoardPresentationController.NotifyChainCellTravelCleared(this);
     }
 
-    public void RefreshActiveLayers()
+    /// <summary>
+    /// True while gameplay has promoted a nested layer but World3D reveal has not finished.
+    /// Presentation must not snap to the promoted mesh until extraction reveal owns the transition.
+    /// </summary>
+    public bool IsPendingLayerExtraction(int cellIndex)
+    {
+        return pendingLayerExtractionCells.Contains(cellIndex);
+    }
+
+    public bool HasPendingLayerExtraction => pendingLayerExtractionCells.Count > 0;
+
+    /// <summary>
+    /// Marks a cell whose outer layer was consumed. Defers World3D mesh promote until
+    /// <see cref="BlockMover"/> plays the extraction reveal.
+    /// </summary>
+    public void BeginPendingLayerExtraction(int cellIndex)
+    {
+        if (cellIndex < 0 || cellIndex >= CellCount)
+        {
+            return;
+        }
+
+        pendingLayerExtractionCells.Add(cellIndex);
+    }
+
+    public void ClearPendingLayerExtraction(int cellIndex)
+    {
+        pendingLayerExtractionCells.Remove(cellIndex);
+    }
+
+    public void RefreshActiveLayers(bool syncWorldPresentation = true)
     {
         RebuildCache();
-        // ShapeType stays the active matching layer. World3D outer/inner meshes use GetOuterShape / GetActiveShape.
+        // Matching identity is the outermost remaining layer (shapeType).
         int anchor = FindAnchorIndex();
         if (anchor >= 0 && anchor < cachedCellCount)
         {
@@ -412,6 +474,10 @@ public class Block : MonoBehaviour
         SyncVisualSizeToBoard();
         RefreshVisual();
         RebuildCellVisuals();
+        if (syncWorldPresentation)
+        {
+            BoardPresentationController.NotifyNestedLayerPromoted(this);
+        }
     }
 
     public void RebuildFromRemaining(IReadOnlyList<ShapeCellData> remaining, Vector2Int worldAnchor)
@@ -419,6 +485,7 @@ public class Block : MonoBehaviour
         // The consumed cell no longer exists after this rebuild. Its old index
         // must not suppress a new survivor that later occupies the same index.
         cellsHiddenForTravel.Clear();
+        pendingLayerExtractionCells.Clear();
         ShapeType nextShape = shapeType;
         ShapeType nextOuter = outerShape;
         if (remaining != null && remaining.Count > 0 && remaining[0] != null)
@@ -707,6 +774,16 @@ public class Block : MonoBehaviour
         dragSelected = true;
         RaiseInDrawOrder();
         AnimateSelectionScale(restScale * dragSelectScale, 1f);
+        ForEachWorldView(view => view.PlayTapFeedback());
+    }
+
+    /// <summary>
+    /// Presentation-only nudge when a press is rejected (settled / invalid).
+    /// Does not consume input or alter gameplay state.
+    /// </summary>
+    public void PlayInvalidInteractionFeedback()
+    {
+        ForEachWorldView(view => view.PlayInvalidNudge());
     }
 
     public void HideDragSelection()
@@ -975,7 +1052,7 @@ public class Block : MonoBehaviour
     public Sprite ContainedInnerSprite()
     {
         int anchor = FindAnchorIndex();
-        return SpriteFor(HasInnerLayer(anchor) ? cachedShapes[anchor] : GetActiveShape(anchor));
+        return SpriteFor(HasInnerLayer(anchor) ? GetNestedInnerShape(anchor) : GetActiveShape(anchor));
     }
 
     public Vector2 VisualSizeDelta
@@ -1254,7 +1331,7 @@ public class Block : MonoBehaviour
         bool showInner = HasInnerLayer(cellIndex);
         PieceGameplayVisuals.SyncInnerOverlay(
             parent,
-            showInner ? SpriteFor(cachedShapes[cellIndex]) : null,
+            showInner ? SpriteFor(GetNestedInnerShape(cellIndex)) : null,
             showInner,
             Color.white,
             NestedInnerLook,
@@ -1389,10 +1466,7 @@ public class Block : MonoBehaviour
     private void SetHeldBlend(float blend)
     {
         PieceView.SetHeldBlend(blend);
-        if (worldView != null)
-        {
-            worldView.SetHeldBlend(blend);
-        }
+        ForEachWorldView(view => view.SetHeldBlend(blend));
     }
 
     private void CaptureRestScale()

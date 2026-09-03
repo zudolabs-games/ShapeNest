@@ -5,15 +5,20 @@ using UnityEngine;
 /// <summary>
 /// World3D <see cref="IPieceMotion"/> driven by DOTween.
 /// Gameplay sequencing stays in <see cref="BlockMover"/>; this only animates presentation.
+/// Phase 52E: polished hop easing, subtle mesh squash, nest entry feel — same destinations/durations.
+/// Phase 52H: nest-entry compress/insert/settle mesh feel + nest socket pulse (presentation only).
 /// </summary>
 [DisallowMultipleComponent]
 public class WorldPieceMotion : MonoBehaviour, IPieceMotion
 {
-    private const float PickupDuration = 0.10f;
-    private const float SettleDuration = 0.12f;
-    private const float CarryScaleBoost = 0.07f;
-    private const float NestJumpFlightScale = 1.22f;
-    private const float NestAnticipateScaleMin = 1.12f;
+    // Presentation-only carry/lift timing (does not change BlockMover hop secondsPerCell).
+    private const float PickupDuration = 0.08f;
+    private const float SettleDuration = 0.10f;
+    private const float CarryScaleBoost = 0.05f;
+    private const float NestJumpFlightScale = 1.10f;
+    private const float NestAnticipateScaleMin = 1.0f;
+    private const float HopAnticipatePortion = 0.16f;
+    private const float HopSettlePortion = 0.18f;
 
     private PieceView3D pieceView;
     private IGridSpace worldGridSpace;
@@ -118,6 +123,15 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         }
     }
 
+    /// <summary>
+    /// Stops hop/travel tweens so fingerwise continuous pose can own the transform.
+    /// Keeps carry lift active.
+    /// </summary>
+    public void InterruptTweensForFingerDrag()
+    {
+        KillActive(false);
+    }
+
     public IEnumerator AnimateHop(
         IGridSpace gridSpace,
         Vector2 visualCellSize,
@@ -154,18 +168,32 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         Vector2Int hopDir = to - from;
         bool continuation = !anticipate && lastHopDir != Vector2Int.zero;
         bool turn = continuation && lastHopDir != hopDir;
-        float linearWeight = continuation ? 0.9f : 0.62f;
-        float microFloat = cellAxis * Mathf.Clamp(hopLiftPercent * 0.32f, 0.008f, 0.016f);
+        // Phase 61B: keep continuation closer to constant-speed cruise; turns slightly softer.
+        // Do not lower secondsPerCell — reduce end-of-hop settle dead-feel instead.
+        float linearWeight = continuation ? (turn ? 0.88f : 0.98f) : 0.35f;
+        float settlePortion = continuation ? 0.08f : HopSettlePortion;
+        float microFloat = cellAxis * Mathf.Clamp(hopLiftPercent * 0.38f, 0.010f, 0.018f);
+        float travelSquash = Mathf.Clamp01(1f - Mathf.Clamp(hopTravelScale, 0.96f, 1f));
 
         Sequence sequence = DOTween.Sequence().SetId(TweenAnimationUtility.PieceMotionId).SetLink(pieceView.gameObject);
         activeSequence = sequence;
 
         try
         {
-            // Wind-up and hop squash stay unused so chained hops keep speed and
-            // drag-selection scale is not overwritten at hop end.
-            // Carry height is a live offset so pickup is not restarted per hop.
-            AppendHopTravel(sequence, start, endRest, fromRestY, toRestY, duration, microFloat, linearWeight, turn);
+            AppendHopTravel(
+                sequence,
+                start,
+                endRest,
+                fromRestY,
+                toRestY,
+                duration,
+                microFloat,
+                linearWeight,
+                softenTurn: false,
+                useCubicEase: !continuation,
+                anticipate,
+                travelSquash,
+                settlePortion);
             sequence.OnComplete(() =>
             {
                 if (pieceView == null)
@@ -179,6 +207,8 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                 {
                     pieceView.transform.position = seated;
                 }
+
+                ClearHopPresentationSquash();
             });
 
             yield return TweenAnimationUtility.Wait(sequence);
@@ -186,6 +216,7 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         }
         finally
         {
+            ClearHopPresentationSquash();
             if (pieceView != null)
             {
                 pieceView.EndMotionLock();
@@ -196,6 +227,155 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                 activeSequence = null;
             }
         }
+    }
+
+    /// <summary>
+    /// Phase 53D: one continuous Shuffle move — anticipation, quintic travel, soft arrival/settle.
+    /// Does not change GridPosition or occupancy; presentation only.
+    /// </summary>
+    public IEnumerator AnimateShuffleMove(
+        IGridSpace gridSpace,
+        Vector2 visualCellSize,
+        Vector2Int from,
+        Vector2Int to,
+        float duration)
+    {
+        IGridSpace space = ResolveSpace(gridSpace);
+        if (pieceView == null || space == null)
+        {
+            yield break;
+        }
+
+        TweenAnimationUtility.KillById(pieceView.gameObject, TweenAnimationUtility.ShuffleId, false);
+        lastHopDir = Vector2Int.zero;
+        bool addedLock = pieceView != null && !pieceView.IsMotionLocked;
+        if (addedLock)
+        {
+            pieceView.BeginMotionLock();
+        }
+
+        Vector3 start = CellRestWorldPosition(space, from);
+        Vector3 endRest = CellRestWorldPosition(space, to);
+        float fromRestY = CellRestWorldPosition(space, from).y;
+        float toRestY = endRest.y;
+        float cellAxis = Mathf.Max(visualCellSize.x, visualCellSize.y, 0.01f);
+        float liftAmount = cellAxis * 0.028f;
+        const float anticipatePortion = 0.09f;
+        const float settlePortion = 0.09f;
+        const float peakSquash = 0.11f;
+        float travelSpan = Mathf.Max(0.0001f, 1f - anticipatePortion - settlePortion);
+
+        Sequence sequence = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.ShuffleId)
+            .SetLink(pieceView.gameObject);
+
+        try
+        {
+            sequence.Append(TweenAnimationUtility.Progress(Mathf.Max(0.01f, duration), t =>
+            {
+                if (pieceView == null)
+                {
+                    return;
+                }
+
+                t = Mathf.Clamp01(t);
+                float positionT = ResolveShufflePositionT(t, anticipatePortion, settlePortion, travelSpan);
+                float travelEased = TweenAnimationUtility.EvaluateEaseInOutQuint(positionT);
+                Vector3 pos = Vector3.LerpUnclamped(start, endRest, travelEased);
+                float restY = Mathf.LerpUnclamped(fromRestY, toRestY, travelEased);
+                pos.y = restY;
+                if (liftAmount > 0.0005f && positionT > 0.0001f && positionT < 0.999f)
+                {
+                    float liftEnvelope = Mathf.Sin(travelEased * Mathf.PI);
+                    pos.y += liftAmount * liftEnvelope;
+                }
+
+                if (IsFiniteVector(pos))
+                {
+                    pieceView.transform.position = pos;
+                }
+
+                float squash = EvaluateShuffleSquashEnvelope(t, anticipatePortion, settlePortion, peakSquash);
+                pieceView.SetPresentationAnticipation(0f, pieceView.CarryMeshScale, squash);
+            }));
+
+            sequence.OnComplete(() =>
+            {
+                if (pieceView == null)
+                {
+                    return;
+                }
+
+                Vector3 seated = endRest;
+                seated.y = toRestY;
+                if (IsFiniteVector(seated))
+                {
+                    pieceView.transform.position = seated;
+                }
+
+                pieceView.SetPresentationAnticipation(0f, pieceView.CarryMeshScale, 0f);
+            });
+
+            yield return TweenAnimationUtility.Wait(sequence);
+        }
+        finally
+        {
+            if (pieceView != null)
+            {
+                pieceView.SetPresentationAnticipation(0f, pieceView.CarryMeshScale, 0f);
+                if (addedLock)
+                {
+                    pieceView.EndMotionLock();
+                }
+            }
+        }
+    }
+
+    private static float ResolveShufflePositionT(
+        float t,
+        float anticipatePortion,
+        float settlePortion,
+        float travelSpan)
+    {
+        if (t <= anticipatePortion)
+        {
+            return 0f;
+        }
+
+        if (t >= 1f - settlePortion)
+        {
+            return 1f;
+        }
+
+        return Mathf.Clamp01((t - anticipatePortion) / travelSpan);
+    }
+
+    private static float EvaluateShuffleSquashEnvelope(
+        float t,
+        float anticipatePortion,
+        float settlePortion,
+        float peak)
+    {
+        t = Mathf.Clamp01(t);
+        float travelEnd = 1f - settlePortion;
+        const float tailPeak = 0.16f;
+
+        if (t <= anticipatePortion)
+        {
+            float u = anticipatePortion > 0.0001f ? t / anticipatePortion : 1f;
+            return peak * TweenAnimationUtility.EvaluateSmoothStep(u);
+        }
+
+        if (t >= travelEnd)
+        {
+            float u = settlePortion > 0.0001f ? (t - travelEnd) / settlePortion : 1f;
+            float eased = TweenAnimationUtility.EvaluateSmoothStep(u);
+            return Mathf.Lerp(peak * tailPeak, 0f, eased);
+        }
+
+        float mid = (t - anticipatePortion) / Mathf.Max(0.0001f, travelEnd - anticipatePortion);
+        float midEased = TweenAnimationUtility.EvaluateSmoothStep(mid);
+        return Mathf.Lerp(peak, peak * tailPeak, midEased);
     }
 
     public IEnumerator AnimateNestAnticipate(
@@ -285,8 +465,22 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         float pieceHeight = ResolvePieceHeight();
         float peakAboveRest = PieceMotionMath.NestJumpPeakHeight(pieceHeight);
         Vector3 control = NestJumpControl(start, end, peakAboveRest);
-        float flightMul = hopScale > 1f ? hopScale : NestJumpFlightScale;
-        Vector3 travelScale = scaleRest * flightMul;
+        // Phase 52H: keep BlockMover hopScale as insertion scale (~0.97). Cap pump if >1.
+        float insertMul = hopScale;
+        if (hopScale > 1.001f)
+        {
+            insertMul = Mathf.Min(hopScale, NestJumpFlightScale);
+        }
+        else if (hopScale >= 0.999f)
+        {
+            insertMul = 0.97f;
+        }
+        else
+        {
+            insertMul = Mathf.Clamp(hopScale, 0.96f, 0.99f);
+        }
+
+        Vector3 insertScale = scaleRest * insertMul;
 
         KillActive(false);
         Sequence sequence = DOTween.Sequence().SetId(TweenAnimationUtility.PieceMotionId).SetLink(pieceView.gameObject);
@@ -308,7 +502,8 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                 }
 
                 t = Mathf.Clamp01(t);
-                float eased = TweenAnimationUtility.EvaluateEaseInOutCubic(t);
+                // Keep existing nest-entry trajectory; EaseInCubic biases into the socket.
+                float eased = TweenAnimationUtility.EvaluateEaseInCubic(t);
                 if (float.IsNaN(eased) || float.IsInfinity(eased))
                 {
                     eased = t;
@@ -320,23 +515,32 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                     pieceView.transform.position = pos;
                 }
 
-                float squashT = Mathf.Sin(t * Mathf.PI);
-                Vector3 scale = Vector3.LerpUnclamped(scaleRest, travelScale, squashT);
+                // Root eases toward insertion scale (no mid-flight pump).
+                Vector3 scale = Vector3.LerpUnclamped(scaleRest, insertScale, eased);
                 if (IsFiniteVector(scale))
                 {
                     pieceView.LocalScale = scale;
                 }
+
+                ApplyNestEntryMeshFeel(t, insertMul);
             }));
 
-            // Sit must start from the arc's actual end scale (Sin(π) → scaleRest), not travelScale.
+            sequence.AppendCallback(() =>
+            {
+                // Socket response as the piece seats — before MatchEffect dissolve.
+                PulseNestSocketAt(space, to);
+            });
+
+            // Sit: EaseOutCubic settle — tiny press then return to rest scale (existing sitDuration).
             AppendWorldMoveScale(
                 sequence,
                 end,
                 end,
                 sitDuration,
+                insertScale,
                 scaleRest,
-                scaleRest,
-                easeOut: true);
+                easeOut: true,
+                settleMeshSquash: true);
 
             sequence.OnComplete(() =>
             {
@@ -354,12 +558,15 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                 {
                     pieceView.LocalScale = scaleRest;
                 }
+
+                ClearHopPresentationSquash();
             });
 
             yield return TweenAnimationUtility.Wait(sequence);
         }
         finally
         {
+            ClearHopPresentationSquash();
             if (pieceView != null)
             {
                 pieceView.EndMotionLock();
@@ -374,6 +581,65 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         // Nest match VFX is owned by MatchEffect (one burst/ring per successful match presentation).
     }
 
+    /// <summary>
+    /// Phase 52H mesh-only nest-entry feel within the existing arc duration.
+    /// Compress → insert scale → light press. Does not change destinations or timings.
+    /// </summary>
+    private void ApplyNestEntryMeshFeel(float t, float insertMul)
+    {
+        if (pieceView == null)
+        {
+            return;
+        }
+
+        t = Mathf.Clamp01(t);
+        float squash;
+        float mul;
+
+        // A/B: pre-insertion compress (~XZ widen / Y squash), then blend into insert scale.
+        const float compressPeakT = 0.14f;
+        const float insertBlendT = 0.32f;
+        if (t <= compressPeakT)
+        {
+            float u = compressPeakT > 0.0001f ? t / compressPeakT : 1f;
+            float peak = TweenAnimationUtility.EvaluateEaseOutCubic(u);
+            // squash≈0.33 → Y≈0.92, XZ≈1.05 (near 1.02 / 0.92 target)
+            squash = 0.33f * peak;
+            mul = 1f;
+        }
+        else if (t <= insertBlendT)
+        {
+            float u = (t - compressPeakT) / Mathf.Max(0.0001f, insertBlendT - compressPeakT);
+            float eased = TweenAnimationUtility.EvaluateEaseInCubic(u);
+            squash = Mathf.Lerp(0.33f, 0.06f, eased);
+            mul = Mathf.Lerp(1f, insertMul, eased);
+        }
+        else
+        {
+            float u = (t - insertBlendT) / Mathf.Max(0.0001f, 1f - insertBlendT);
+            float eased = TweenAnimationUtility.EvaluateEaseInCubic(u);
+            squash = Mathf.Lerp(0.06f, 0.04f, eased);
+            mul = Mathf.Lerp(insertMul, Mathf.Min(insertMul, 0.96f), eased * 0.35f);
+        }
+
+        pieceView.SetPresentationAnticipation(0f, mul, squash);
+    }
+
+    private void PulseNestSocketAt(IGridSpace space, Vector2Int cell)
+    {
+        MeshRenderer nestRenderer = FindNestRendererAtCell(space, cell);
+        if (nestRenderer == null)
+        {
+            return;
+        }
+
+        PieceView3D nestView = nestRenderer.GetComponentInParent<PieceView3D>();
+        if (nestView != null && nestView.ConfiguredAsNest)
+        {
+            nestView.PlayNestSocketPulse();
+        }
+    }
+
     private void AppendHopTravel(
         Sequence sequence,
         Vector3 from,
@@ -383,7 +649,11 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         float duration,
         float liftAmount,
         float linearWeight,
-        bool softenTurn)
+        bool softenTurn,
+        bool useCubicEase,
+        bool anticipate,
+        float travelSquash,
+        float settlePortion = HopSettlePortion)
     {
         if (duration <= 0f)
         {
@@ -400,10 +670,13 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                 {
                     pieceView.transform.position = seated;
                 }
+
+                ClearHopPresentationSquash();
             });
             return;
         }
 
+        float settle = Mathf.Clamp(settlePortion, 0.02f, 0.35f);
         sequence.Append(TweenAnimationUtility.Progress(duration, t =>
         {
             if (pieceView == null)
@@ -417,9 +690,20 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
             }
 
             t = Mathf.Clamp01(t);
-            float eased = softenTurn
-                ? TweenAnimationUtility.EvaluateEaseInOutSine(t)
-                : TweenAnimationUtility.EvaluateHopCruise(t, linearWeight);
+            float eased;
+            if (softenTurn)
+            {
+                eased = TweenAnimationUtility.EvaluateEaseInOutSine(t);
+            }
+            else if (useCubicEase)
+            {
+                eased = TweenAnimationUtility.EvaluateEaseInOutCubic(t);
+            }
+            else
+            {
+                eased = TweenAnimationUtility.EvaluateHopCruise(t, linearWeight);
+            }
+
             if (float.IsNaN(eased) || float.IsInfinity(eased))
             {
                 eased = t;
@@ -443,7 +727,57 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
             {
                 pieceView.transform.position = pos;
             }
+
+            ApplyHopPresentationSquash(t, anticipate, travelSquash, settle);
         }));
+    }
+
+    /// <summary>
+    /// Phase 52E: mesh-only anticipation / travel squash / settle within the existing hop duration.
+    /// Does not change transform destination or GridPosition.
+    /// </summary>
+    private void ApplyHopPresentationSquash(float t, bool anticipate, float travelSquash, float settlePortion = HopSettlePortion)
+    {
+        if (pieceView == null)
+        {
+            return;
+        }
+
+        float squash = 0f;
+        float peak = Mathf.Clamp(travelSquash * 1.35f, 0f, 0.22f);
+        if (anticipate && t < HopAnticipatePortion)
+        {
+            float u = Mathf.Clamp01(t / HopAnticipatePortion);
+            // Wind-up: brief compress, then release into travel.
+            squash = peak * 1.15f * (1f - TweenAnimationUtility.EvaluateEaseOutCubic(u));
+        }
+        else
+        {
+            squash = peak * PieceMotionMath.MicroFloatEnvelope(t);
+        }
+
+        float settle = Mathf.Clamp(settlePortion, 0.02f, 0.35f);
+        if (t > 1f - settle)
+        {
+            float u = Mathf.Clamp01((t - (1f - settle)) / settle);
+            float settlePulse = peak * 0.55f * Mathf.Sin(u * Mathf.PI) * (1f - u);
+            float release = TweenAnimationUtility.EvaluateEaseOutCubic(u);
+            squash = Mathf.Lerp(squash, 0f, release) + settlePulse;
+        }
+
+        float meshMul = CarryVisualScale(pieceView.PresentationLift);
+        pieceView.SetPresentationAnticipation(pieceView.PresentationLift, meshMul, squash);
+    }
+
+    private void ClearHopPresentationSquash()
+    {
+        if (pieceView == null)
+        {
+            return;
+        }
+
+        float meshMul = CarryVisualScale(pieceView.PresentationLift);
+        pieceView.SetPresentationAnticipation(pieceView.PresentationLift, meshMul, 0f);
     }
 
     private void AppendWorldMoveScale(
@@ -453,7 +787,8 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         float duration,
         Vector3 scaleFrom,
         Vector3 scaleTo,
-        bool easeOut)
+        bool easeOut,
+        bool settleMeshSquash = false)
     {
         if (duration <= 0f)
         {
@@ -469,6 +804,11 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
                     if (IsFiniteVector(scaleTo))
                     {
                         pieceView.LocalScale = scaleTo;
+                    }
+
+                    if (settleMeshSquash)
+                    {
+                        ClearHopPresentationSquash();
                     }
                 }
             });
@@ -489,7 +829,7 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
 
             t = Mathf.Clamp01(t);
             float eased = easeOut
-                ? TweenAnimationUtility.EvaluateEaseOutQuad(t)
+                ? TweenAnimationUtility.EvaluateEaseOutCubic(t)
                 : TweenAnimationUtility.EvaluateSmoothStep(t);
             if (float.IsNaN(eased) || float.IsInfinity(eased))
             {
@@ -507,6 +847,14 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
             {
                 pieceView.LocalScale = scale;
             }
+
+            if (settleMeshSquash)
+            {
+                // Phase 52H: subtler nest press then release — presentation only.
+                float press = 0.12f * Mathf.Sin(t * Mathf.PI) * (1f - (0.35f * t));
+                float mul = Mathf.Lerp(1f, 0.98f, Mathf.Sin(t * Mathf.PI) * (1f - t));
+                pieceView.SetPresentationAnticipation(0f, mul, press);
+            }
         }));
     }
 
@@ -518,6 +866,7 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         }
 
         activeSequence = null;
+        ClearHopPresentationSquash();
         if (pieceView != null)
         {
             // Do not DOKill the whole transform: carry tweens must survive hop sequence swaps.

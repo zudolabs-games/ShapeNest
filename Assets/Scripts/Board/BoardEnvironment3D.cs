@@ -34,10 +34,11 @@ public class BoardEnvironment3D : MonoBehaviour
         EnsureFloor();
         EnsureUnderShadow(board);
 
-        // Deep indigo / purple — high contrast backdrop for bright pieces.
-        clearColor = new Color(0.11f, 0.07f, 0.34f, 1f); // ~28,18,87
+        // Phase 52J: quieter indigo backdrop — board/pieces stay the focus.
+        clearColor = new Color(0.09f, 0.055f, 0.28f, 1f);
         floorColor = clearColor;
-        ambientColor = new Color(0.12f, 0.09f, 0.22f, 1f);
+        // Phase 52I ambient baseline retained for side-face readability.
+        ambientColor = new Color(0.18f, 0.15f, 0.31f, 1f);
 
         if (targetCamera != null)
         {
@@ -68,7 +69,7 @@ public class BoardEnvironment3D : MonoBehaviour
                     0.002f,
                     board.BoardCenterWorld.z + footprint.y * 0.04f);
                 underBoardShadow.localScale = new Vector3(shadowSpan, 1f, shadowSpan * 0.88f);
-                ApplyMatColor(underBoardShadow.GetComponent<MeshRenderer>(), new Color(0.01f, 0.005f, 0.04f, 0.72f));
+                ApplyMatColor(underBoardShadow.GetComponent<MeshRenderer>(), new Color(0.01f, 0.005f, 0.04f, 0.78f));
             }
         }
     }

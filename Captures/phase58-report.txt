@@ -1,0 +1,85 @@
+Phase 58 — Reference-Style Touch/Drag Controls
+Unity 6000.3.8f1
+VisualCenterBoardPlaneOffsetLocal=0.12
+Control: InputManager screen-space grid drag → BlockMover
+Gameplay movement authority: BlockMover (unchanged)
+LOAD FirstMove
+SHOT Captures/phase58-before.png
+FAIL T1 — pointer-down selects correct block
+FAIL T2 — small drag below threshold does not move
+FAIL T3 — drag RIGHT one cell
+FAIL T16 — no destination flash
+FAIL T17 — no duplicate movement requests
+FAIL T3 — drag RIGHT one cell
+SHOT Captures/phase58-drag-right.png
+PASS T4 — drag LEFT one cell
+SHOT Captures/phase58-drag-left.png
+FAIL T5 — drag UP one cell
+SHOT Captures/phase58-drag-up.png
+PASS T6 — drag DOWN one cell
+SHOT Captures/phase58-drag-down.png
+FAIL T7 — long drag multiple cells (0)
+SHOT Captures/phase58-long-drag.png
+FAIL T8 — diagonal resolves to one cardinal
+PASS T9 — blocked destination does not corrupt state
+PASS T15 — release leaves piece at last valid grid position
+LOAD Chain
+PASS T10 — multi-cell chain drag issued as one Block unit
+FAIL T10 — multi-cell chain moves as one unit
+PASS T11 — chain relative offsets unchanged
+SHOT Captures/phase58-chain.png
+LOAD Nested
+PASS T12 — nested piece still nested after drag
+SHOT Captures/phase58-nested.png
+LOAD FixedDirection
+PASS T14 — fixed-direction block rejects forbidden direction
+FAIL T13 — fixed-direction accepts allowed direction
+SHOT Captures/phase58-fixed-direction.png
+LOAD MasterBoosters
+T18 magnet charges before=3
+PASS T18 — Magnet selection still works
+SHOT Captures/phase58-magnet.png
+PASS T19 — Hammer selection still works
+T19 hammer charges before=3
+SHOT Captures/phase58-hammer.png
+PASS T20 — Shuffle still works
+WAIT boosters idle timed out
+PASS T21 — Undo still works
+WAIT boosters idle timed out
+SHOT Captures/phase58-undo.png
+LOAD Ice
+PASS T22 — Ice behavior unchanged (level has IceState)
+LOAD Shutter
+PASS T23 — Shutter behavior unchanged (level has ShutterState)
+T23 shutter closed before=True
+LOAD CleanupRestart
+PASS T24 — restart clears drag state
+LOAD LevelChange
+PASS T25 — level change clears drag state
+PASS T26 — UI buttons do not start board drag
+PASS T27 — no stale tween/input lock after interruption
+PASS T28 — existing matching flow still works (HasNestMatch/BlockMover unchanged)
+T28 matching not reimplemented in InputManager
+SHOT Captures/phase58-cleanup.png
+
+Audit:
+- Pointer/touch: InputManager (mouse + Input System touch)
+- Block pick: BoardInput3D physics raycast → PieceView3D → Block
+- Direction: InputManager cardinal from screen delta (no diagonals)
+- Grid commit: BlockMover.DragRoutine → BoardManager.TryMoveBlock → Block.SetGridPosition
+- Chains: one Block with ShapeCellData local offsets; TryMoveBlock translates all cells
+- Fixed direction: Block.MoveDirection + BlockMover.IsDirectionAllowed
+- Boosters: BoosterManager.IsAnySelecting intercepts InputManager before drag
+
+Implementation:
+- Drag threshold: 28 screen pixels
+- First grid hop: max(28px, 0.55 × on-screen cell)
+- Further hops: +1 cell of on-screen travel each
+- Mapping: 3D cell projection via BoardCamera3D + GridSpace3D (not UI RectTransform)
+- Release: EndDrag; piece stays on last valid GridPosition
+
+Files:
+- Assets/Scripts/Input/InputManager.cs
+- Assets/Editor/Phase58PlayModeVerify.cs
+RESULT failed
+lastError=T1 failed

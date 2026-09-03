@@ -64,6 +64,8 @@ public class LevelManager : MonoBehaviour
     private Vector2Int lastMatchOrigin;
     private Vector2Int lastMatchTargetCell;
     private readonly List<Block> alignedScanBlocks = new List<Block>();
+    private readonly List<BlockMover.AlignedMatchAction> alignedMatchActions = new List<BlockMover.AlignedMatchAction>();
+    private readonly List<BlockMover.AlignedMovementGroup> alignedMovementGroups = new List<BlockMover.AlignedMovementGroup>();
     private readonly HashSet<int> autoMatchSkipIds = new HashSet<int>();
     private int successfulMatchCount;
 
@@ -275,6 +277,14 @@ public class LevelManager : MonoBehaviour
                 }
             }
 
+            BoardUndoHistory undoHistory = GetComponent<BoardUndoHistory>();
+            if (undoHistory == null)
+            {
+                undoHistory = FindFirstObjectByType<BoardUndoHistory>();
+            }
+
+            undoHistory?.ClearAll("level load");
+
             successfulMatchCount = 0;
 
             if (currentLevel == null)
@@ -290,6 +300,7 @@ public class LevelManager : MonoBehaviour
             }
 
             boardManager.ApplyGridSize(currentLevel.ResolvedGridWidth, currentLevel.ResolvedGridHeight);
+            boardManager.SetStaticBlockedCells(currentLevel.blockedCells);
             SpawnTargets();
             SpawnBlocks();
             SpawnShutters();
@@ -403,8 +414,6 @@ public class LevelManager : MonoBehaviour
 
             for (int pass = 0; pass < maxPasses; pass++)
             {
-                // Debug.Log("[AUTO CHAIN SEQUENCE]\nFRESH SCAN");
-
                 boardManager.RebindChildBlockOccupancy();
                 alignedScanBlocks.Clear();
                 boardManager.CollectUniqueBlocks(alignedScanBlocks);
@@ -413,22 +422,24 @@ public class LevelManager : MonoBehaviour
                     BlockMover.EnsureSubjectOccupancy(boardManager, alignedScanBlocks[i]);
                 }
 
-                if (!BlockMover.TryFindNextAlignedMatch(
+                // Phase 66/67: collect match actions, fold into connected-block movement groups,
+                // then start all groups together.
+                int groupCount = BlockMover.CollectAlignedMovementGroups(
                     boardManager,
                     alignedScanBlocks,
                     autoMatchSkipIds,
                     hasLastMatch,
                     lastMatchOrigin,
                     lastMatchTargetCell,
-                    out Block subject,
-                    out Vector2Int nestTo))
+                    alignedMatchActions,
+                    alignedMovementGroups);
+
+                if (groupCount <= 0)
                 {
                     if (!attemptedOrphanRebind)
                     {
                         attemptedOrphanRebind = true;
                         int n = boardManager.RebindChildBlockOccupancy();
-                        // Debug.Log(
-                        //     $"[AUTO MATCH QUEUE] SELECTED none — rebound orphans={n}, skipIds={autoMatchSkipIds.Count}");
                         if (n > 0)
                         {
                             continue;
@@ -438,7 +449,6 @@ public class LevelManager : MonoBehaviour
                     if (!attemptedSkipClear && autoMatchSkipIds.Count > 0)
                     {
                         attemptedSkipClear = true;
-                        // Debug.Log("[AUTO MATCH QUEUE] SELECTED none — clearing soft-skips and retrying once");
                         autoMatchSkipIds.Clear();
                         continue;
                     }
@@ -446,97 +456,123 @@ public class LevelManager : MonoBehaviour
                     yield break;
                 }
 
-                // Fresh candidate from current occupancy — do not reuse prior match Block/cell/target.
                 attemptedOrphanRebind = false;
                 attemptedSkipClear = false;
 
-                BlockMover acting = subject.GetComponent<BlockMover>();
-                if (acting == null)
+                var runners = new List<(BlockMover acting, BlockMover.AlignedMovementGroup group)>(groupCount);
+                for (int w = 0; w < alignedMovementGroups.Count; w++)
                 {
-                    // Debug.Log(
-                    //     $"REJECT auto-match Block {subject.GetInstanceID()} nestTo={nestTo}:\n- BlockMover missing");
-                    autoMatchSkipIds.Add(BlockMover.AutoMatchSkipKey(subject.GetInstanceID(), nestTo));
-                    continue;
-                }
-
-                BlockMover.EnsureSubjectOccupancy(boardManager, subject);
-                if (!BlockMover.IsChainCellAutoMatchValid(boardManager, subject, nestTo))
-                {
-                    boardManager.RebindChildBlockOccupancy();
-                    BlockMover.EnsureSubjectOccupancy(boardManager, subject);
-                    if (!BlockMover.IsChainCellAutoMatchValid(boardManager, subject, nestTo))
+                    BlockMover.AlignedMovementGroup group = alignedMovementGroups[w];
+                    Block subject = group != null ? group.Subject : null;
+                    if (subject == null || group.Actions.Count == 0)
                     {
-                        int cellIndex = 0;
-                        for (int c = 0; c < subject.CellCount; c++)
+                        continue;
+                    }
+
+                    BlockMover acting = subject.GetComponent<BlockMover>();
+                    if (acting == null)
+                    {
+                        Vector2Int skipNest = group.Actions[0].NestTo;
+                        autoMatchSkipIds.Add(BlockMover.AutoMatchSkipKey(subject.GetInstanceID(), skipNest));
+                        continue;
+                    }
+
+                    BlockMover.EnsureSubjectOccupancy(boardManager, subject);
+                    bool anyValid = false;
+                    for (int a = 0; a < group.Actions.Count; a++)
+                    {
+                        if (BlockMover.IsChainCellAutoMatchValid(
+                                boardManager,
+                                subject,
+                                group.Actions[a].NestTo))
                         {
-                            Vector2Int world = subject.GridPosition + subject.GetLocalCell(c);
-                            if (world == nestTo || BlockMover.IsFourAdjacent(world, nestTo))
+                            anyValid = true;
+                            break;
+                        }
+                    }
+
+                    if (!anyValid)
+                    {
+                        boardManager.RebindChildBlockOccupancy();
+                        BlockMover.EnsureSubjectOccupancy(boardManager, subject);
+                        for (int a = 0; a < group.Actions.Count; a++)
+                        {
+                            if (BlockMover.IsChainCellAutoMatchValid(
+                                    boardManager,
+                                    subject,
+                                    group.Actions[a].NestTo))
                             {
-                                cellIndex = c;
+                                anyValid = true;
                                 break;
                             }
                         }
+                    }
 
-                        string reason = BlockMover.ExplainAlignedCellRejection(
-                            boardManager,
-                            subject,
-                            cellIndex,
-                            subject.GridPosition + subject.GetLocalCell(cellIndex),
-                            autoMatchSkipIds) ?? "revalidate failed (unknown)";
-                        if (BlockMover.TryGetAdjacentAutoMatchDest(
-                            boardManager,
-                            subject,
-                            cellIndex,
-                            subject.GridPosition + subject.GetLocalCell(cellIndex),
-                            autoMatchSkipIds,
-                            out _,
-                            out string adj))
-                        {
-                            reason = "adjacent dest valid but revalidate failed";
-                        }
-                        else if (adj != null)
-                        {
-                            reason = adj;
-                        }
-
-                        // Debug.Log(
-                        //     $"REJECT auto-match Block {subject.GetInstanceID()} nestTo={nestTo}:\n- {reason}");
-                        autoMatchSkipIds.Add(BlockMover.AutoMatchSkipKey(subject.GetInstanceID(), nestTo));
+                    if (!anyValid)
+                    {
+                        Vector2Int skipNest = group.Actions[0].NestTo;
+                        autoMatchSkipIds.Add(BlockMover.AutoMatchSkipKey(subject.GetInstanceID(), skipNest));
                         continue;
                     }
+
+                    runners.Add((acting, group));
                 }
 
-                BlockMover.LastConsumeSucceeded = false;
-                int subjectId = subject.GetInstanceID();
-                ShapeType subjectShape = subject.GetActiveShape(0);
-                // Debug.Log(
-                //     $"[AUTO MATCH QUEUE] Playing Block={subjectId} nestTo={nestTo} " +
-                //     $"CellCount={subject.CellCount} shape={subjectShape}");
+                if (runners.Count == 0)
+                {
+                    continue;
+                }
 
-                // Host on the piece so MatchEffect dissolve finishes before this queue resumes.
-                yield return acting.StartCoroutine(acting.PlayResolvedAutoMatch(boardManager, nestTo));
+                int remaining = runners.Count;
+                bool anyConsumeSucceeded = false;
+                float gap = 0.22f;
 
-                BlockMover.LogAutoChainSequenceAfterMatch(boardManager, subject);
+                for (int r = 0; r < runners.Count; r++)
+                {
+                    BlockMover acting = runners[r].acting;
+                    BlockMover.AlignedMovementGroup group = runners[r].group;
+                    if (acting.MatchingTargetPause > gap)
+                    {
+                        gap = acting.MatchingTargetPause;
+                    }
 
-                //Debug.Log("[MATCH SEQUENCE] NEXT MATCH ALLOWED");
-                // Pause on LevelManager — do not depend on the matched piece still hosting coroutines.
-                float gap = acting != null ? acting.MatchingTargetPause : 0.22f;
+                    acting.StartCoroutine(PlayWaveGroupThenSignal(
+                        acting,
+                        group,
+                        () =>
+                        {
+                            remaining--;
+                            if (acting.LastResolvedConsumeSucceeded)
+                            {
+                                anyConsumeSucceeded = true;
+                            }
+                            else if (group.Actions.Count > 0)
+                            {
+                                autoMatchSkipIds.Add(
+                                    BlockMover.AutoMatchSkipKey(
+                                        group.Subject.GetInstanceID(),
+                                        group.Actions[0].NestTo));
+                            }
+
+                            BlockMover.LogAutoChainSequenceAfterMatch(boardManager, group.Subject);
+                        }));
+                }
+
+                while (remaining > 0)
+                {
+                    yield return null;
+                }
+
                 yield return WaitRealtimeGap(gap);
 
-                if (BlockMover.LastConsumeSucceeded)
+                if (anyConsumeSucceeded)
                 {
                     autoMatchSkipIds.Clear();
                     yield return null;
                     boardManager.RebindChildBlockOccupancy();
                     yield return null;
-                    // Loop continues → FRESH SCAN of current occupancy only.
                     continue;
                 }
-
-                // Debug.Log(
-                //     $"REJECT auto-match Block {subjectId} nestTo={nestTo}:\n" +
-                //     "- play/consume did not succeed (LastConsumeSucceeded=false)");
-                autoMatchSkipIds.Add(BlockMover.AutoMatchSkipKey(subjectId, nestTo));
             }
         }
         finally
@@ -545,6 +581,45 @@ public class LevelManager : MonoBehaviour
             alignedMatchRoutine = null;
             EndPieceMatchSequence();
             NotifyBlockSettled();
+        }
+    }
+
+    private IEnumerator PlayWaveGroupThenSignal(
+        BlockMover acting,
+        BlockMover.AlignedMovementGroup group,
+        System.Action onComplete)
+    {
+        try
+        {
+            BlockMover.LastConsumeSucceeded = false;
+            if (acting != null)
+            {
+                yield return acting.StartCoroutine(acting.PlayResolvedMovementGroup(boardManager, group));
+            }
+        }
+        finally
+        {
+            onComplete?.Invoke();
+        }
+    }
+
+    private IEnumerator PlayWaveMemberThenSignal(
+        BlockMover acting,
+        Block subject,
+        Vector2Int nestTo,
+        System.Action onComplete)
+    {
+        try
+        {
+            BlockMover.LastConsumeSucceeded = false;
+            if (acting != null)
+            {
+                yield return acting.StartCoroutine(acting.PlayResolvedAutoMatch(boardManager, nestTo));
+            }
+        }
+        finally
+        {
+            onComplete?.Invoke();
         }
     }
 
@@ -962,6 +1037,11 @@ public class LevelManager : MonoBehaviour
         }
 
         spawnedShutters.Clear();
+        if (boardManager != null)
+        {
+            boardManager.ClearStaticBlockedCells();
+        }
+
         pieceMatchSequenceDepth = 0;
         if (boardManager != null)
         {
@@ -1147,6 +1227,15 @@ public class LevelManager : MonoBehaviour
             {
                 spawnedShutters[i].RefreshLayoutVisuals();
             }
+        }
+
+        // Phase 60: bind PieceView3D immediately after spawn so picking does not
+        // depend on waiting for BoardPresentationController.LateUpdate.
+        BoardPresentationController presentation =
+            FindFirstObjectByType<BoardPresentationController>(FindObjectsInactive.Include);
+        if (presentation != null)
+        {
+            presentation.EnsureWorldViewsBound();
         }
     }
 }

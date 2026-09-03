@@ -1,0 +1,77 @@
+Phase 53C — Shuffle Booster Presentation Polish
+==============================================
+
+AUDIT (pre-change flow)
+-----------------------
+button press → BoosterManager.TryActivate(Shuffle)
+             → ShuffleBooster.ActivateShuffle()
+             → TryBuildShufflePlan (gameplay, unchanged)
+             → ApplyLogicalShuffle (occupancy + GridPosition preserveWorldPresentation)
+             → AnimateShuffleMoves via WorldPieceMotion.AnimateHop per cell view
+             → FinalizeShufflePresentation (sync world views to grid)
+
+PRESENTATION CHANGES
+--------------------
+A. ShuffleBoosterButton
+   - Successful activation: scale pulse 1.00 → 0.96 → 1.00 (~0.14s, unscaled)
+   - Failed/busy/no-charges: subtle invalid press 1.00 → 0.97 → 1.00
+   - Uses existing TweenAnimationUtility.UiPressId; restores scale on disable
+
+B. Pre-move anticipation (ShuffleBooster + PieceView3D)
+   - PlayShuffleAnticipation: mesh-only compress (~0.07s) before hops
+   - XZ widen / Y squash via SetPresentationAnticipation (no root movement)
+
+C. Movement (unchanged destinations)
+   - Still uses WorldPieceMotion.AnimateHop with existing plan cells
+   - Slightly tuned hop presentation params only (anticipate 0.05, lift 0.045)
+
+D. Visual stagger
+   - 25ms between independent Block units (presentation timing only)
+   - Logical occupancy already applied before animation starts
+
+E–G. Chains / nested / Ice / Shutter
+   - No gameplay changes; animation still per Block unit / cell view
+   - Nested inner follows outer via existing PieceView3D squash path
+
+H. Post-arrival settle
+   - PlayShuffleSettle: subtle mesh pulse (~0.06s) on moved units only
+
+I. VFX
+   - Skipped (no Shuffle-specific BoardVfx3D addition)
+
+J. Cleanup
+   - ClearShufflePresentation on ResetShuffleState / disable / interrupt
+   - Kills ShapeNest.Shuffle tweens; clears squash/lift
+
+GAMEPLAY UNCHANGED
+------------------
+- Shuffle eligibility, destination algorithm, occupancy, charges
+- BlockMover.secondsPerCell, BoosterManager, Magnet, Hammer
+- VisualCenterBoardPlaneOffsetLocal = 0.12f (not modified)
+- Hierarchy: single BoostersContainer/ShuffleButton (not modified)
+
+FILES CHANGED
+-------------
+- Assets/Scripts/Animation/TweenAnimationUtility.cs (ShuffleId)
+- Assets/Scripts/UI/PieceView3D.cs (PlayShuffleAnticipation/Settle/Clear)
+- Assets/Scripts/Boosters/ShuffleBooster.cs (anticipation, stagger, settle, cleanup)
+- Assets/Scripts/UI/ShuffleBoosterButton.cs (activate/invalid press feedback)
+- Assets/Editor/Phase53PlayModeVerify.cs (phase53c captures + T21–T24)
+
+VALIDATION
+----------
+Run in Unity Editor:
+  Shape Nest → Phase 53 Verify Shuffle Booster
+
+Captures written during verify:
+  Captures/phase53c-before.png
+  Captures/phase53c-button.png
+  Captures/phase53c-shuffle.png
+  Captures/phase53c-chain.png
+  Captures/phase53c-nested.png
+  Captures/phase53c-ice.png
+  Captures/phase53c-shutter.png
+  Captures/phase53c-after-shuffle.png
+  Captures/phase53c-cleanup.png
+
+Compile/Play Mode: run Unity Editor locally (batch blocked if project already open).

@@ -1,0 +1,79 @@
+Phase 52I — 3D Block/Nest Shadow & Depth Polish
+Unity 6000.3.8f1
+
+STATUS: COMPLETE (presentation-only).
+Phase 52G selection feel preserved. Phase 52H nest-entry feel preserved.
+
+## Goal
+Ground pieces with softer, clearer contact shadows and subtle depth via lighting/materials — without moving roots or changing VisualCenter.
+
+## Files changed
+- Assets/Scripts/UI/PieceView3D.cs (contact shadow tint/radius/mesh + Invalidate)
+- Assets/Scripts/Board/BoardMeshFactory3D.cs (soft disc falloff v2)
+- Assets/Scripts/UI/ShapeVisuals3D.cs (smoothness + cavity darken only)
+- Assets/Scripts/Board/BoardPresentationController.cs (key/fill/shadowStrength only)
+- Assets/Scripts/Board/BoardEnvironment3D.cs (ambient only)
+- Assets/Scripts/Board/BoardPresenter3D.cs (cell color/smoothness only)
+- Assets/Editor/Phase52IPlayModeVerify.cs (new)
+
+## Exact presentation values changed
+
+### Contact shadow (PieceView3D + BoardMeshFactory3D)
+- Soft disc: GetSoftContactShadowDisc(40, 5); falloff = 1 − smoothstep(t)² (stronger center, softer rim)
+- Block tint alpha 0.30 → 0.34; nest 0.36 → 0.40
+- Base radius block 0.50 → 0.48; nest 0.38 → 0.36 (tighter in-cell footprint)
+- Still XZ-aligned to visualRoot (VisualCenterBoardPlaneOffsetLocal)
+- 52G heldBoost / 52H insertTighten retained
+- InvalidateContactShadowMaterials() on World3D mode apply
+
+### Materials (ShapeVisuals3D) — Metallic 0, Emission OFF
+- BlockSmoothness 0.66 → 0.67
+- NestSmoothness 0.60 → 0.62
+- NestCavitySmoothness 0.24 → 0.22
+- Nest cavity darken 0.34 → 0.36 (same hue)
+- ConnectorSmoothness 0.63 → 0.64
+- Shape colors unchanged
+
+### Lighting
+- Key intensity 1.36 → 1.38; soft shadowStrength 0.46 → 0.50; rotation unchanged Euler(52, 318, 0)
+- Fill intensity 0.48 → 0.52; color/rotation unchanged
+- Ambient (0.17,0.14,0.30) → (0.18,0.15,0.31)
+
+### Board cells (BoardPresenter3D)
+- Cell color (0.20,0.17,0.42) → (0.18,0.15,0.39)
+- Cell smoothness 0.40 → 0.37
+- Cell pitch / layout / positions unchanged
+
+## Confirmations
+- VisualCenterBoardPlaneOffsetLocal = 0.12f (unchanged)
+- Piece roots / ApplyGridPosition / GridPosition untouched
+- Chain endpoints / connector length/orientation/thickness logic untouched
+- BlockMover timings / destinations untouched
+- Magnet / Hammer / Ice / Shutter gameplay untouched
+- Phase 52G: PlayTapFeedback / SetHeldBlend / invalid nudge / destination breath present
+- Phase 52H: PlayNestSocketPulse / nest-entry mesh feel / impact flash present
+- No new shadow/lighting/material/animation systems; hierarchy unchanged
+
+## Compile
+- Unity compile: OK, 0 errors
+- Console: 0 errors after play
+
+## Play Mode validation
+- Master: shadows=12 alignedXZ=12 mismatch=0; VC=0.12
+- Materials: Block=0.67 Nest=0.62 Cavity=0.22 Connector=0.64 Metallic=0
+- Magnet activate/cancel OK; Hammer selection Executing
+- Verifier RESULT ok
+
+## Captures
+- Captures/phase52i-before-master.png
+- Captures/phase52i-after-master.png
+- Captures/phase52i-chain.png
+- Captures/phase52i-nested.png
+- Captures/phase52i-ice.png
+- Captures/phase52i-shutter.png
+- Captures/phase52i-magnet.png
+- Captures/phase52i-hammer.png
+- Captures/phase52i-report.txt
+
+STOP after Phase 52I.
+Do not start Shuffle, Undo, Swap, or unrelated features.

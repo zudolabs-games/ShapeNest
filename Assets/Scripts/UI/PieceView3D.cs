@@ -1,3 +1,4 @@
+using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
@@ -17,7 +18,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private float surfaceLift = 0.03f;
 
     [SerializeField]
-    private float pieceHeight = 0.26f;
+    private float pieceHeight = 0.36f;
 
     [SerializeField]
     private MeshFilter meshFilter;
@@ -43,11 +44,23 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private float presentationLift;
     private float carryMeshScale = 1f;
     private float presentationSquash;
+    private float interactionHeldBlend;
+    private float interactionScaleMul = 1f;
+    private float interactionLiftLocal;
+    private float tapPunchMul = 1f;
+    private float magnetSelectionMul = 1f;
+    private Vector3 nestedInnerRestScale = Vector3.one;
     private Transform contactShadow;
     private MeshRenderer contactShadowRenderer;
     private static Material sharedContactShadowMaterial;
     private const string DesignerVisualName = "DesignerVisual";
     private const string DesignerInnerName = "DesignerInner";
+    private const float InteractionScalePeak = 1.04f;
+    private const float InteractionLiftLocal = 0.045f;
+    private const float TapPunchUpDuration = 0.05f;
+    private const float TapPunchDownDuration = 0.07f;
+    private const float InvalidNudgeScale = 0.97f;
+    private const float InvalidNudgeDuration = 0.10f;
     private GameObject designerVisualInstance;
     private GameObject designerVisualPrefab;
     private MeshRenderer designerVisualRenderer;
@@ -127,6 +140,34 @@ public class PieceView3D : MonoBehaviour, IPieceView
     /// <summary>True when this view can be selected by World3D input.</summary>
     public bool IsSelectable => !configuredAsNest && sourceBlock != null;
 
+    /// <summary>
+    /// World-space center used for pointer picking / screen projection.
+    /// Follows the visible mesh (including VisualCenterBoardPlaneOffsetLocal),
+    /// not only the logical root seat.
+    /// </summary>
+    public Vector3 PickWorldCenter
+    {
+        get
+        {
+            if (pickCollider != null && pickCollider.enabled)
+            {
+                return pickCollider.bounds.center;
+            }
+
+            if (meshRenderer != null && meshRenderer.enabled)
+            {
+                return meshRenderer.bounds.center;
+            }
+
+            if (visualRoot != null)
+            {
+                return visualRoot.position;
+            }
+
+            return transform.position;
+        }
+    }
+
     public Vector3 LocalScale
     {
         get => transform.localScale;
@@ -181,6 +222,34 @@ public class PieceView3D : MonoBehaviour, IPieceView
     }
 
     /// <summary>
+    /// Seats world presentation at a grid cell while motion-locked (Shuffle start pose).
+    /// Does not change Block GridPosition or occupancy.
+    /// </summary>
+    public void SnapWorldPresentationToGrid(IGridSpace gridSpace, Vector2Int gridPosition)
+    {
+        if (gridSpace == null)
+        {
+            return;
+        }
+
+        Vector3 world = gridSpace.GridToWorld(gridPosition);
+        float halfHeight = Mathf.Abs(transform.lossyScale.y) * 0.5f;
+        world.y += surfaceLift + halfHeight + PresentationLift;
+        if (!PieceMotionMath.IsFinite(world))
+        {
+            world = gridSpace.GridToWorld(gridPosition);
+            world.y += surfaceLift + halfHeight;
+        }
+
+        if (PieceMotionMath.IsFinite(world))
+        {
+            transform.position = world;
+        }
+
+        RefreshContactShadow();
+    }
+
+    /// <summary>
     /// Sets carry height (world Y extra) and mesh-only scale. Does not move the transform.
     /// Mesh scale is independent of root held/selection scale. Clears squash.
     /// </summary>
@@ -202,6 +271,16 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         presentationLift = Mathf.Max(0f, lift);
         presentationSquash = Mathf.Clamp01(squash);
+        // Carry owns height once active — clear press micro-lift so they do not stack.
+        if (presentationLift > 0.02f)
+        {
+            interactionLiftLocal = 0f;
+        }
+        else if (interactionHeldBlend > 0.001f)
+        {
+            interactionLiftLocal = InteractionLiftLocal * interactionHeldBlend;
+        }
+
         ApplyCarryVisualScale(visualScaleMul);
         RefreshContactShadow();
     }
@@ -232,6 +311,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
         float lift = PresentationLift;
         presentationLift = 0f;
         presentationSquash = 0f;
+        if (interactionHeldBlend > 0.001f)
+        {
+            interactionLiftLocal = InteractionLiftLocal * interactionHeldBlend;
+        }
+
         ApplyCarryVisualScale(1f);
         if (applyToTransform && Mathf.Abs(lift) >= 0.00001f)
         {
@@ -264,14 +348,32 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
 
         carryMeshScale = visualScaleMul;
+        float scaleMul = visualScaleMul * interactionScaleMul * tapPunchMul * magnetSelectionMul;
+        if (!PieceMotionMath.IsFinite(scaleMul) || scaleMul < 0.45f || scaleMul > 1.35f)
+        {
+            scaleMul = 1f;
+        }
+
         float squash = Mathf.Clamp01(presentationSquash);
-        float xz = visualScaleMul * (1f + (0.14f * squash));
-        float y = visualScaleMul * (1f - (0.24f * squash));
+        float xz = scaleMul * (1f + (0.14f * squash));
+        float y = scaleMul * (1f - (0.24f * squash));
         Vector3 meshScale = new Vector3(xz, y, xz);
         if (PieceMotionMath.IsFinite(meshScale))
         {
             visualRoot.localScale = meshScale;
         }
+
+        // Nested inner shares the same presentation scale/squash so outer+inner stay coherent.
+        if (hasNestedInner && nestedInnerRoot != null && nestedInnerRoot.gameObject.activeSelf)
+        {
+            Vector3 inner = Vector3.Scale(nestedInnerRestScale, meshScale);
+            if (PieceMotionMath.IsFinite(inner))
+            {
+                nestedInnerRoot.localScale = inner;
+            }
+        }
+
+        ApplyVisualCenterOffset(configuredFootprintScale.x);
     }
 
     private void RefreshContactShadow()
@@ -282,7 +384,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
             return;
         }
 
-        bool show = !configuredAsNest && isActiveAndEnabled;
+        bool show = isActiveAndEnabled;
         if (contactShadow.gameObject.activeSelf != show)
         {
             contactShadow.gameObject.SetActive(show);
@@ -296,6 +398,9 @@ public class PieceView3D : MonoBehaviour, IPieceView
         if (contactShadowRenderer != null)
         {
             contactShadowRenderer.enabled = true;
+            contactShadowRenderer.sharedMaterial = configuredAsNest
+                ? GetNestContactShadowMaterial()
+                : GetContactShadowMaterial();
         }
 
         float lift = PresentationLift;
@@ -305,13 +410,23 @@ public class PieceView3D : MonoBehaviour, IPieceView
             parentY = 1f;
         }
 
+        // Sit the disc on the tile under the piece bottom (local unit mesh center at 0).
         float drop = 0.5f + ((surfaceLift + lift) / parentY);
         if (!PieceMotionMath.IsFinite(drop))
         {
             drop = 0.5f;
         }
 
-        Vector3 local = new Vector3(0f, -drop, 0f);
+        // Phase 52D: align soft contact with visualRoot board-plane centering (not gameplay root).
+        Vector3 local = BoardAdaptivePresentation3D.ComputeVisualCenterOffsetLocal(
+            configuredAsNest,
+            transform);
+        if (!PieceMotionMath.IsFinite(local))
+        {
+            local = Vector3.zero;
+        }
+
+        local.y = -drop;
         if (PieceMotionMath.IsFinite(local))
         {
             contactShadow.localPosition = local;
@@ -324,8 +439,16 @@ public class PieceView3D : MonoBehaviour, IPieceView
             blend = Mathf.Clamp01(lift / Mathf.Max(0.0001f, height * 0.34f));
         }
 
-        float radius = 0.46f * (1f + (0.42f * blend));
-        Vector3 shadowScale = new Vector3(radius, 0.02f, radius);
+        // Soft disc under the visual footprint; nests use a tighter inset recess shadow.
+        // Held selection strengthens the shadow slightly for visual priority (no material swap).
+        // Nest-entry squash / insert scale tightens the disc (Phase 52H contact response).
+        float heldBoost = 0.10f * interactionHeldBlend;
+        float insertTighten = (0.18f * Mathf.Clamp01(presentationSquash))
+            + (0.12f * Mathf.Clamp01(1f - carryMeshScale));
+        // Phase 52I: slightly tighter footprint so soft falloff stays in-cell.
+        float baseRadius = configuredAsNest ? 0.36f : 0.48f;
+        float radius = baseRadius * (1f + (0.32f * blend) + heldBoost) * (1f - insertTighten);
+        Vector3 shadowScale = new Vector3(radius, 0.010f, radius);
         if (PieceMotionMath.IsFinite(shadowScale))
         {
             contactShadow.localScale = shadowScale;
@@ -334,21 +457,19 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
     private void EnsureContactShadow()
     {
-        if (contactShadow != null)
+        if (contactShadow == null)
         {
-            return;
-        }
-
-        Transform existing = transform.Find("ContactShadow3D");
-        if (existing != null)
-        {
-            contactShadow = existing;
-        }
-        else
-        {
-            var go = new GameObject("ContactShadow3D");
-            go.transform.SetParent(transform, false);
-            contactShadow = go.transform;
+            Transform existing = transform.Find("ContactShadow3D");
+            if (existing != null)
+            {
+                contactShadow = existing;
+            }
+            else
+            {
+                var go = new GameObject("ContactShadow3D");
+                go.transform.SetParent(transform, false);
+                contactShadow = go.transform;
+            }
         }
 
         var filter = contactShadow.GetComponent<MeshFilter>();
@@ -357,18 +478,31 @@ public class PieceView3D : MonoBehaviour, IPieceView
             filter = contactShadow.gameObject.AddComponent<MeshFilter>();
         }
 
-        filter.sharedMesh = BoardMeshFactory3D.GetShadowDisc(28);
+        filter.sharedMesh = BoardMeshFactory3D.GetSoftContactShadowDisc(40, 5);
         contactShadowRenderer = contactShadow.GetComponent<MeshRenderer>();
         if (contactShadowRenderer == null)
         {
             contactShadowRenderer = contactShadow.gameObject.AddComponent<MeshRenderer>();
         }
 
-        contactShadowRenderer.sharedMaterial = GetContactShadowMaterial();
+        contactShadowRenderer.sharedMaterial = configuredAsNest
+            ? GetNestContactShadowMaterial()
+            : GetContactShadowMaterial();
         contactShadowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         contactShadowRenderer.receiveShadows = false;
         contactShadow.localRotation = Quaternion.identity;
     }
+
+    /// <summary>
+    /// Clears cached contact-shadow materials so presentation retunes pick up on mode apply.
+    /// </summary>
+    public static void InvalidateContactShadowMaterials()
+    {
+        sharedContactShadowMaterial = null;
+        sharedNestContactShadowMaterial = null;
+    }
+
+    private static Material sharedNestContactShadowMaterial;
 
     private static Material GetContactShadowMaterial()
     {
@@ -377,39 +511,83 @@ public class PieceView3D : MonoBehaviour, IPieceView
             return sharedContactShadowMaterial;
         }
 
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        sharedContactShadowMaterial = new Material(shader)
-        {
-            name = "PieceContactShadow3D_Runtime",
-            color = new Color(0.02f, 0.01f, 0.05f, 0.32f)
-        };
-        if (sharedContactShadowMaterial.HasProperty("_BaseColor"))
-        {
-            sharedContactShadowMaterial.SetColor("_BaseColor", sharedContactShadowMaterial.color);
-        }
-
-        if (sharedContactShadowMaterial.HasProperty("_Metallic"))
-        {
-            sharedContactShadowMaterial.SetFloat("_Metallic", 0f);
-        }
-
-        if (sharedContactShadowMaterial.HasProperty("_Smoothness"))
-        {
-            sharedContactShadowMaterial.SetFloat("_Smoothness", 0f);
-        }
-
-        if (sharedContactShadowMaterial.HasProperty("_Surface"))
-        {
-            sharedContactShadowMaterial.SetFloat("_Surface", 1f);
-            sharedContactShadowMaterial.SetOverrideTag("RenderType", "Transparent");
-            sharedContactShadowMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            sharedContactShadowMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            sharedContactShadowMaterial.SetInt("_ZWrite", 0);
-            sharedContactShadowMaterial.renderQueue = 3000;
-            sharedContactShadowMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        }
-
+        // Phase 52I: slightly stronger center alpha; soft indigo — not a hard black cookie.
+        sharedContactShadowMaterial = CreateSoftContactShadowMaterial(
+            "PieceContactShadow3D_Runtime",
+            new Color(0.032f, 0.018f, 0.085f, 0.34f));
         return sharedContactShadowMaterial;
+    }
+
+    private static Material GetNestContactShadowMaterial()
+    {
+        if (sharedNestContactShadowMaterial != null)
+        {
+            return sharedNestContactShadowMaterial;
+        }
+
+        // Slightly stronger / tighter recess cue for sockets.
+        sharedNestContactShadowMaterial = CreateSoftContactShadowMaterial(
+            "NestContactShadow3D_Runtime",
+            new Color(0.022f, 0.010f, 0.065f, 0.40f));
+        return sharedNestContactShadowMaterial;
+    }
+
+    private static Material CreateSoftContactShadowMaterial(string materialName, Color tint)
+    {
+        // Particles/Unlit multiplies vertex colors → radial soft falloff from soft disc mesh.
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+            ?? Shader.Find("Universal Render Pipeline/Unlit")
+            ?? Shader.Find("Sprites/Default")
+            ?? Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Standard");
+
+        var material = new Material(shader)
+        {
+            name = materialName,
+            color = tint
+        };
+
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", tint);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", tint);
+        }
+
+        if (material.HasProperty("_Metallic"))
+        {
+            material.SetFloat("_Metallic", 0f);
+        }
+
+        if (material.HasProperty("_Smoothness"))
+        {
+            material.SetFloat("_Smoothness", 0f);
+        }
+
+        if (material.HasProperty("_Surface"))
+        {
+            material.SetFloat("_Surface", 1f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.renderQueue = 3000;
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+        else
+        {
+            material.renderQueue = 3000;
+        }
+
+        if (material.HasProperty("_Cull"))
+        {
+            material.SetFloat("_Cull", 0f); // Off — visible from below camera angles
+        }
+
+        return material;
     }
 
     public void BeginMotionLock()
@@ -427,11 +605,360 @@ public class PieceView3D : MonoBehaviour, IPieceView
         SetHeldBlend(held ? 1f : 0f);
     }
 
+    /// <summary>
+    /// Presentation-only held feel: mesh scale + visualRoot micro-lift.
+    /// Does not change root footprint scale, GridPosition, or occupancy.
+    /// </summary>
     public void SetHeldBlend(float blend)
     {
-        CaptureRestScale();
-        float pump = Mathf.Lerp(1f, 1.08f, Mathf.Clamp01(blend));
-        transform.localScale = restScale * pump;
+        interactionHeldBlend = Mathf.Clamp01(blend);
+        interactionScaleMul = Mathf.Lerp(1f, InteractionScalePeak, interactionHeldBlend);
+        if (presentationLift < 0.02f)
+        {
+            interactionLiftLocal = InteractionLiftLocal * interactionHeldBlend;
+        }
+        else
+        {
+            interactionLiftLocal = 0f;
+        }
+
+        ApplyCarryVisualScale(carryMeshScale);
+        RefreshContactShadow();
+    }
+
+    /// <summary>
+    /// Short ease-out select response. Micro lift pulse on visualRoot only;
+    /// held scale comes from <see cref="SetHeldBlend"/> so values do not stack.
+    /// </summary>
+    public void PlayTapFeedback()
+    {
+        if (!isActiveAndEnabled || configuredAsNest)
+        {
+            return;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.InteractionId, false);
+        float startLift = interactionLiftLocal;
+        float peakLift = Mathf.Max(startLift, 0.055f);
+        Sequence punch = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.InteractionId)
+            .SetLink(gameObject);
+        punch.Append(TweenAnimationUtility.Progress(TapPunchUpDuration, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            interactionLiftLocal = Mathf.LerpUnclamped(startLift, peakLift, eased);
+            ApplyVisualCenterOffset(configuredFootprintScale.x);
+            RefreshContactShadow();
+        }));
+        punch.Append(TweenAnimationUtility.Progress(TapPunchDownDuration, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            float settle = presentationLift < 0.02f
+                ? InteractionLiftLocal * interactionHeldBlend
+                : 0f;
+            interactionLiftLocal = Mathf.LerpUnclamped(peakLift, settle, eased);
+            ApplyVisualCenterOffset(configuredFootprintScale.x);
+            RefreshContactShadow();
+        }));
+        punch.OnKill(() =>
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            if (presentationLift < 0.02f)
+            {
+                interactionLiftLocal = InteractionLiftLocal * interactionHeldBlend;
+            }
+            else
+            {
+                interactionLiftLocal = 0f;
+            }
+
+            ApplyVisualCenterOffset(configuredFootprintScale.x);
+            RefreshContactShadow();
+        });
+    }
+
+    /// <summary>
+    /// Tiny nest-socket response when a matching block inserts. visualRoot only.
+    /// Does not move the nest gameplay root / GridPosition.
+    /// </summary>
+    public void PlayNestSocketPulse()
+    {
+        if (!isActiveAndEnabled || !configuredAsNest || visualRoot == null)
+        {
+            return;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.NestSocketId, false);
+        EnsureMeshComponents();
+        Vector3 restMesh = visualRoot.localScale;
+        if (!PieceMotionMath.IsFinite(restMesh) || restMesh.sqrMagnitude < 0.0001f)
+        {
+            restMesh = Vector3.one;
+        }
+
+        const float peak = 1.035f;
+        const float up = 0.07f;
+        const float down = 0.08f;
+        Sequence pulse = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.NestSocketId)
+            .SetLink(gameObject);
+        pulse.Append(TweenAnimationUtility.Progress(up, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            float mul = Mathf.LerpUnclamped(1f, peak, eased);
+            Vector3 s = restMesh * mul;
+            if (PieceMotionMath.IsFinite(s) && visualRoot != null)
+            {
+                visualRoot.localScale = s;
+            }
+        }));
+        pulse.Append(TweenAnimationUtility.Progress(down, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseInCubic(t);
+            float mul = Mathf.LerpUnclamped(peak, 1f, eased);
+            Vector3 s = restMesh * mul;
+            if (PieceMotionMath.IsFinite(s) && visualRoot != null)
+            {
+                visualRoot.localScale = s;
+            }
+        }));
+        pulse.OnKill(() =>
+        {
+            if (this == null || visualRoot == null)
+            {
+                return;
+            }
+
+            visualRoot.localScale = restMesh;
+        });
+        pulse.OnComplete(() =>
+        {
+            if (visualRoot != null)
+            {
+                visualRoot.localScale = restMesh;
+            }
+        });
+    }
+
+    /// <summary>
+    /// Legacy standalone compress (superseded by WorldPieceMotion.AnimateShuffleMove).
+    /// Kept for cleanup/interrupt paths via <see cref="ClearShufflePresentation"/>.
+    /// </summary>
+    public IEnumerator PlayShuffleAnticipation(float duration = 0.10f)
+    {
+        if (!isActiveAndEnabled || configuredAsNest || IsMotionLocked)
+        {
+            yield break;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.ShuffleId, false);
+        const float peakSquash = 0.14f;
+        float half = Mathf.Max(0.02f, duration * 0.45f);
+        float meshMul = carryMeshScale;
+        Sequence sequence = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.ShuffleId)
+            .SetLink(gameObject);
+        sequence.Append(TweenAnimationUtility.Progress(half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            SetPresentationAnticipation(0f, meshMul, peakSquash * eased);
+        }));
+        sequence.Append(TweenAnimationUtility.Progress(duration - half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseInCubic(t);
+            SetPresentationAnticipation(0f, meshMul, peakSquash * (1f - eased));
+        }));
+        sequence.OnKill(() =>
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            SetPresentationAnticipation(0f, carryMeshScale, 0f);
+        });
+        yield return TweenAnimationUtility.Wait(sequence);
+    }
+
+    /// <summary>
+    /// Clears Shuffle presentation squash/lift. Safe after interrupt or level change.
+    /// </summary>
+    public void ClearShufflePresentation()
+    {
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.ShuffleId, false);
+        SetPresentationAnticipation(0f, carryMeshScale, 0f);
+    }
+
+    /// <summary>
+    /// Legacy standalone settle (superseded by WorldPieceMotion.AnimateShuffleMove).
+    /// </summary>
+    public IEnumerator PlayShuffleSettle(float duration = 0.06f)
+    {
+        if (!isActiveAndEnabled || configuredAsNest || IsMotionLocked)
+        {
+            yield break;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.ShuffleId, false);
+        const float peakSquash = 0.10f;
+        float meshMul = carryMeshScale;
+        Sequence sequence = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.ShuffleId)
+            .SetLink(gameObject);
+        sequence.Append(TweenAnimationUtility.Progress(duration, t =>
+        {
+            float pulse = peakSquash * Mathf.Sin(t * Mathf.PI) * (1f - (0.35f * t));
+            SetPresentationAnticipation(0f, meshMul, pulse);
+        }));
+        sequence.OnKill(() =>
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            SetPresentationAnticipation(0f, carryMeshScale, 0f);
+        });
+        sequence.OnComplete(() =>
+        {
+            if (this != null)
+            {
+                SetPresentationAnticipation(0f, carryMeshScale, 0f);
+            }
+        });
+        yield return TweenAnimationUtility.Wait(sequence);
+    }
+
+    /// <summary>
+    /// Tiny press response for rejected interactions. Presentation only.
+    /// </summary>
+    public void PlayInvalidNudge()
+    {
+        if (!isActiveAndEnabled || configuredAsNest)
+        {
+            return;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.InteractionId, false);
+        tapPunchMul = 1f;
+        float half = InvalidNudgeDuration * 0.5f;
+        Sequence nudge = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.InteractionId)
+            .SetLink(gameObject);
+        nudge.Append(TweenAnimationUtility.Progress(half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            tapPunchMul = Mathf.LerpUnclamped(1f, InvalidNudgeScale, eased);
+            ApplyCarryVisualScale(carryMeshScale);
+        }));
+        nudge.Append(TweenAnimationUtility.Progress(half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            tapPunchMul = Mathf.LerpUnclamped(InvalidNudgeScale, 1f, eased);
+            ApplyCarryVisualScale(carryMeshScale);
+        }));
+        nudge.OnKill(() =>
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            tapPunchMul = 1f;
+            ApplyCarryVisualScale(carryMeshScale);
+        });
+        nudge.OnComplete(() =>
+        {
+            tapPunchMul = 1f;
+            ApplyCarryVisualScale(carryMeshScale);
+        });
+    }
+
+    /// <summary>
+    /// Presentation-only Magnet selection breath/confirm scale (mesh only).
+    /// Does not move root, GridPosition, or nested parenting.
+    /// </summary>
+    public float MagnetSelectionMul => magnetSelectionMul;
+
+    public void SetMagnetSelectionEmphasis(float scaleMul)
+    {
+        if (!isActiveAndEnabled || configuredAsNest)
+        {
+            return;
+        }
+
+        if (!PieceMotionMath.IsFinite(scaleMul) || scaleMul < 0.9f || scaleMul > 1.08f)
+        {
+            scaleMul = 1f;
+        }
+
+        magnetSelectionMul = scaleMul;
+        ApplyCarryVisualScale(carryMeshScale);
+    }
+
+    /// <summary>
+    /// Short confirm punch when an eligible Magnet target is chosen. Fire-and-forget.
+    /// </summary>
+    public void PlayMagnetSelectionConfirm()
+    {
+        if (!isActiveAndEnabled || configuredAsNest)
+        {
+            return;
+        }
+
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.MagnetSelectionId, false);
+        float start = magnetSelectionMul;
+        const float peak = 1.045f;
+        const float half = 0.05f;
+        Sequence confirm = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.MagnetSelectionId)
+            .SetLink(gameObject);
+        confirm.Append(TweenAnimationUtility.Progress(half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+            magnetSelectionMul = Mathf.LerpUnclamped(start, peak, eased);
+            ApplyCarryVisualScale(carryMeshScale);
+        }));
+        confirm.Append(TweenAnimationUtility.Progress(half, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateEaseInCubic(t);
+            magnetSelectionMul = Mathf.LerpUnclamped(peak, 1f, eased);
+            ApplyCarryVisualScale(carryMeshScale);
+        }));
+        confirm.OnKill(() =>
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            magnetSelectionMul = 1f;
+            ApplyCarryVisualScale(carryMeshScale);
+        });
+        confirm.OnComplete(() =>
+        {
+            magnetSelectionMul = 1f;
+            ApplyCarryVisualScale(carryMeshScale);
+        });
+    }
+
+    /// <summary>
+    /// Clears Magnet selection emphasis and kills MagnetSelection tweens on this view.
+    /// </summary>
+    public void ClearMagnetSelectionPresentation()
+    {
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.MagnetSelectionId, false);
+        if (Mathf.Abs(magnetSelectionMul - 1f) < 0.0001f)
+        {
+            return;
+        }
+
+        magnetSelectionMul = 1f;
+        ApplyCarryVisualScale(carryMeshScale);
     }
 
     /// <summary>
@@ -462,10 +989,65 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
     public void SetMaterial(Material material)
     {
+        ApplyProceduralMaterials(material, configuredAsNest, configuredShape, null);
+    }
+
+    private void ApplyProceduralMaterials(Material material, bool asNest, ShapeType shape, Material[] nestMaterials)
+    {
         EnsureMeshComponents();
-        if (meshRenderer != null && material != null)
+        if (meshRenderer == null)
+        {
+            return;
+        }
+
+        if (asNest)
+        {
+            if (nestMaterials != null && nestMaterials.Length > 0)
+            {
+                meshRenderer.sharedMaterials = nestMaterials;
+            }
+            else if (material != null)
+            {
+                meshRenderer.sharedMaterials = new[] { material, material };
+            }
+            else
+            {
+                meshRenderer.sharedMaterials = ShapeVisuals3D.NestMaterialSet(shape);
+            }
+
+            return;
+        }
+
+        if (material != null)
         {
             meshRenderer.sharedMaterial = material;
+        }
+    }
+
+    private void ApplyMaterialToActiveVisual(Material material, bool asNest, Material[] nestMaterials)
+    {
+        if (material == null && (nestMaterials == null || nestMaterials.Length == 0))
+        {
+            return;
+        }
+
+        if (designerVisualRenderer != null)
+        {
+            if (asNest)
+            {
+                if (nestMaterials != null && nestMaterials.Length > 0)
+                {
+                    designerVisualRenderer.sharedMaterials = nestMaterials;
+                }
+                else if (material != null)
+                {
+                    designerVisualRenderer.sharedMaterials = new[] { material, material };
+                }
+            }
+            else if (material != null)
+            {
+                designerVisualRenderer.sharedMaterial = material;
+            }
         }
     }
 
@@ -478,7 +1060,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     /// Applies shape mesh (solid block or hollow nest) and material.
     /// Footprint scale is XY on XZ plane; Y scale maps extruded unit height to <see cref="pieceHeight"/>.
     /// </summary>
-    public void ConfigureVisual(ShapeType shape, Material material, bool asNest, float footprint, float height)
+    public void ConfigureVisual(ShapeType shape, Material material, bool asNest, float footprint, float height, Material[] nestMaterials = null)
     {
         EnsureMeshComponents();
         configuredShape = shape;
@@ -488,6 +1070,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
         if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
         {
             ApplyDesignerVisual(prefab);
+            ApplyMaterialToActiveVisual(material, asNest, nestMaterials);
         }
         else
         {
@@ -498,7 +1081,12 @@ public class PieceView3D : MonoBehaviour, IPieceView
                 meshFilter.sharedMesh = mesh;
             }
 
-            SetMaterial(material);
+            if (visualRoot != null)
+            {
+                visualRoot.localRotation = Quaternion.identity;
+            }
+
+            ApplyProceduralMaterials(material, asNest, shape, nestMaterials);
         }
 
         // Blocks sit proudly on the cell; nests sit slightly recessed as destinations.
@@ -509,30 +1097,97 @@ public class PieceView3D : MonoBehaviour, IPieceView
         configuredFootprintScale = transform.localScale;
         hasRestScale = false;
         CaptureRestScale();
+        ApplyVisualCenterOffset(footprint);
         ClearCarryPresentation(applyToTransform: false);
         RefreshPickCollider();
         EnsurePresentationVisible();
     }
 
     /// <summary>
+    /// Presentation-only visualRoot offset so the mesh reads centered in the cell under
+    /// BoardCamera3D. Uses a board-plane (XZ) shift — never sinks the mesh into the tile.
+    /// Nests are left at local zero. Does not move the piece root or chain spacing.
+    /// </summary>
+    private void ApplyVisualCenterOffset(float footprintWorld)
+    {
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        Vector3 local = BoardAdaptivePresentation3D.ComputeVisualCenterOffsetLocal(
+            configuredAsNest,
+            transform);
+        if (!PieceMotionMath.IsFinite(local))
+        {
+            local = Vector3.zero;
+        }
+
+        // Keep physical height from centering: micro interaction lift is presentation-only.
+        local.y = interactionLiftLocal;
+        visualRoot.localPosition = local;
+        ApplyNestedInnerVisualCenterOffset();
+        // Keep the pick volume on the visible mesh, not the unshifted logical root.
+        AlignPickColliderToVisual();
+    }
+
+    /// <summary>
     /// Presentation-only nested inner mesh. Child of this cell so hop squash and
     /// chain follow move outer+inner together. Does not own gameplay layers.
     /// </summary>
+    /// <summary>
+    /// Phase 68B: reparent NestedInner3D under <paramref name="newParent"/> while preserving
+    /// world position/rotation/scale. Clears ownership on this view so outer-only travel
+    /// can move without carrying the inner. Does not destroy the inner GameObject.
+    /// </summary>
+    public bool TryDetachNestedInnerPreservingWorld(Transform newParent, out Transform detached)
+    {
+        detached = null;
+        if (!hasNestedInner || nestedInnerRoot == null || !nestedInnerRoot.gameObject.activeSelf)
+        {
+            return false;
+        }
+
+        detached = nestedInnerRoot;
+        Transform parent = newParent != null ? newParent : detached.root;
+        detached.SetParent(parent, worldPositionStays: true);
+
+        nestedInnerRoot = null;
+        nestedInnerFilter = null;
+        nestedInnerRenderer = null;
+        hasNestedInner = false;
+        configuredInnerShape = default;
+        // Designer instance (if any) remains under the detached root; drop local refs only.
+        designerInnerInstance = null;
+        designerInnerPrefab = null;
+        return true;
+    }
+
+    /// <summary>
+    /// True when a nested-inner child mesh is currently shown under this cell view.
+    /// </summary>
+    public bool HasDetachedNestedInnerCandidate =>
+        hasNestedInner && nestedInnerRoot != null && nestedInnerRoot.gameObject.activeSelf;
+
     public void ConfigureNestedInner(bool show, ShapeType innerShape, Material material, float relativeScale, bool asNest)
     {
-        EnsureNestedInner();
+        // Phase 69B: show=false must not allocate NestedInner3D. After detach, the anchored
+        // residual owns the nested presentation — recreating under the traveler caused the
+        // duplicate-inner / target-promotion bug.
         if (!show)
         {
             hasNestedInner = false;
+            configuredInnerShape = default;
             if (nestedInnerRoot != null)
             {
                 nestedInnerRoot.gameObject.SetActive(false);
-            ClearDesignerInner();
+                ClearDesignerInner();
             }
 
             return;
         }
 
+        EnsureNestedInner();
         hasNestedInner = true;
         configuredInnerShape = innerShape;
         nestedInnerRoot.gameObject.SetActive(true);
@@ -553,17 +1208,51 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
             if (nestedInnerRenderer != null && material != null)
             {
-                nestedInnerRenderer.sharedMaterial = material;
+                if (asNest)
+                {
+                    nestedInnerRenderer.sharedMaterials = new[] { material, material };
+                }
+                else
+                {
+                    nestedInnerRenderer.sharedMaterial = material;
+                }
+
                 nestedInnerRenderer.enabled = true;
                 nestedInnerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 nestedInnerRenderer.receiveShadows = true;
             }
         }
 
+        ApplyMaterialToDesignerInner(material, asNest);
+
         float scale = Mathf.Clamp(relativeScale, 0.4f, 0.7f);
-        nestedInnerRoot.localScale = new Vector3(scale, scale * 0.72f, scale);
-        nestedInnerRoot.localPosition = new Vector3(0f, asNest ? 0.06f : 0.16f, 0f);
+        // Slightly flatter Y so the inner extrusion reads seated inside the outer rim.
+        nestedInnerRestScale = new Vector3(scale, scale * 0.72f, scale);
+        nestedInnerRoot.localScale = nestedInnerRestScale;
+        ApplyNestedInnerVisualCenterOffset();
         nestedInnerRoot.localRotation = Quaternion.identity;
+    }
+
+    /// <summary>
+    /// Aligns nested inner mesh with the outer piece's board-plane visual center.
+    /// Uses the same optical offset as visualRoot without moving gameplay/root transforms.
+    /// </summary>
+    private void ApplyNestedInnerVisualCenterOffset()
+    {
+        if (nestedInnerRoot == null || !hasNestedInner)
+        {
+            return;
+        }
+
+        EnsureMeshComponents();
+        Vector3 local = visualRoot != null ? visualRoot.localPosition : Vector3.zero;
+        if (!PieceMotionMath.IsFinite(local))
+        {
+            local = Vector3.zero;
+        }
+
+        // Follow outer visualRoot including interaction micro-lift so nested stays aligned.
+        nestedInnerRoot.localPosition = local;
     }
 
     /// <summary>
@@ -618,6 +1307,12 @@ public class PieceView3D : MonoBehaviour, IPieceView
             }
         }
 
+        ApplyVisualCenterOffset(configuredFootprintScale.x);
+
+        if (hasNestedInner && nestedInnerRoot != null)
+        {
+            ApplyNestedInnerVisualCenterOffset();
+        }
         RefreshContactShadow();
     }
 
@@ -657,10 +1352,27 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
 
         // Mesh is unit-sized in local space; root scale maps to world footprint/height.
+        // Center follows visualRoot so VisualCenterBoardPlaneOffsetLocal stays pickable.
         pickCollider.isTrigger = true;
-        pickCollider.center = Vector3.zero;
-        pickCollider.size = Vector3.one;
+        AlignPickColliderToVisual();
         pickCollider.enabled = true;
+    }
+
+    private void AlignPickColliderToVisual()
+    {
+        if (pickCollider == null)
+        {
+            return;
+        }
+
+        Vector3 center = Vector3.zero;
+        if (visualRoot != null)
+        {
+            center = visualRoot.localPosition;
+        }
+
+        pickCollider.center = center;
+        pickCollider.size = Vector3.one;
     }
 
     private void EnsureMeshComponents()
@@ -678,6 +1390,9 @@ public class PieceView3D : MonoBehaviour, IPieceView
                 meshObject.transform.SetParent(transform, false);
                 visualRoot = meshObject.transform;
             }
+
+            visualRoot.localRotation = Quaternion.identity;
+            ApplyVisualCenterOffset(configuredFootprintScale.x);
         }
 
         if (meshFilter == null)
@@ -727,6 +1442,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
                 var innerObject = new GameObject("NestedInner3D");
                 innerObject.transform.SetParent(transform, false);
                 nestedInnerRoot = innerObject.transform;
+                Phase69AForensic.LogNestedCreated(this, innerObject);
             }
         }
 
@@ -759,6 +1475,29 @@ public class PieceView3D : MonoBehaviour, IPieceView
             {
                 DestroyImmediate(innerCollider);
             }
+        }
+    }
+
+    private void ApplyMaterialToDesignerInner(Material material, bool asNest)
+    {
+        if (material == null || designerInnerInstance == null)
+        {
+            return;
+        }
+
+        MeshRenderer renderer = designerInnerInstance.GetComponentInChildren<MeshRenderer>(true);
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (asNest)
+        {
+            renderer.sharedMaterials = new[] { material, material };
+        }
+        else
+        {
+            renderer.sharedMaterial = material;
         }
     }
 

@@ -1,0 +1,31 @@
+Phase 51 Play Mode verification
+Unity 6000.3.8f1
+LOAD Campaign_15_Master (all shapes) ok
+SHOT Captures/phase51-t1-all-shapes.png
+T1 all-shapes views=12 meshOk=12 thin=0 spritesOnPiece=0 shapes=Circle,Square,Diamond,Hexagon,Star,Triangle
+SHOT angled-live Captures/phase51-t2-angled.png
+moved Circle (0, 4) -> (0, 5)
+T3 move: TryMoveBlock succeeded
+SHOT Captures/phase51-t3-after-move.png
+LOAD Campaign_07_ChainIntro ok
+SHOT Captures/phase51-t4-chain.png
+T4 chain connectors=1
+T4 chain views=6 meshOk=6 thin=0 spritesOnPiece=0 shapes=Circle,Diamond,Square
+LOAD Campaign_10_ShapeInShape ok
+SHOT Captures/phase51-t5-nested.png
+T5 nested nestedInners=2
+T5 nested views=4 meshOk=4 thin=0 spritesOnPiece=0 shapes=Square,Hexagon
+LOAD Campaign_12_Ice ok
+SHOT Captures/phase51-t9-ice.png
+T9 ice iceViews=1
+LOAD Campaign_13_Shutter ok
+SHOT Captures/phase51-t10-shutter.png
+T10 shutter shutterViews=1
+LOAD Campaign_08_ChainCascade ok
+SHOT Captures/phase51-t7-magnet-board.png
+T7 magnet selecting=True
+SHOT Captures/phase51-t7-magnet-selecting.png
+T7 magnet cancelled
+T8 hammer Diamond accepted=True phase=Executing
+SHOT Captures/phase51-t8-hammer.png
+RESULT ok

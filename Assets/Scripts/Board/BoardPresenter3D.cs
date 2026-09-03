@@ -15,6 +15,7 @@ public class BoardPresenter3D : MonoBehaviour
     private const string NestsName = "Nests3D";
     private const string IceName = "Ice3D";
     private const string ShuttersName = "Shutters3D";
+    private const string ObstaclesName = "Obstacles3D";
     private const string VfxName = "Vfx3D";
 
     [SerializeField]
@@ -71,6 +72,7 @@ public class BoardPresenter3D : MonoBehaviour
     private Transform nestsRoot;
     private Transform iceRoot;
     private Transform shuttersRoot;
+    private Transform obstaclesRoot;
     private Transform vfxRoot;
     private int builtWidth;
     private int builtHeight;
@@ -121,6 +123,16 @@ public class BoardPresenter3D : MonoBehaviour
         {
             EnsureHierarchy();
             return shuttersRoot;
+        }
+    }
+
+    /// <summary>Parent for permanent static obstacle visuals.</summary>
+    public Transform ObstaclesRoot
+    {
+        get
+        {
+            EnsureHierarchy();
+            return obstaclesRoot;
         }
     }
 
@@ -312,6 +324,7 @@ public class BoardPresenter3D : MonoBehaviour
         nestsRoot = EnsureChild(NestsName);
         iceRoot = EnsureChild(IceName);
         shuttersRoot = EnsureChild(ShuttersName);
+        obstaclesRoot = EnsureChild(ObstaclesName);
         vfxRoot = EnsureChild(VfxName);
         BoardVfx3D.SetEffectsRoot(vfxRoot);
     }
@@ -355,8 +368,9 @@ public class BoardPresenter3D : MonoBehaviour
         var filter = slab.AddComponent<MeshFilter>();
         filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(sizeX, floorHeight, sizeZ, boardCornerRadius, 4);
         slab.AddComponent<MeshRenderer>();
-        ApplyMaterial(slab, boardMaterial, new Color(0.10f, 0.09f, 0.26f, 1f));
-        TuneSharedMaterial(boardMaterial, new Color(0.10f, 0.09f, 0.26f, 1f), 0.05f, 0.45f);
+        ApplyMaterial(slab, boardMaterial, new Color(0.07f, 0.06f, 0.20f, 1f));
+        // Phase 52J: darker matte slab so the playable well reads as a physical recess.
+        TuneSharedMaterial(boardMaterial, new Color(0.07f, 0.06f, 0.20f, 1f), 0f, 0.24f);
     }
 
     private void RebuildFrame()
@@ -389,7 +403,7 @@ public class BoardPresenter3D : MonoBehaviour
         CreateFrameWall("FrameSouth", new Vector3(0f, y, -zEdge), new Vector3(outerX, wallHeight, frameWallThickness), corner);
         CreateFrameWall("FrameEast", new Vector3(xEdge, y, 0f), new Vector3(frameWallThickness, wallHeight, innerZ), corner);
         CreateFrameWall("FrameWest", new Vector3(-xEdge, y, 0f), new Vector3(frameWallThickness, wallHeight, innerZ), corner);
-        TuneSharedMaterial(frameMaterial, new Color(0.18f, 0.13f, 0.38f, 1f), 0.06f, 0.62f);
+        TuneSharedMaterial(frameMaterial, new Color(0.17f, 0.13f, 0.37f, 1f), 0f, 0.32f);
     }
 
     private void CreateFrameWall(string wallName, Vector3 localPos, Vector3 localScale, float cornerRadius)
@@ -405,7 +419,7 @@ public class BoardPresenter3D : MonoBehaviour
             Mathf.Min(cornerRadius, Mathf.Min(localScale.x, localScale.z) * 0.35f),
             3);
         wall.AddComponent<MeshRenderer>();
-        ApplyMaterial(wall, frameMaterial, new Color(0.18f, 0.13f, 0.38f, 1f));
+        ApplyMaterial(wall, frameMaterial, new Color(0.19f, 0.14f, 0.39f, 1f));
     }
 
     private void RebuildCells(int gridWidth, int gridHeight)
@@ -432,12 +446,13 @@ public class BoardPresenter3D : MonoBehaviour
                 tile.transform.localScale = Vector3.one;
                 if (!keepDesignerMaterials)
                 {
-                    ApplyMaterial(tile, cellMaterial, new Color(0.24f, 0.20f, 0.48f, 1f));
+                    ApplyMaterial(tile, cellMaterial, new Color(0.20f, 0.16f, 0.41f, 1f));
                 }
             }
         }
 
-        TuneSharedMaterial(cellMaterial, new Color(0.24f, 0.20f, 0.48f, 1f), 0.04f, 0.5f);
+        // Phase 52J: readable molded slots — slightly lighter than slab, matte, subordinate to pieces.
+        TuneSharedMaterial(cellMaterial, new Color(0.20f, 0.16f, 0.41f, 1f), 0f, 0.34f);
     }
 
     private GameObject CreateCellTile(Vector2Int cell, float face, float thickness, out bool keepDesignerMaterials)

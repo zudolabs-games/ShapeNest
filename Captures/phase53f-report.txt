@@ -1,0 +1,50 @@
+Phase 53F — Fix Shuffle Destination Flash
+=========================================
+
+ROOT CAUSE
+----------
+After ApplyLogicalShuffle() updates GridPosition (with preserveWorldPresentation),
+BoardPresentationController.LateUpdate() runs RefreshWorldPositions() and
+SyncWorldPieceViews(), which call:
+
+    block.SetGridPosition(block.GridPosition)
+
+without preserveWorldPresentation when the view is NOT motion-locked.
+That snaps PieceView3D transforms to the NEW logical grid cell before
+AnimateShuffleMove() begins — causing a ~1-frame destination flash.
+
+EXACT CULPRIT PATH
+------------------
+ShuffleBooster.ApplyLogicalShuffle()
+  → block.SetGridPosition(anchor, preserveWorldPresentation: true)  // 3D preserved
+  → (same/next frame) BoardPresentationController.LateUpdate()
+  → RefreshWorldPositions() line ~1136 OR SyncWorldPieceViews() line ~862
+  → block.SetGridPosition(block.GridPosition)  // snaps WorldView to NEW cell
+
+FIX (presentation-order only)
+-----------------------------
+1. Capture fromAnchors BEFORE any logical change (unchanged intent, moved earlier).
+2. BeginShufflePresentationHold(): BeginMotionLock on all moving cell views BEFORE
+   ApplyLogicalShuffle — BoardPresentationController skips grid snap when IsMotionLocked.
+3. RestoreShuffleViewsAtFrom(): after logical apply, SnapWorldPresentationToGrid()
+   at FROM cells (works while locked; ApplyGridPosition does not).
+4. AnimateShuffleMove(): start from CellRestWorldPosition(from), not ResolveHopStart;
+   only BeginMotionLock if not already held; EndMotionLock only if this call added it.
+5. EndShufflePresentationHold(): release locks after animation completes or on interrupt.
+6. ResetShuffleState / ClearBlockShufflePresentation: release motion lock on cleanup.
+
+FILES CHANGED
+-------------
+- Assets/Scripts/Boosters/ShuffleBooster.cs
+- Assets/Scripts/UI/PieceView3D.cs (SnapWorldPresentationToGrid)
+- Assets/Scripts/UI/WorldPieceMotion.cs (shuffle start pose + lock pairing)
+
+UNTOUCHED
+---------
+- TryBuildShufflePlan, occupancy, charges, Block.SetGridPosition implementation
+- BoardPresentationController (uses existing IsMotionLocked gate)
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+
+COMPILE
+-------
+Run: dotnet build Assembly-CSharp.csproj

@@ -1,0 +1,83 @@
+Phase 61A — Drag Movement Smoothness + Per-Cell Haptics
+========================================================
+Date: 2026-09-01
+Unity: 6000.3.8f1 (Editor)
+
+Root cause of movement hesitation
+---------------------------------
+1. Per-hop easing decelerated to near-zero velocity at each cell arrival
+   (first hop EaseInOutCubic; turn hops EaseInOutSine), so the next hop
+   had to re-accelerate → perceived CELL → STOP → CELL.
+2. secondsPerCell=0.14 amplified that valley between hops.
+3. InputManager already queues SetDragRequest while BlockMover is hopping —
+   request timing / Phase 61 direction params were NOT the pause source.
+4. No artificial WaitBetweenCells gate was found in BlockMover.
+
+Timing changes (OLD → NEW)
+--------------------------
+- BlockMover.secondsPerCell: 0.14 → 0.105
+- BlockMover.normalHopAnticipateDuration: 0.04 → 0.03
+- WorldPieceMotion continuation linearWeight: 0.88 → 0.95
+  (turns cruise at 0.80; softenTurn/EaseInOutSine disabled)
+- WorldPieceMotion first-hop linear blend: 0.22 → 0.35
+
+Why these values
+----------------
+Slightly shorter hop + less end-of-hop braking keeps consecutive cells
+in a continuous velocity envelope without teleporting (still visibly animated).
+
+Phase 61 direction params UNCHANGED
+-----------------------------------
+threshold 20 | firstStep 0.38 | stride 0.92 | change 0.18 | reverse 0.42
+perp deadband 0.12 | dominance 1.32 | steer dominance 1.28
+
+Architecture
+------------
+InputManager changed: NO (direction/feel params preserved)
+BlockMover changed: YES (secondsPerCell, anticipate, haptic call site name)
+WorldPieceMotion changed: YES (hop cruise weights only; shuffle/magnet/match untouched)
+VisualCenterBoardPlaneOffsetLocal=0.12 preserved
+
+Haptics
+-------
+Implementation: reused Assets/Scripts/Feedback/HapticFeedback.cs
+API: PlayGridCellMove() (+ PlayHop() alias)
+Test counters: GridMoveHapticCount / TotalHapticInvokeCount / ResetTestCounters()
+Trigger location: BlockMover.PlayHopSound() immediately after successful TryMoveBlock
+  (logical grid commit — NOT presentation/DOTween completion)
+Behavior: one subtle pulse per successful one-cell GridPosition translation
+Blocked / failed / direction-only / booster select: do NOT call PlayGridCellMove
+Editor / unsupported platforms: counter increments; hardware vibration no-ops
+No duplicate triggers from WorldPieceMotion / PieceView3D / InputManager
+
+Compile
+-------
+dotnet build Assembly-CSharp.csproj: SUCCESS (0 errors; pre-existing warnings)
+dotnet build Assembly-CSharp-Editor.csproj: SUCCESS (0 errors; minor unused-var warnings in verifier)
+
+Play Mode
+---------
+PENDING — Unity MCP entered playmode_transition with Time stuck (~0.02s).
+Verifier menu: Shape Nest → Phase 61A Verify Drag Smoothness
+Captures/screenshots will be written when the menu run completes locally.
+
+T1–T36
+------
+PENDING (automated Play Mode hang). Run the menu item above to fill results.
+
+Files changed
+-------------
+- Assets/Scripts/Blocks/BlockMover.cs
+- Assets/Scripts/UI/WorldPieceMotion.cs
+- Assets/Scripts/Feedback/HapticFeedback.cs
+- Assets/Scenes/SampleScene.unity
+- Assets/Prefabs/Blocks/Block .prefab
+- Assets/Editor/Phase61APlayModeVerify.cs (+ .meta)
+- Assembly-CSharp-Editor.csproj (compile include)
+- Captures/phase61a-report.txt (this file)
+
+Remaining issues
+----------------
+- Play Mode verification must be run manually via the menu item until MCP
+  play-mode transitions are reliable.
+- Do not start Phase 62.

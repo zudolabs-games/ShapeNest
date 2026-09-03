@@ -1,0 +1,15 @@
+=== ADJACENT YELLOW NESTED MATCH ===
+placed source=(1, 0) ok=True HasNestMatchOccupying=False
+  before i=0 world=(1, 0) active=Square:Yellow hasInner=True
+  before i=1 world=(1, 1) active=Square:Yellow hasInner=True
+  before i=2 world=(1, 2) active=Square:Yellow hasInner=True
+steps=9 AFTER grid=(1, 0) cells=3 settled=False
+  LIVE Square:Purple logical=(1, 0) viewCell=(1, 0) hasInner=False residual=False
+  LIVE Square:Purple logical=(1, 1) viewCell=(1, 1) hasInner=False residual=False
+  LIVE Square:Purple logical=(1, 2) viewCell=(1, 2) hasInner=False residual=False
+NEST (0, 0) tgt=False occ=-
+NEST (0, 1) tgt=False occ=-
+NEST (0, 2) tgt=False occ=-
+SRC (1, 0) occ=Square:Purple
+SRC (1, 1) occ=Square:Purple
+SRC (1, 2) occ=Square:Purple

@@ -1,0 +1,4 @@
+grid=(4, 4) cells=2 settled=False pending=False moving=False
+  Pentagon:Cyan world=(4, 4) viewCell=(4, 4) inner=False active=True
+  Pentagon:Cyan world=(4, 5) viewCell=(4, 5) inner=False active=True
+tgt53=False tgt54=False tgt55=False

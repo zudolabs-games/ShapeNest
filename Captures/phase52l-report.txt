@@ -1,0 +1,165 @@
+Phase 52L — 3D VFX Polish & Impact Readability
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+STATUS: COMPLETE (presentation-only).
+Stop — do not start Shuffle / Undo / Swap / new gameplay.
+
+==================================================
+GOAL
+==================================================
+Improve readability and cohesion of existing 3D VFX so interactions
+feel like small physical reactions on the molded-plastic board.
+
+==================================================
+FILES CHANGED
+==================================================
+- Assets/Scripts/Board/BoardVfx3D.cs
+- Assets/Scripts/Effects/MatchEffect.cs (glow presentation only)
+- Assets/Editor/Phase52LPlayModeVerify.cs (+ .meta) — verification only
+
+FILES NOT CHANGED
+- HammerBooster.cs (animation timings / charge / impact call sites untouched)
+- IceState.cs / ShutterState.cs
+- Block.cs / BlockMover.cs / BoardManager.cs / InputManager.cs
+- MagnetBooster.cs
+- IceView3D / ShutterView3D melt/open timings
+- PieceView3D / WorldPieceMotion (52G/52H)
+- BoardAdaptivePresentation3D (VC=0.12)
+- BoardPresenter3D / BoardEnvironment3D / BoardCamera3D
+- Unity hierarchy
+
+==================================================
+VFX CHANGED (BoardVfx3D)
+==================================================
+Shared particle style (all bursts):
+- RenderMode: Mesh (shared sphere mesh) instead of billboard sprites
+- Soft URP Particles/Unlit transparent material (no neon additive)
+- Size-over-lifetime shrink + alpha fade gradient
+- Soft startSpeed range; feel-specific gravity / shape radius
+
+Match impact (PlayNestMatchImpactFlash + PlayNestMatch):
+- Contact flash: 6 mesh beads, life 0.18s, small ring 0.16s
+- Settle burst: 10 beads, life 0.32s, softer ring alpha 0.42
+- Call order unchanged (MatchEffect still flash@start, PlayNestMatch@finalize)
+- MatchEffect timings UNCHANGED:
+  - impactDuration = 0.10
+  - glowDuration = 0.22
+  - dissolveDuration = 0.10
+- MatchEffect glowPeakAlpha default 0.85 → 0.55 (sprite glow secondary to 3D burst)
+- EvaluateGlow soft-caps peak to ≤0.55 even if prefab serialized higher
+- glowColor slightly softer cream
+
+Hammer impact (PlayHammerImpact / CellBurst / Nest / Fragments):
+- Animation durations in HammerBooster UNCHANGED
+- Fragment lifetime still 0.50f
+- Burst counts softened (14–20 vs 18–24); flash less white-blast
+- Ground contact ring retained (softer alpha / thinner cylinder)
+- Fragment scatter slightly tighter; same gravity contract in animator
+- HasActiveHammerPresentation / ClearHammerEffects contracts preserved
+
+Ice melt (PlayIceMelt):
+- Dual soft frost + mist bursts
+- Slight upward velocity + near-zero / float gravity
+- Triggered only from existing IceView3D melt path / timing
+
+Shutter open (PlayShutterOpen):
+- Warm plastic release + light dust bursts
+- Geometry of ShutterView3D plates UNCHANGED
+- Triggered only from existing ShutterView3D open path / timing
+
+Landing:
+- Softer smaller mesh beads (secondary polish)
+
+==================================================
+TIMINGS VERIFIED UNCHANGED
+==================================================
+- MatchEffect impact/glow/dissolve durations: unchanged fields
+- Hammer lift / anticipation / wind-up / slam / settle: unchanged (HammerBooster)
+- HammerFragmentAnimator Play(..., 0.50f, ...): unchanged lifetime
+- Ice melt MeltDuration 0.34 / durability 0.22: unchanged (IceView3D)
+- Shutter OpenDuration 0.32: unchanged (ShutterView3D)
+- VisualCenterBoardPlaneOffsetLocal = 0.12
+
+==================================================
+GAMEPLAY SYSTEMS VERIFIED UNTOUCHED
+==================================================
+- GridPosition / occupancy / matching / BlockMover / InputManager
+- Magnet present
+- Hammer ice reject: smashed=False eligible=False
+- Hammer single smash accepted (phase=Executing, charges start 3)
+- Hammer chain smash accepted (cells=3, one operation)
+- IceState / ShutterState logic untouched
+- 52G selection / 52H nest-entry / 52I shadows / 52J board / 52K ice-shutter presentation geometry
+
+==================================================
+COMPILE
+==================================================
+- Unity compile: 0 new errors (console clean after refresh)
+- dotnet build Assembly-CSharp.csproj: attempted; hung while Unity held assemblies
+  (Unity Editor compile is the authoritative result for this project)
+
+==================================================
+PLAY MODE RESULTS
+==================================================
+- Master load + match VFX probe: ok (vc=0.12)
+- Chain / nested match VFX probes: ok
+- Hammer single impact: smash=True shape=Square phase=Executing
+- Hammer chain impact: smash=True cells=3 phase=Executing
+- Ice melt: IsPresentationAnimating=True
+- Shutter open: IsOpeningPresentation=True
+- Hammer Ice reject: smashed=False eligible=False
+- Magnet present=True
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52l-before-master.png (from Phase 52K master baseline)
+- Captures/phase52l-after-master.png
+- Captures/phase52l-match-impact.png
+- Captures/phase52l-chain-impact.png
+- Captures/phase52l-nested-impact.png
+- Captures/phase52l-hammer-impact.png
+- Captures/phase52l-hammer-chain.png
+- Captures/phase52l-ice-melt.png
+- Captures/phase52l-shutter-open.png
+- Captures/phase52l-final.png
+- Captures/phase52l-report.txt (this file)
+
+RESULT ok
+
+==================================================
+PHASE 52L-FIX — Particle Velocity Curve Mode
+==================================================
+Error: "Particle Velocity curves must all be in the same mode"
+
+Source: BoardVfx3D.SpawnBurst — VelocityOverLifetimeModule for:
+- BurstFeel.IceMelt
+- BurstFeel.ShutterOpen
+
+Mixed modes (invalid):
+- Y set via MinMaxCurve(min, max) → TwoConstants
+- X / Z left at module defaults → Constant
+Unity rejects mixed Constant + TwoConstants on the same module.
+
+Fix (common mode = TwoConstants on X/Y/Z):
+- IceMelt:  x=(0,0)  y=(0.08s, 0.22s)  z=(0,0)
+- Shutter:  x=(0,0)  y=(0.04s, 0.14s)  z=(0,0)
+Upward float ranges preserved. No other VFX redesign.
+
+MatchEffect.cs: no ParticleSystem velocity (not involved).
+
+Validation:
+- Unity compile: 0 errors
+- Play Mode VFX probe (match / hammer / ice / shutter): 0 console errors/warnings
+- "Particle Velocity curves must all be in the same mode": GONE
+- VC=0.12 unchanged; timings/gameplay untouched
+
+Refreshed captures:
+- Captures/phase52l-match-impact.png
+- Captures/phase52l-hammer-impact.png
+- Captures/phase52l-ice-melt.png
+- Captures/phase52l-shutter-open.png
+- Captures/phase52l-report.txt
+
+52L-FIX RESULT ok — STOP

@@ -1,0 +1,69 @@
+Phase 53D — Shuffle Movement Animation Polish
+==============================================
+
+ROOT CAUSE OF UNSMOOTH FEELING
+------------------------------
+1. Three disconnected phases: global anticipation → AnimateHop → global settle
+   created velocity discontinuities at each handoff.
+2. Double anticipation: PieceView3D compress THEN AnimateHop anticipate:true.
+3. AnimateHop reuses player-drag hop easing (pickup, carry, hop cruise) — wrong
+   feel for automated board-wide Shuffle.
+4. 25ms stagger + global anticipation wait made pieces feel sequential, not flowing.
+
+PRESENTATION CHANGES
+--------------------
+New: WorldPieceMotion.AnimateShuffleMove()
+  - Single continuous tween (TweenAnimationUtility.ShuffleId)
+  - Timeline: 10% in-place anticipate / 82% travel / 8% soft settle
+  - Position: quintic ease-in-out (PieceMotionMath.EaseInOutQuint)
+  - Squash: ease-out cubic build → gentle mid-travel → ease-in cubic release
+  - Lift: sin(π·travel) arc at 3.2% cell axis (no bounce)
+  - No pickup/carry/drag hop path
+
+ShuffleBooster:
+  - Removed separate PlayShuffleAnticipation / PlayShuffleSettle passes
+  - AnimateCellShuffle now calls AnimateShuffleMove (not AnimateHop)
+  - Stagger: 18ms per independent Block unit (was 25ms)
+  - Chains: all cell views of one Block still launch together with same duration
+
+EASING
+------
+- Travel position: quintic ease-in-out
+- Anticipation squash in: ease-out cubic
+- Settle squash out: ease-in cubic
+- Lift envelope: sin(π·t) over travel portion only
+
+STAGGER
+-------
+0.018s (18ms) between Block units — overlapping simultaneous motion
+
+GAMEPLAY UNTOUCHED
+------------------
+- TryBuildShufflePlan, eligibility, occupancy, GridPosition, charges
+- BlockMover.secondsPerCell, BoosterManager, Magnet, Hammer
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+
+FILES CHANGED
+-------------
+- Assets/Scripts/UI/PieceMotionMath.cs (EaseInOutQuint)
+- Assets/Scripts/Animation/TweenAnimationUtility.cs (EvaluateEaseInOutQuint)
+- Assets/Scripts/UI/WorldPieceMotion.cs (AnimateShuffleMove)
+- Assets/Scripts/Boosters/ShuffleBooster.cs (unified move path, 18ms stagger)
+- Assets/Scripts/UI/PieceView3D.cs (legacy method notes, squash tuning)
+- Assets/Editor/Phase53PlayModeVerify.cs (phase53d captures/report)
+
+VALIDATION
+----------
+Run: Shape Nest → Phase 53 Verify Shuffle Booster
+
+Captures (written during verify):
+  Captures/phase53d-before.png
+  Captures/phase53d-shuffle.png
+  Captures/phase53d-chain.png
+  Captures/phase53d-nested.png
+  Captures/phase53d-ice.png
+  Captures/phase53d-shutter.png
+  Captures/phase53d-after-shuffle.png
+  Captures/phase53d-cleanup.png
+
+Compile/Play Mode: run in Unity Editor (batch blocked if project open).

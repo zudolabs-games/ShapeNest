@@ -190,6 +190,93 @@ public static class BoardMeshFactory3D
         return mesh;
     }
 
+    /// <summary>
+    /// Soft contact shadow disc with radial alpha falloff via vertex colors.
+    /// Phase 52I: stronger center plateau, softer outer rim (not a hard cookie).
+    /// </summary>
+    public static Mesh GetSoftContactShadowDisc(int segments = 36, int rings = 4)
+    {
+        segments = Mathf.Clamp(segments, 12, 64);
+        rings = Mathf.Clamp(rings, 3, 8);
+        string key = "soft_contact_shadow_v2_" + segments + "_" + rings;
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        int ringVertCount = segments * rings + 1;
+        var vertices = new List<Vector3>(ringVertCount);
+        var normals = new List<Vector3>(ringVertCount);
+        var uvs = new List<Vector2>(ringVertCount);
+        var colors = new List<Color>(ringVertCount);
+        var triangles = new List<int>(segments * rings * 6);
+
+        vertices.Add(Vector3.zero);
+        normals.Add(Vector3.up);
+        uvs.Add(new Vector2(0.5f, 0.5f));
+        // Center stays fully opaque for a grounded contact cue.
+        colors.Add(new Color(1f, 1f, 1f, 1f));
+
+        for (int r = 1; r <= rings; r++)
+        {
+            float t = r / (float)rings;
+            // Smoothstep then ease: holds center strength, softens the outer edge.
+            float s = t * t * (3f - (2f * t));
+            float alpha = 1f - (s * s);
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                float x = Mathf.Cos(a) * t;
+                float z = Mathf.Sin(a) * t;
+                vertices.Add(new Vector3(x, 0f, z));
+                normals.Add(Vector3.up);
+                uvs.Add(new Vector2(x * 0.5f + 0.5f, z * 0.5f + 0.5f));
+                colors.Add(new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        // Center fan to first ring.
+        for (int i = 0; i < segments; i++)
+        {
+            int i1 = 1 + i;
+            int i2 = 1 + ((i + 1) % segments);
+            triangles.Add(0);
+            triangles.Add(i1);
+            triangles.Add(i2);
+        }
+
+        // Concentric bands.
+        for (int r = 0; r < rings - 1; r++)
+        {
+            int inner = 1 + (r * segments);
+            int outer = 1 + ((r + 1) * segments);
+            for (int i = 0; i < segments; i++)
+            {
+                int i1 = (i + 1) % segments;
+                int a = inner + i;
+                int b = inner + i1;
+                int c = outer + i;
+                int d = outer + i1;
+                triangles.Add(a);
+                triangles.Add(c);
+                triangles.Add(d);
+                triangles.Add(a);
+                triangles.Add(d);
+                triangles.Add(b);
+            }
+        }
+
+        var mesh = new Mesh { name = "SoftContactShadowDisc_v2" };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        Cache[key] = mesh;
+        return mesh;
+    }
+
     private static Vector2[] RoundedRectOutline(float halfX, float halfZ, float radius, int segments)
     {
         var points = new List<Vector2>((segments + 1) * 4);

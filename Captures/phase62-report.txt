@@ -1,0 +1,26 @@
+PHASE 62 — LEVEL 43 STATIC VALIDATION
+=====================================
+
+Level asset: Campaign_43_Reference
+Database index: 42 (UI level 43)
+Grid: 6x10
+Blocks: 9
+Targets: 10
+Shutters: 1 (2 cells, durability 999)
+
+LevelValidator layer multiset: PASS (balanced offline check)
+Grid 6x10: PASS
+Level 43 slot (index 42): PASS
+Piece footprints: PASS (9 pieces, expected cells)
+Target footprints: PASS (10 targets, expected cells)
+Blocker at C4-R7, C5-R7: PASS
+Block-target overlaps: F/T7, I/T9 (expected)
+
+Timer: 90 seconds (global LevelManager.timeLimitSeconds = 90f; not per-level)
+
+Play Mode: NOT EXECUTED — Unity project already open (batch mode blocked).
+Run manually: Shape Nest / Phase 62 Verify Level 43
+Then load level index 42 in Play Mode.
+
+Existing levels 1-15: unchanged (indices 0-14 same asset GUIDs)
+Levels 16-42: placeholder cycling references to Campaign 01-15 (registration only)

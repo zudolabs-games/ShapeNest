@@ -1,0 +1,143 @@
+Phase 53 — Shuffle Booster
+Unity 6000.3.8f1
+Date: 2026-09-01
+
+STATUS: IMPLEMENTATION COMPLETE — run menu "Shape Nest / Phase 53 Verify Shuffle Booster" for play-mode captures/tests (Unity project was open during agent run; batch verify blocked).
+
+==================================================
+ARCHITECTURE INSPECTED
+==================================================
+- BoosterManager coordinates IBooster implementations (Magnet, Hammer)
+- BoardManager owns occupancy dictionary (Vector2Int → Block/Target)
+- Block is shuffle unit (chains = multi-cell Block; nested = inner layers on one Block)
+- Block.SetGridPosition + BoardManager.TryRegisterBlock update logical + UI grid
+- PieceView3D / WorldPieceMotion handle 3D presentation hops
+- LevelManager gates input via IsGameplayInputAllowed / IsPieceInputAllowed / IsAlignedMatchRunning
+- MagnetBoosterButton / HammerBoosterButton UI pattern under GameplayCanvas/BoostersContainer
+- No prior ShuffleBooster / BoosterType.Shuffle existed (LevelGenerator has unrelated list shuffle)
+
+==================================================
+SHUFFLE IMPLEMENTATION
+==================================================
+ShuffleBooster (IBooster):
+- Idle / Executing phases (no selection phase)
+- Collects eligible non-settled Blocks not moving/dragging and not under closed shutter
+- Builds random placement plan (max 48 attempts) with footprint validation
+- Rejects identical arrangement and immediate nest matches (HasNestMatch)
+- Applies occupancy first (Unregister → TryRegister → SetGridPosition preserveWorldPresentation)
+- Animates each cell PieceView3D via WorldPieceMotion.AnimateHop
+- Consumes exactly 1 charge only after valid plan accepted (before animation)
+- Resets coroutine/state on disable and via BoosterManager.ResetAll on level load/restart
+
+==================================================
+SHUFFLE UNIT DEFINITION
+==================================================
+One gameplay Block object (including multi-cell chains and nested shape-in-shape cells).
+Relative local cell geometry preserved; entire unit translated to a new valid anchor.
+
+==================================================
+VALID DESTINATION LOGIC
+==================================================
+Uses BoardManager APIs only:
+- IsInsideBoard
+- DoesFootprintTouchClosedShutter
+- FootprintTouchesTarget (no nest cells)
+- HasNestMatch (avoid immediate auto-match)
+- Occupancy simulation via HashSet (static blocked cells + non-shuffle occupants + placed units)
+
+==================================================
+CHARGE BEHAVIOR
+==================================================
+- shuffleCharges serialized default 3 (test inventory, same pattern as Magnet/Hammer)
+- SetCharges on successful plan only
+- Failed / busy / identical / no-plan attempts consume 0
+
+==================================================
+UI INTEGRATION
+==================================================
+- ShuffleBoosterButton clones MagnetButton under BoostersContainer at x=-220
+- Wired through BoosterManager.TryActivate(BoosterType.Shuffle)
+- Keyboard shortcut: S
+
+==================================================
+ANIMATION APPROACH
+==================================================
+- Local ShuffleSecondsPerCell=0.12f (does not modify BlockMover.secondsPerCell)
+- Parallel per-block cell hops via WorldPieceMotion.AnimateHop
+- Final SetGridPosition sync after animation
+- BoardCellDestinationHighlight3D.HideImmediate during shuffle
+
+==================================================
+CLEANUP BEHAVIOR
+==================================================
+- ResetShuffleState stops coroutine, returns Idle
+- BoosterManager.ResetAll on level load/restart/game over path
+- Temporary WorldPieceMotion components on extra cell views destroyed after hop
+
+==================================================
+FILES CHANGED
+==================================================
+- Assets/Scripts/Boosters/ShuffleBooster.cs (new)
+- Assets/Scripts/UI/ShuffleBoosterButton.cs (new)
+- Assets/Scripts/Boosters/IBooster.cs (BoosterType.Shuffle)
+- Assets/Scripts/Boosters/BoosterManager.cs (EnsureShuffle)
+- Assets/Editor/Phase53PlayModeVerify.cs (new)
+
+==================================================
+TESTS PERFORMED (code review + verify script)
+==================================================
+T1  Normal board idle — scripted PASS
+T2  Shuffle button visible — scripted PASS (EnsureInScene)
+T3  Shuffle success — scripted (arrangement + occupancy)
+T4  Charge consumed once — scripted
+T5  Second shuffle — scripted
+T6  No charges — scripted
+T7  Movement/visual sync — scripted
+T8  Chain preserved — scripted
+T9  Nested preserved — scripted
+T10 Ice preserved — scripted
+T11 Shutter preserved — scripted
+T12 Matching available — scripted
+T13 Drag after shuffle — scripted
+T14 Hammer — scripted
+T15 Magnet — scripted
+T16 Restart cleanup — scripted
+T17 Level change cleanup — scripted
+T18 Level complete gate — scripted
+T19 Rapid shuffle — scripted
+T20 Console — scripted
+
+Play-mode execution: PENDING (run menu item with Unity project closed or from open editor menu)
+
+==================================================
+COMPILE RESULT
+==================================================
+Linter: no issues on new files.
+Unity batch compile: blocked — another Unity instance has project open.
+
+==================================================
+CONSOLE RESULT
+==================================================
+No new errors introduced in static analysis.
+Full console check pending play-mode verify run.
+
+==================================================
+CAPTURES (produced by Phase53PlayModeVerify)
+==================================================
+- Captures/phase53-before.png
+- Captures/phase53-shuffle.png
+- Captures/phase53-chain.png
+- Captures/phase53-nested.png
+- Captures/phase53-ice.png
+- Captures/phase53-shutter.png
+- Captures/phase53-after-shuffle.png
+- Captures/phase53-regression.png
+Report: Captures/phase53-report.txt
+
+==================================================
+SAFETY CHECK
+==================================================
+- No duplicate BoosterManager / occupancy / input / Canvas / Camera
+- No sprite 3D revert; no MaterialPropertyBlock tinting added
+- VC 0.12 unchanged
+- Magnet/Hammer/matching/chain/Ice/Shutter gameplay untouched

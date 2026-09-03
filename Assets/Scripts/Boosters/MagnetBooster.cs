@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -51,6 +52,12 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private readonly List<Coroutine> chainPullRoutines = new List<Coroutine>();
     private readonly List<Block> activeMagnetCohort = new List<Block>();
     private Block highlightedBlock;
+    private readonly List<PieceView3D> selectionViews = new List<PieceView3D>();
+    private Sequence selectionPulse;
+    private bool overlayHideImmediate;
+
+    private const float SelectionPulsePeak = 1.03f;
+    private const float SelectionPulseCycle = 0.65f;
 
     public MagnetPhase Phase => phase;
     public bool IsSelecting => phase == MagnetPhase.Selecting;
@@ -149,11 +156,19 @@ public class MagnetBooster : MonoBehaviour, IBooster
         StopChainPullRoutines();
         activeMagnetCohort.Clear();
         ClearMagnetPresentation();
+        ClearAllMagnetSelectionPresentation();
         ClearHighlight();
+        overlayHideImmediate = true;
         if (phase != MagnetPhase.Idle)
         {
             SetPhase(MagnetPhase.Idle);
         }
+        else
+        {
+            BoosterSelectionOverlay.HideExisting(true);
+        }
+
+        overlayHideImmediate = false;
 
         if (!string.IsNullOrEmpty(reason))
         {
@@ -179,31 +194,54 @@ public class MagnetBooster : MonoBehaviour, IBooster
     [ContextMenu("Activate Magnet")]
     public void ActivateMagnet()
     {
+        TryBeginActivation(out _);
+    }
+
+    /// <summary>
+    /// Begins Magnet selection using the same gates as <see cref="ActivateMagnet"/>.
+    /// Returns false with a presentation reason when selection does not start.
+    /// Cancel-while-selecting counts as success (no failure reason).
+    /// </summary>
+    public bool TryBeginActivation(out BoosterFailureReason failure)
+    {
+        failure = BoosterFailureReason.None;
+
         if (phase == MagnetPhase.Executing)
         {
-            return;
+            failure = BoosterFailureReason.Busy;
+            return false;
         }
 
         if (phase == MagnetPhase.Selecting)
         {
             CancelMagnet("Cancelled");
-            return;
+            return true;
         }
 
         if (levelManager != null && !levelManager.IsGameplayInputAllowed)
         {
             Log("Magnet ignored: gameplay input not allowed");
-            return;
+            failure = BoosterFailureReason.Unavailable;
+            return false;
         }
 
         if (magnetCharges <= 0)
         {
             Log("Magnet ignored: no charges");
-            return;
+            failure = BoosterFailureReason.NoCharges;
+            return false;
+        }
+
+        if (!HasAnyMagnetEligibleBlock())
+        {
+            Log("Magnet ignored: no eligible blocks");
+            failure = BoosterFailureReason.NoValidTarget;
+            return false;
         }
 
         SetPhase(MagnetPhase.Selecting);
         Log($"Magnet selecting (charges={magnetCharges}). Tap a block.");
+        return true;
     }
 
     public void ToggleMagnet()
@@ -219,6 +257,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         }
 
         ClearHighlight();
+        StopSelectionPresentation();
         SetPhase(MagnetPhase.Idle);
         if (!string.IsNullOrEmpty(reason))
         {
@@ -256,6 +295,8 @@ public class MagnetBooster : MonoBehaviour, IBooster
         if (!TryBuildMagnetPlan(block, out _, out string failReason))
         {
             Log($"Magnet failed: {failReason}");
+            block.PlayInvalidInteractionFeedback();
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Magnet, BoosterFailureReason.InvalidTarget);
             // Stay in selecting mode so the player can try another block.
             return false;
         }
@@ -264,12 +305,16 @@ public class MagnetBooster : MonoBehaviour, IBooster
         if (resolveChain && block.IsFrozen)
         {
             Log("Magnet failed: block frozen by Ice");
+            block.PlayInvalidInteractionFeedback();
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Magnet, BoosterFailureReason.InvalidTarget);
             return false;
         }
 
         if (resolveChain && !CanFullyResolveChain(block, out string chainFail))
         {
             Log($"Magnet failed: {chainFail}");
+            block.PlayInvalidInteractionFeedback();
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Magnet, BoosterFailureReason.InvalidTarget);
             return false;
         }
 
@@ -277,6 +322,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         highlightedBlock = block;
         block.ShowDragSelection();
         SetPhase(MagnetPhase.Executing);
+        PlaySelectionConfirm(block);
         pullRoutine = resolveChain
             ? StartCoroutine(ExecuteMagnetChainResolution(block))
             : StartCoroutine(ExecuteMagnetJourney(block));
@@ -284,9 +330,65 @@ public class MagnetBooster : MonoBehaviour, IBooster
     }
 
     /// <summary>True if Magnet could legally pull this block right now.</summary>
-    public bool CanMagnetPull(Block block)
+    public bool CanMagnetPull(Block block) => IsMagnetEligibleVisual(block);
+
+    /// <summary>
+    /// Presentation-only eligibility. Mirrors TryUseMagnetOnBlock validation
+    /// (route plan + chain resolution) without changing gameplay.
+    /// </summary>
+    public bool IsMagnetEligibleVisual(PieceView3D view)
     {
-        return TryBuildMagnetPlan(block, out _, out _);
+        if (view == null || view.ConfiguredAsNest)
+        {
+            return false;
+        }
+
+        return IsMagnetEligibleVisual(view.SourceBlock);
+    }
+
+    /// <summary>
+    /// True when the existing Magnet activation path would accept this block.
+    /// </summary>
+    public bool IsMagnetEligibleVisual(Block block)
+    {
+        if (block == null || !block.isActiveAndEnabled || block.IsSettled)
+        {
+            return false;
+        }
+
+        if (!TryBuildMagnetPlan(block, out _, out _))
+        {
+            return false;
+        }
+
+        if (block.CellCount > 1)
+        {
+            if (block.IsFrozen)
+            {
+                return false;
+            }
+
+            if (!CanFullyResolveChain(block, out _))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool HasAnyMagnetEligibleBlock()
+    {
+        Block[] blocks = FindObjectsByType<Block>(FindObjectsSortMode.None);
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            if (IsMagnetEligibleVisual(blocks[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool TryBuildMagnetPlan(Block block, out MagnetPlan plan, out string failReason)
@@ -326,7 +428,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
             return false;
         }
 
-        if (board.IsBlockUnderClosedShutter(block))
+        if (board.IsBlockUnderImpassableCell(block))
         {
             failReason = "block under closed shutter";
             return false;
@@ -597,7 +699,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
             return false;
         }
 
-        if (board.DoesFootprintTouchClosedShutter(block, toAnchor))
+        if (board.DoesFootprintTouchImpassableCell(block, toAnchor))
         {
             return false;
         }
@@ -633,7 +735,9 @@ public class MagnetBooster : MonoBehaviour, IBooster
                 continue;
             }
 
-            if (target.RequiredShape == block.GetActiveShape(i))
+            if (ShapeMatch.AreMatchingLayers(
+                    target.GetRequiredIdentityAtWorld(proposedAnchor + block.GetLocalCell(i)),
+                    block.GetActiveIdentity(i)))
             {
                 return true;
             }
@@ -1051,7 +1155,8 @@ public class MagnetBooster : MonoBehaviour, IBooster
 
         ClearHighlight();
         pullRoutine = null;
-        SetPhase(returnToSelecting ? MagnetPhase.Selecting : MagnetPhase.Idle);
+        bool canReselect = returnToSelecting && magnetCharges > 0 && HasAnyMagnetEligibleBlock();
+        SetPhase(canReselect ? MagnetPhase.Selecting : MagnetPhase.Idle);
     }
 
     private IEnumerator WaitForMagnetGameplayIdle()
@@ -1340,9 +1445,9 @@ public class MagnetBooster : MonoBehaviour, IBooster
             return false;
         }
 
-        Dictionary<Vector2Int, List<ShapeType>> simLayers = SnapshotSimNestLayers(board);
-        var needed = new List<ShapeType>();
-        ShapeLayout.CollectResolvableLayers(
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers = SnapshotSimNestLayers(board);
+        var needed = new List<MatchIdentity>();
+        ShapeLayout.CollectResolvableIdentities(
             CollectBlockCells(block),
             block.ShapeType,
             block.Composition,
@@ -1400,9 +1505,9 @@ public class MagnetBooster : MonoBehaviour, IBooster
         return ShapeLayout.Clone(block.Cells, block.ShapeType);
     }
 
-    private static Dictionary<Vector2Int, List<ShapeType>> SnapshotSimNestLayers(BoardManager board)
+    private static Dictionary<Vector2Int, List<MatchIdentity>> SnapshotSimNestLayers(BoardManager board)
     {
-        var simLayers = new Dictionary<Vector2Int, List<ShapeType>>();
+        var simLayers = new Dictionary<Vector2Int, List<MatchIdentity>>();
         if (board == null)
         {
             return simLayers;
@@ -1422,16 +1527,18 @@ public class MagnetBooster : MonoBehaviour, IBooster
                     continue;
                 }
 
-                var layers = new List<ShapeType>();
-                ShapeLayout.CollectResolvableLayers(
-                    target.Cells,
-                    target.ShapeType,
-                    target.Composition,
-                    target.OuterShape,
-                    layers);
                 int nestCount = Mathf.Max(1, target.CellCount);
+                IReadOnlyList<ShapeCellData> targetCells = target.Cells;
                 for (int i = 0; i < nestCount; i++)
                 {
+                    var layers = new List<MatchIdentity>();
+                    ShapeCellData nestCell = targetCells != null && i < targetCells.Count
+                        ? targetCells[i]
+                        : null;
+                    ShapeLayout.CollectResolvableIdentitiesForCell(
+                        nestCell,
+                        target.ShapeType,
+                        layers);
                     simLayers[target.GridPosition + target.GetLocalCell(i)] = layers;
                 }
             }
@@ -1441,21 +1548,21 @@ public class MagnetBooster : MonoBehaviour, IBooster
     }
 
     private static bool SimNestCoverageAllows(
-        List<ShapeType> needed,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        List<MatchIdentity> needed,
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (needed == null || needed.Count == 0)
         {
             return true;
         }
 
-        var available = new Dictionary<ShapeType, int>();
+        var available = new Dictionary<MatchIdentity, int>();
         if (simLayers != null)
         {
-            var seenLists = new HashSet<List<ShapeType>>();
-            foreach (KeyValuePair<Vector2Int, List<ShapeType>> pair in simLayers)
+            var seenLists = new HashSet<List<MatchIdentity>>();
+            foreach (KeyValuePair<Vector2Int, List<MatchIdentity>> pair in simLayers)
             {
-                List<ShapeType> layers = pair.Value;
+                List<MatchIdentity> layers = pair.Value;
                 if (layers == null || !seenLists.Add(layers))
                 {
                     continue;
@@ -1463,34 +1570,34 @@ public class MagnetBooster : MonoBehaviour, IBooster
 
                 for (int i = 0; i < layers.Count; i++)
                 {
-                    ShapeType shape = layers[i];
-                    if (available.ContainsKey(shape))
+                    MatchIdentity identity = layers[i];
+                    if (available.ContainsKey(identity))
                     {
-                        available[shape] = available[shape] + 1;
+                        available[identity] = available[identity] + 1;
                     }
                     else
                     {
-                        available[shape] = 1;
+                        available[identity] = 1;
                     }
                 }
             }
         }
 
-        var required = new Dictionary<ShapeType, int>();
+        var required = new Dictionary<MatchIdentity, int>();
         for (int i = 0; i < needed.Count; i++)
         {
-            ShapeType shape = needed[i];
-            if (required.ContainsKey(shape))
+            MatchIdentity identity = needed[i];
+            if (required.ContainsKey(identity))
             {
-                required[shape] = required[shape] + 1;
+                required[identity] = required[identity] + 1;
             }
             else
             {
-                required[shape] = 1;
+                required[identity] = 1;
             }
         }
 
-        foreach (KeyValuePair<ShapeType, int> pair in required)
+        foreach (KeyValuePair<MatchIdentity, int> pair in required)
         {
             int have = 0;
             if (available != null)
@@ -1510,7 +1617,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private static void DrainSimAlignedMatches(
         BoardManager board,
         List<MagnetSimPiece> pieces,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (pieces == null)
         {
@@ -1588,7 +1695,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private static bool TrySimFindPath(
         BoardManager board,
         MagnetSimPiece piece,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers,
         out Vector2Int lastLegal,
         out Vector2Int nestAnchor)
     {
@@ -1683,7 +1790,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private static bool TrySimFindAdjacentOrOccupyingNest(
         BoardManager board,
         MagnetSimPiece piece,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers,
         out Vector2Int nestAnchor)
     {
         nestAnchor = Vector2Int.zero;
@@ -1699,7 +1806,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         BoardManager board,
         MagnetSimPiece piece,
         Vector2Int anchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers,
         out Vector2Int nestWorld)
     {
         nestWorld = Vector2Int.zero;
@@ -1732,7 +1839,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         BoardManager board,
         MagnetSimPiece piece,
         Vector2Int proposedAnchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers,
         out Vector2Int nestWorld)
     {
         nestWorld = Vector2Int.zero;
@@ -1745,12 +1852,12 @@ public class MagnetBooster : MonoBehaviour, IBooster
         for (int i = 0; i < count; i++)
         {
             Vector2Int world = proposedAnchor + piece.GetLocalCell(i);
-            if (!TryGetSimRequiredShape(simLayers, world, out ShapeType required))
+            if (!TryGetSimRequiredIdentity(simLayers, world, out MatchIdentity required))
             {
                 continue;
             }
 
-            if (required != piece.GetActiveShape(i))
+            if (!ShapeMatch.AreMatchingLayers(required, piece.GetActiveIdentity(i)))
             {
                 continue;
             }
@@ -1766,7 +1873,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         BoardManager board,
         MagnetSimPiece piece,
         Vector2Int anchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         return TrySimFindAdjacentOrOccupyingNestAt(board, piece, anchor, simLayers, out _);
     }
@@ -1775,7 +1882,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         BoardManager board,
         MagnetSimPiece piece,
         Vector2Int nextAnchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (!IsSimSoftFootprintValid(board, piece, nextAnchor))
         {
@@ -1801,7 +1908,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         for (int i = 0; i < count; i++)
         {
             Vector2Int world = toAnchor + piece.GetLocalCell(i);
-            if (!board.IsInsideBoard(world) || board.IsCellBlockedByClosedShutter(world))
+            if (!board.IsInsideBoard(world) || board.IsCellImpassable(world))
             {
                 return false;
             }
@@ -1814,7 +1921,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         BoardManager board,
         MagnetSimPiece piece,
         Vector2Int proposedAnchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (!IsSimSoftFootprintValid(board, piece, proposedAnchor))
         {
@@ -1825,12 +1932,12 @@ public class MagnetBooster : MonoBehaviour, IBooster
         for (int i = 0; i < count; i++)
         {
             Vector2Int world = proposedAnchor + piece.GetLocalCell(i);
-            if (!TryGetSimRequiredShape(simLayers, world, out ShapeType required))
+            if (!TryGetSimRequiredIdentity(simLayers, world, out MatchIdentity required))
             {
                 continue;
             }
 
-            if (required == piece.GetActiveShape(i))
+            if (ShapeMatch.AreMatchingLayers(required, piece.GetActiveIdentity(i)))
             {
                 return true;
             }
@@ -1842,7 +1949,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private static bool SimFootprintTouchesNest(
         MagnetSimPiece piece,
         Vector2Int toAnchor,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (piece == null || simLayers == null)
         {
@@ -1852,7 +1959,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         int count = Mathf.Max(1, piece.CellCount);
         for (int i = 0; i < count; i++)
         {
-            if (TryGetSimRequiredShape(simLayers, toAnchor + piece.GetLocalCell(i), out _))
+            if (TryGetSimRequiredIdentity(simLayers, toAnchor + piece.GetLocalCell(i), out _))
             {
                 return true;
             }
@@ -1861,18 +1968,18 @@ public class MagnetBooster : MonoBehaviour, IBooster
         return false;
     }
 
-    private static bool TryGetSimRequiredShape(
-        Dictionary<Vector2Int, List<ShapeType>> simLayers,
+    private static bool TryGetSimRequiredIdentity(
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers,
         Vector2Int world,
-        out ShapeType required)
+        out MatchIdentity required)
     {
-        required = ShapeType.Square;
+        required = default;
         if (simLayers == null)
         {
             return false;
         }
 
-        if (!simLayers.TryGetValue(world, out List<ShapeType> layers) || layers == null || layers.Count == 0)
+        if (!simLayers.TryGetValue(world, out List<MatchIdentity> layers) || layers == null || layers.Count == 0)
         {
             return false;
         }
@@ -1884,7 +1991,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private static bool TrySimConsumeOneMatch(
         MagnetSimPiece piece,
         Vector2Int nestFocus,
-        Dictionary<Vector2Int, List<ShapeType>> simLayers)
+        Dictionary<Vector2Int, List<MatchIdentity>> simLayers)
     {
         if (piece == null || simLayers == null)
         {
@@ -1899,11 +2006,12 @@ public class MagnetBooster : MonoBehaviour, IBooster
         {
             Vector2Int world = piece.anchor + piece.GetLocalCell(i);
             Vector2Int targetWorld = world;
-            bool occupying = TryGetSimRequiredShape(simLayers, world, out ShapeType occupyingRequired)
-                && occupyingRequired == piece.GetActiveShape(i);
+            MatchIdentity pieceIdentity = piece.GetActiveIdentity(i);
+            bool occupying = TryGetSimRequiredIdentity(simLayers, world, out MatchIdentity occupyingRequired)
+                && ShapeMatch.AreMatchingLayers(occupyingRequired, pieceIdentity);
             bool adjacent = !occupying
-                && TryGetSimRequiredShape(simLayers, nestFocus, out ShapeType adjacentRequired)
-                && adjacentRequired == piece.GetActiveShape(i)
+                && TryGetSimRequiredIdentity(simLayers, nestFocus, out MatchIdentity adjacentRequired)
+                && ShapeMatch.AreMatchingLayers(adjacentRequired, pieceIdentity)
                 && IsFourAdjacent(world, nestFocus);
             if (!occupying && !adjacent)
             {
@@ -1935,13 +2043,14 @@ public class MagnetBooster : MonoBehaviour, IBooster
             return false;
         }
 
-        if (!TryGetSimRequiredShape(simLayers, bestWorld, out ShapeType required)
-            || required != piece.GetActiveShape(bestIndex))
+        MatchIdentity offered = piece.GetActiveIdentity(bestIndex);
+        if (!TryGetSimRequiredIdentity(simLayers, bestWorld, out MatchIdentity required)
+            || !ShapeMatch.AreMatchingLayers(required, offered))
         {
             return false;
         }
 
-        if (!simLayers.TryGetValue(bestWorld, out List<ShapeType> layers) || layers == null || layers.Count == 0)
+        if (!simLayers.TryGetValue(bestWorld, out List<MatchIdentity> layers) || layers == null || layers.Count == 0)
         {
             return false;
         }
@@ -1952,7 +2061,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         bool hadInner = cell != null && cell.innerShapes != null && cell.innerShapes.Count > 0;
         if (hadInner)
         {
-            ShapeLayout.TryConsumeLayer(cell, required);
+            ShapeLayout.TryConsumeLayer(cell, offered);
             piece.RefreshFallbackShape();
             return true;
         }
@@ -2200,10 +2309,148 @@ public class MagnetBooster : MonoBehaviour, IBooster
             return;
         }
 
+        bool wasSelecting = phase == MagnetPhase.Selecting;
         phase = next;
+        if (phase == MagnetPhase.Selecting)
+        {
+            StartSelectionPresentation();
+        }
+        else if (wasSelecting)
+        {
+            StopSelectionPresentation();
+        }
+
+        SyncSelectionOverlay(overlayHideImmediate);
+        overlayHideImmediate = false;
         OnPhaseChanged?.Invoke(phase);
         OnStateChanged?.Invoke();
     }
+
+    private void SyncSelectionOverlay(bool immediate = false)
+    {
+        if (phase == MagnetPhase.Selecting)
+        {
+            BoosterSelectionOverlay overlay = BoosterSelectionOverlay.Ensure();
+            if (overlay != null)
+            {
+                overlay.SetVisible(true, immediate);
+            }
+
+            return;
+        }
+
+        BoosterSelectionOverlay.HideExisting(immediate);
+    }
+
+    /// <summary>
+    /// Presentation-only breath pulse on eligible Magnet blocks while Selecting.
+    /// One shared timing so chain cells stay synchronized.
+    /// </summary>
+    private void StartSelectionPresentation()
+    {
+        StopSelectionPresentation();
+        CollectEligibleSelectionViews(selectionViews);
+        if (selectionViews.Count == 0)
+        {
+            return;
+        }
+
+        selectionPulse = DOTween.Sequence()
+            .SetId(TweenAnimationUtility.MagnetSelectionId)
+            .SetLink(gameObject)
+            .SetLoops(-1, LoopType.Restart)
+            .SetUpdate(true);
+        selectionPulse.Append(TweenAnimationUtility.Progress(SelectionPulseCycle, t =>
+        {
+            float wave = Mathf.Sin(t * Mathf.PI);
+            float mul = Mathf.LerpUnclamped(1f, SelectionPulsePeak, wave);
+            for (int i = 0; i < selectionViews.Count; i++)
+            {
+                PieceView3D view = selectionViews[i];
+                if (view != null)
+                {
+                    view.SetMagnetSelectionEmphasis(mul);
+                }
+            }
+        }));
+        selectionPulse.OnKill(() => { selectionPulse = null; });
+    }
+
+    private void StopSelectionPresentation()
+    {
+        if (selectionPulse != null && selectionPulse.IsActive())
+        {
+            selectionPulse.Kill(false);
+        }
+
+        selectionPulse = null;
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.MagnetSelectionId, false);
+
+        for (int i = 0; i < selectionViews.Count; i++)
+        {
+            PieceView3D view = selectionViews[i];
+            if (view != null)
+            {
+                view.SetMagnetSelectionEmphasis(1f);
+            }
+        }
+
+        selectionViews.Clear();
+    }
+
+    private void ClearAllMagnetSelectionPresentation()
+    {
+        StopSelectionPresentation();
+        PieceView3D[] views = FindObjectsByType<PieceView3D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+        {
+            if (views[i] != null)
+            {
+                views[i].ClearMagnetSelectionPresentation();
+            }
+        }
+    }
+
+    private void PlaySelectionConfirm(Block block)
+    {
+        if (block == null)
+        {
+            return;
+        }
+
+        PieceView3D[] views = FindObjectsByType<PieceView3D>(FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+        {
+            PieceView3D view = views[i];
+            if (view != null && view.SourceBlock == block && view.gameObject.activeInHierarchy)
+            {
+                view.PlayMagnetSelectionConfirm();
+            }
+        }
+    }
+
+    private void CollectEligibleSelectionViews(List<PieceView3D> destination)
+    {
+        destination.Clear();
+        PieceView3D[] views = FindObjectsByType<PieceView3D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+        {
+            PieceView3D view = views[i];
+            if (view == null || !IsMagnetEligibleVisual(view))
+            {
+                continue;
+            }
+
+            if (!destination.Contains(view))
+            {
+                destination.Add(view);
+            }
+        }
+    }
+
+    /// <summary>True while the Selecting breath pulse is running (presentation only).</summary>
+    public bool IsSelectionPresentationActive =>
+        selectionPulse != null && selectionPulse.IsActive();
 
     private void SetCharges(int count)
     {
@@ -2311,6 +2558,12 @@ public class MagnetBooster : MonoBehaviour, IBooster
         {
             ShapeCellData cell = GetCell(index);
             return ShapeLayout.ActiveShape(cell, shapeType);
+        }
+
+        public MatchIdentity GetActiveIdentity(int index)
+        {
+            ShapeCellData cell = GetCell(index);
+            return ShapeMatch.FromCell(cell, shapeType);
         }
 
         public ShapeCellData GetCell(int index)

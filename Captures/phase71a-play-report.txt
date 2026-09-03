@@ -1,0 +1,82 @@
+PHASE 71A — PLAY MODE FORENSIC
+==============================
+PLAYER DRAG (CellCount>1):
+  InputManager.OnPointerReleased
+  → BlockMover.EndDrag (dragReleased=true)
+  → DragRoutine
+  → EnterMatchingTarget
+  → EnterMatchingTargetBody
+     if (CellCount > 1) → EnterChainPartialMatch  *** BRANCH ***
+        → MatchFocusedChainCell
+           → CollectChainFocusedMatch
+              → KeepOnlyNearestMatch / KeepOnlyCellAtWorld  *** REDUCES TO 1 ***
+           → PlayChainCellNestEntry (ONE cell)
+           → ConsumeAndRebuild (ONE nestCellIndices entry)
+
+AUTO-MATCH (LevelManager alignedMatchRoutine):
+  CollectAlignedMovementGroups
+  → PlayResolvedMovementGroup
+     Count==1 → MatchFocusedChainCell
+     Count>=2 → PlayMatchingSubsetAlignedMatch (Phase 70B)
+
+CONCLUSION: Player-visible drag of the 4-cell white triangle NEVER enters Phase 70B.
+
+WHITE_BEFORE: id=-558444 cells=4 grid=(1, 4) settled=False
+  cell[0] logical=(1, 4) active=Triangle:White hasInner=False view=-559762 viewPos=(-0.832, 0.327, 2.547) motionLock=False nestedParent=none nestedPos=- hasResidual=False targetAt=none
+  cell[1] logical=(2, 4) active=Triangle:White hasInner=False view=-559786 viewPos=(-0.277, 0.327, 2.547) motionLock=False nestedParent=none nestedPos=- hasResidual=False targetAt=none
+  cell[2] logical=(1, 5) active=Triangle:White hasInner=False view=-559800 viewPos=(-0.832, 0.327, 3.101) motionLock=False nestedParent=none nestedPos=- hasResidual=False targetAt=none
+  cell[3] logical=(2, 5) active=Triangle:White hasInner=False view=-559814 viewPos=(-0.277, 0.327, 3.101) motionLock=False nestedParent=none nestedPos=- hasResidual=False targetAt=none
+
+  cell[0] logical=(1, 4) expectedW=(-0.832, 0.195, 2.547) actualW=(-0.832, 0.327, 2.547) err=0.1328 locked=False
+  cell[1] logical=(2, 4) expectedW=(-0.277, 0.195, 2.547) actualW=(-0.277, 0.327, 2.547) err=0.1328 locked=False
+  cell[2] logical=(1, 5) expectedW=(-0.832, 0.195, 3.101) actualW=(-0.832, 0.327, 3.101) err=0.1328 locked=False
+  cell[3] logical=(2, 5) expectedW=(-0.277, 0.195, 3.101) actualW=(-0.277, 0.327, 3.101) err=0.1328 locked=False
+
+WHITE TRIANGLE id=-558444 grid=(1, 4)
+  cell A index=0 local=(0, 0) world=(1, 4) id=Triangle:White
+  cell B index=1 local=(1, 0) world=(2, 4) id=Triangle:White
+  cell C index=2 local=(0, 1) world=(1, 5) id=Triangle:White
+  cell D index=3 local=(1, 1) world=(2, 5) id=Triangle:White
+  A+B→TargetA indices=[0,1] d=(0, 5) CanTranslateMatchingSubset=True CanTranslateBlock=False
+    src=(1, 4) dest=(1, 9) target=Triangle:White
+    src=(2, 4) dest=(2, 9) target=Triangle:White
+  C+D→TargetA indices=[2,3] d=(0, 5) CanTranslateMatchingSubset=False CanTranslateBlock=False
+    src=(1, 5) dest=(1, 10) target=NONE
+    src=(2, 5) dest=(2, 10) target=NONE
+  A+C→TargetB indices=[0,2] d=(3, 0) CanTranslateMatchingSubset=True CanTranslateBlock=True
+    src=(1, 4) dest=(4, 4) target=Triangle:White
+    src=(1, 5) dest=(4, 5) target=Triangle:White
+  B+D→TargetB indices=[1,3] d=(3, 0) CanTranslateMatchingSubset=True CanTranslateBlock=True
+    src=(2, 4) dest=(5, 4) target=Pentagon:Orange
+    src=(2, 5) dest=(5, 5) target=Pentagon:Orange
+
+autoMatch actions=0 groups=0 hasLast=False last=(0, 0)->(0, 0)
+
+--- Simulate focused reduction (drag toward Target A) ---
+focus=(1, 5) occupancy=(1, 4) delta=(0, 1) candidates=0
+NO CANDIDATES — focused match would fail entirely
+
+focus=(1, 9) occupancy=(1, 4) delta=(0, 5) candidates=2
+  cand cell=0 src=(1, 4) nest=(1, 9) dist=5
+  cand cell=1 src=(2, 4) nest=(2, 9) dist=5.09902
+KeepOnlyNearest RESULT: KEEP cell=0 src=(1, 4) nest=(1, 9) DROPPED=1 other candidates
+FIRST INCORRECT STATE (drag path): multi-cell valid set reduced to 1 cell inside CollectChainFocusedMatch → KeepOnlyNearestMatch
+
+focus=(2, 9) occupancy=(1, 4) delta=(1, 5) candidates=1
+  cand cell=0 src=(1, 4) nest=(2, 9) dist=5.09902
+KeepOnlyNearest RESULT: KEEP cell=0 src=(1, 4) nest=(2, 9) DROPPED=0 other candidates
+FIRST INCORRECT STATE (drag path): multi-cell valid set reduced to 1 cell inside CollectChainFocusedMatch → KeepOnlyNearestMatch
+
+NESTED_SAMPLE: id=-558102 cells=3 grid=(1, 6) settled=False
+  cell[0] logical=(1, 6) active=Pentagon:Orange hasInner=False view=-559538 viewPos=(-0.832, 0.327, 3.656) motionLock=False nestedParent=none nestedPos=- hasResidual=False targetAt=none
+  cell[1] logical=(1, 7) active=Pentagon:Orange hasInner=True view=-559562 viewPos=(-0.832, 0.327, 4.210) motionLock=False nestedParent=Block3D_Pentagon_-558102_c1 nestedPos=(-0.832, 0.327, 4.169) hasResidual=False targetAt=none
+  cell[2] logical=(1, 8) active=Pentagon:Orange hasInner=True view=-559576 viewPos=(-0.832, 0.327, 4.764) motionLock=False nestedParent=Block3D_Pentagon_-558102_c2 nestedPos=(-0.832, 0.327, 4.723) hasResidual=False targetAt=none
+
+  cell[0] logical=(1, 6) expectedW=(-0.832, 0.195, 3.656) actualW=(-0.832, 0.327, 3.656) err=0.1328 locked=False
+  cell[1] logical=(1, 7) expectedW=(-0.832, 0.195, 4.210) actualW=(-0.832, 0.327, 4.210) err=0.1328 locked=False
+  cell[2] logical=(1, 8) expectedW=(-0.832, 0.195, 4.764) actualW=(-0.832, 0.327, 4.764) err=0.1328 locked=False
+
+methods: EnterMatchingTargetBody=True EnterChainPartialMatch=True PlayMatchingSubsetAlignedMatch=True
+SOURCE EnterMatchingTargetBody contains EnterChainPartialMatch=True contains PlayMatchingSubsetAlignedMatch=False
+
+TAG: OK

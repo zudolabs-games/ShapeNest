@@ -16,13 +16,13 @@ public class ShutterView3D : MonoBehaviour
     private Transform cellsRoot;
 
     [SerializeField]
-    private float plateHeight = 0.1f;
+    private float plateHeight = 0.13f;
 
     [SerializeField]
     private float plateLift = 0.34f;
 
     [SerializeField]
-    private float footprintFactor = 0.96f;
+    private float footprintFactor = 0.94f;
 
     private ShutterState source;
     private static Material sharedPlateMaterial;
@@ -357,7 +357,11 @@ public class ShutterView3D : MonoBehaviour
             }
             else
             {
-                plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                // Phase 52K: rounded molded plate (visible thickness + beveled edges).
+                plate = new GameObject("ShutterPlate");
+                var filter = plate.AddComponent<MeshFilter>();
+                filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.14f, 3);
+                plate.AddComponent<MeshRenderer>();
             }
 
             plate.name = "ShutterPlate_" + cellPlates.Count;
@@ -365,9 +369,9 @@ public class ShutterView3D : MonoBehaviour
             RemoveCollider(plate);
             if (!designerPlate)
             {
-                ApplyMaterial(plate, GetPlateMaterial(), new Color(0.22f, 0.12f, 0.34f, 1f));
-                CreateSlat(plate.transform, "SlatTop", new Vector3(0f, 0.55f, 0.28f));
-                CreateSlat(plate.transform, "SlatBottom", new Vector3(0f, 0.55f, -0.28f));
+                ApplyMaterial(plate, GetPlateMaterial(), new Color(0.78f, 0.52f, 0.22f, 1f));
+                CreateSlat(plate.transform, "SlatTop", new Vector3(0f, 0.52f, 0.30f));
+                CreateSlat(plate.transform, "SlatBottom", new Vector3(0f, 0.52f, -0.30f));
             }
 
             cellPlates.Add(plate.transform);
@@ -376,6 +380,7 @@ public class ShutterView3D : MonoBehaviour
 
     private void ApplySlats(Transform plate, float plateSize)
     {
+        _ = plateSize;
         for (int i = 0; i < plate.childCount; i++)
         {
             Transform slat = plate.GetChild(i);
@@ -385,21 +390,23 @@ public class ShutterView3D : MonoBehaviour
             }
 
             Vector3 lp = slat.localPosition;
-            slat.localScale = new Vector3(0.92f, 0.12f, 0.08f);
-            slat.localPosition = new Vector3(0f, 0.55f, lp.z);
-            ApplyMaterial(slat.gameObject, GetSlatMaterial(), new Color(0.42f, 0.28f, 0.56f, 1f));
+            // Slightly taller ridges for readable side depth under board lighting.
+            slat.localScale = new Vector3(0.90f, 0.16f, 0.10f);
+            slat.localPosition = new Vector3(0f, 0.52f, lp.z);
+            ApplyMaterial(slat.gameObject, GetSlatMaterial(), new Color(0.88f, 0.68f, 0.30f, 1f));
         }
     }
 
     private static void CreateSlat(Transform parent, string name, Vector3 localPos)
     {
-        GameObject slat = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        slat.name = name;
+        GameObject slat = new GameObject(name);
+        var filter = slat.AddComponent<MeshFilter>();
+        filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.18f, 2);
+        slat.AddComponent<MeshRenderer>();
         slat.transform.SetParent(parent, false);
         slat.transform.localPosition = localPos;
-        slat.transform.localScale = new Vector3(0.92f, 0.12f, 0.08f);
-        RemoveCollider(slat);
-        ApplyMaterial(slat, GetSlatMaterial(), new Color(0.42f, 0.28f, 0.56f, 1f));
+        slat.transform.localScale = new Vector3(0.90f, 0.16f, 0.10f);
+        ApplyMaterial(slat, GetSlatMaterial(), new Color(0.88f, 0.68f, 0.30f, 1f));
     }
 
     private void ClearPlates()
@@ -450,6 +457,9 @@ public class ShutterView3D : MonoBehaviour
             return;
         }
 
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        renderer.receiveShadows = true;
+
         if (material != null)
         {
             renderer.sharedMaterial = material;
@@ -460,6 +470,13 @@ public class ShutterView3D : MonoBehaviour
         renderer.sharedMaterial = new Material(shader) { color = fallback };
     }
 
+    /// <summary>Clears cached shutter materials so presentation retunes pick up after domain reload.</summary>
+    public static void InvalidateSharedMaterials()
+    {
+        sharedPlateMaterial = null;
+        sharedSlatMaterial = null;
+    }
+
     public static Material GetPlateMaterial()
     {
         if (sharedPlateMaterial != null)
@@ -468,10 +485,11 @@ public class ShutterView3D : MonoBehaviour
         }
 
         Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        // Phase 52K: molded-plastic warm barrier — Metallic 0, no emission, board-family specular.
         sharedPlateMaterial = new Material(shader)
         {
             name = "ShutterPlate3D_Runtime",
-            color = new Color(0.92f, 0.72f, 0.18f, 1f)
+            color = new Color(0.86f, 0.62f, 0.22f, 1f)
         };
         if (sharedPlateMaterial.HasProperty("_BaseColor"))
         {
@@ -480,12 +498,18 @@ public class ShutterView3D : MonoBehaviour
 
         if (sharedPlateMaterial.HasProperty("_Smoothness"))
         {
-            sharedPlateMaterial.SetFloat("_Smoothness", 0.62f);
+            sharedPlateMaterial.SetFloat("_Smoothness", 0.58f);
         }
 
         if (sharedPlateMaterial.HasProperty("_Metallic"))
         {
-            sharedPlateMaterial.SetFloat("_Metallic", 0.18f);
+            sharedPlateMaterial.SetFloat("_Metallic", 0f);
+        }
+
+        if (sharedPlateMaterial.HasProperty("_EmissionColor"))
+        {
+            sharedPlateMaterial.DisableKeyword("_EMISSION");
+            sharedPlateMaterial.SetColor("_EmissionColor", Color.black);
         }
 
         return sharedPlateMaterial;
@@ -502,7 +526,7 @@ public class ShutterView3D : MonoBehaviour
         sharedSlatMaterial = new Material(shader)
         {
             name = "ShutterSlat3D_Runtime",
-            color = new Color(1f, 0.86f, 0.35f, 1f)
+            color = new Color(0.94f, 0.76f, 0.34f, 1f)
         };
         if (sharedSlatMaterial.HasProperty("_BaseColor"))
         {
@@ -511,12 +535,18 @@ public class ShutterView3D : MonoBehaviour
 
         if (sharedSlatMaterial.HasProperty("_Smoothness"))
         {
-            sharedSlatMaterial.SetFloat("_Smoothness", 0.7f);
+            sharedSlatMaterial.SetFloat("_Smoothness", 0.55f);
         }
 
         if (sharedSlatMaterial.HasProperty("_Metallic"))
         {
-            sharedSlatMaterial.SetFloat("_Metallic", 0.22f);
+            sharedSlatMaterial.SetFloat("_Metallic", 0f);
+        }
+
+        if (sharedSlatMaterial.HasProperty("_EmissionColor"))
+        {
+            sharedSlatMaterial.DisableKeyword("_EMISSION");
+            sharedSlatMaterial.SetColor("_EmissionColor", Color.black);
         }
 
         return sharedSlatMaterial;

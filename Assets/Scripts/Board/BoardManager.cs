@@ -96,6 +96,7 @@ public class BoardManager : MonoBehaviour
     private readonly Dictionary<Vector2Int, Block> occupancy = new Dictionary<Vector2Int, Block>();
     private readonly Dictionary<Vector2Int, Target> targets = new Dictionary<Vector2Int, Target>();
     private readonly List<ShutterState> closedShutters = new List<ShutterState>();
+    private readonly HashSet<Vector2Int> staticBlockedCells = new HashSet<Vector2Int>();
 
     private RectTransform BoardRect
     {
@@ -205,6 +206,67 @@ public class BoardManager : MonoBehaviour
         return false;
     }
 
+    public IReadOnlyCollection<Vector2Int> StaticBlockedCells => staticBlockedCells;
+
+    public void SetStaticBlockedCells(IEnumerable<Vector2Int> cells)
+    {
+        staticBlockedCells.Clear();
+        if (cells == null)
+        {
+            return;
+        }
+
+        foreach (Vector2Int cell in cells)
+        {
+            staticBlockedCells.Add(cell);
+        }
+    }
+
+    public void ClearStaticBlockedCells()
+    {
+        staticBlockedCells.Clear();
+    }
+
+    public bool IsCellBlockedByStaticObstacle(Vector2Int gridPosition)
+    {
+        return staticBlockedCells.Contains(gridPosition);
+    }
+
+    public bool IsCellImpassable(Vector2Int gridPosition)
+    {
+        return IsCellBlockedByClosedShutter(gridPosition)
+            || IsCellBlockedByStaticObstacle(gridPosition);
+    }
+
+    public bool DoesFootprintTouchImpassableCell(Block block, Vector2Int toAnchor)
+    {
+        if (block == null)
+        {
+            return false;
+        }
+
+        int count = Mathf.Max(1, block.CellCount);
+        for (int i = 0; i < count; i++)
+        {
+            if (IsCellImpassable(toAnchor + block.GetLocalCell(i)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool IsBlockUnderImpassableCell(Block block)
+    {
+        return DoesFootprintTouchImpassableCell(block, block != null ? block.GridPosition : Vector2Int.zero);
+    }
+
+    public bool IsBlockUnderClosedShutter(Block block)
+    {
+        return DoesFootprintTouchClosedShutter(block, block != null ? block.GridPosition : Vector2Int.zero);
+    }
+
     public bool DoesFootprintTouchClosedShutter(Block block, Vector2Int toAnchor)
     {
         if (block == null)
@@ -222,11 +284,6 @@ public class BoardManager : MonoBehaviour
         }
 
         return false;
-    }
-
-    public bool IsBlockUnderClosedShutter(Block block)
-    {
-        return DoesFootprintTouchClosedShutter(block, block != null ? block.GridPosition : Vector2Int.zero);
     }
 
     public void RegisterShutter(ShutterState shutter)
@@ -419,7 +476,7 @@ public class BoardManager : MonoBehaviour
             return false;
         }
 
-        if (DoesFootprintTouchClosedShutter(block, toAnchor))
+        if (DoesFootprintTouchImpassableCell(block, toAnchor))
         {
             return false;
         }
@@ -435,6 +492,89 @@ public class BoardManager : MonoBehaviour
 
             Block occupant = GetBlockAt(cell);
             if (occupant != null && occupant != block)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Phase 70B: validate translating only the selected matching cells by
+    /// <paramref name="translation"/>. Unmatched sibling cells are not required to move
+    /// and are treated as stationary occupancy that destinations must not collide with.
+    /// </summary>
+    public bool CanTranslateMatchingSubset(
+        Block block,
+        IReadOnlyList<int> cellIndices,
+        Vector2Int translation)
+    {
+        if (block == null || cellIndices == null || cellIndices.Count == 0)
+        {
+            return false;
+        }
+
+        var selected = new HashSet<int>();
+        var destinations = new HashSet<Vector2Int>();
+        for (int n = 0; n < cellIndices.Count; n++)
+        {
+            int cellIndex = cellIndices[n];
+            if (cellIndex < 0 || cellIndex >= block.CellCount)
+            {
+                return false;
+            }
+
+            if (!selected.Add(cellIndex))
+            {
+                continue;
+            }
+
+            Vector2Int source = block.GridPosition + block.GetLocalCell(cellIndex);
+            Vector2Int dest = source + translation;
+            if (!IsInsideBoard(dest) || IsCellImpassable(dest))
+            {
+                return false;
+            }
+
+            if (!destinations.Add(dest))
+            {
+                // Two selected cells map onto the same destination.
+                return false;
+            }
+        }
+
+        foreach (Vector2Int dest in destinations)
+        {
+            Block occupant = GetBlockAt(dest);
+            if (occupant == null)
+            {
+                continue;
+            }
+
+            if (occupant != block)
+            {
+                return false;
+            }
+
+            // Occupied by this block: allowed only if that occupant cell is also selected
+            // (and therefore leaving), or translation is zero (already seated).
+            if (translation == Vector2Int.zero)
+            {
+                continue;
+            }
+
+            int occupantIndex = -1;
+            for (int i = 0; i < block.CellCount; i++)
+            {
+                if (block.GridPosition + block.GetLocalCell(i) == dest)
+                {
+                    occupantIndex = i;
+                    break;
+                }
+            }
+
+            if (occupantIndex < 0 || !selected.Contains(occupantIndex))
             {
                 return false;
             }
@@ -610,10 +750,14 @@ public class BoardManager : MonoBehaviour
         }
 
         ShapeCellData blockCell = block.GetCell(cellIndex);
-        ShapeType blockActive = block.GetActiveShape(cellIndex);
-        ShapeType blockOuter = blockCell != null ? blockCell.shapeType : blockActive;
+        MatchIdentity blockActive = block.GetActiveIdentity(cellIndex);
+        ShapeType blockOuter = blockCell != null ? blockCell.shapeType : blockActive.Shape;
+        ShapeColor blockOuterColor = blockCell != null
+            ? ShapeLayout.EffectiveOuterColor(blockCell)
+            : blockActive.Color;
         int blockLayers = ShapeLayout.LayerCount(blockCell);
         IReadOnlyList<ShapeType> blockInners = blockCell != null ? blockCell.innerShapes : null;
+        IReadOnlyList<ShapeColor> blockInnerColors = blockCell != null ? blockCell.innerShapeColors : null;
 
         ShapeCellData targetCell = null;
         IReadOnlyList<ShapeCellData> targetCells = target.Cells;
@@ -622,17 +766,47 @@ public class BoardManager : MonoBehaviour
             targetCell = targetCells[0];
         }
 
-        ShapeType targetActive = target.RequiredShape;
-        ShapeType targetOuter = targetCell != null ? targetCell.shapeType : targetActive;
+        MatchIdentity targetActive = new MatchIdentity(
+            target.RequiredShape,
+            target.GetOuterColorAtIndex(0));
+        ShapeType targetOuter = targetCell != null ? targetCell.shapeType : targetActive.Shape;
+        ShapeColor targetOuterColor = targetCell != null
+            ? ShapeLayout.EffectiveOuterColor(targetCell)
+            : targetActive.Color;
         int targetLayers = ShapeLayout.LayerCount(targetCell);
         IReadOnlyList<ShapeType> targetInners = targetCell != null ? targetCell.innerShapes : null;
+        IReadOnlyList<ShapeColor> targetInnerColors = targetCell != null ? targetCell.innerShapeColors : null;
 
-        if (blockActive != targetActive || blockOuter != targetOuter || blockLayers != targetLayers)
+        if (!ShapeMatch.AreMatchingLayers(blockActive, targetActive)
+            || blockOuter != targetOuter
+            || blockOuterColor != targetOuterColor
+            || blockLayers != targetLayers)
         {
             return false;
         }
 
-        return SameShapeList(blockInners, targetInners);
+        return SameShapeList(blockInners, targetInners)
+            && SameColorList(blockInnerColors, targetInnerColors);
+    }
+
+    private static bool SameColorList(IReadOnlyList<ShapeColor> a, IReadOnlyList<ShapeColor> b)
+    {
+        int ac = a != null ? a.Count : 0;
+        int bc = b != null ? b.Count : 0;
+        if (ac != bc)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < ac; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool SameShapeList(IReadOnlyList<ShapeType> a, IReadOnlyList<ShapeType> b)
@@ -702,13 +876,16 @@ public class BoardManager : MonoBehaviour
         int count = Mathf.Max(1, block.CellCount);
         for (int i = 0; i < count; i++)
         {
-            Target target = GetTargetAt(proposedAnchor + block.GetLocalCell(i));
+            Vector2Int world = proposedAnchor + block.GetLocalCell(i);
+            Target target = GetTargetAt(world);
             if (target == null)
             {
                 continue;
             }
 
-            if (target.RequiredShape == block.GetActiveShape(i))
+            if (ShapeMatch.AreMatchingLayers(
+                    target.GetRequiredIdentityAtWorld(world),
+                    block.GetActiveIdentity(i)))
             {
                 return true;
             }
@@ -733,8 +910,12 @@ public class BoardManager : MonoBehaviour
         int count = Mathf.Max(1, block.CellCount);
         for (int i = 0; i < count; i++)
         {
-            Target target = GetTargetAt(proposedAnchor + block.GetLocalCell(i));
-            if (target == null || target.RequiredShape != block.GetActiveShape(i))
+            Vector2Int world = proposedAnchor + block.GetLocalCell(i);
+            Target target = GetTargetAt(world);
+            if (target == null
+                || !ShapeMatch.AreMatchingLayers(
+                    target.GetRequiredIdentityAtWorld(world),
+                    block.GetActiveIdentity(i)))
             {
                 continue;
             }

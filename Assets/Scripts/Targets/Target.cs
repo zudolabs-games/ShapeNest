@@ -131,13 +131,59 @@ public class Target : MonoBehaviour
         }
     }
 
-    public bool TryConsumeLayer(ShapeType offered, out bool fullyComplete)
+    /// <summary>
+    /// Consumes one layer from the nest cell at <paramref name="worldCell"/>.
+    /// Multi-cell targets only complete when every cell has been consumed.
+    /// Matching requires ShapeType + Color.
+    /// </summary>
+    public bool TryConsumeLayerAtWorld(Vector2Int worldCell, MatchIdentity offered, out bool fullyComplete)
     {
         fullyComplete = false;
-        ShapeCellData cell = cells != null && cells.Count > 0 ? cells[0] : null;
-        if (cell == null)
+        int index = FindCellIndexAtWorld(worldCell);
+        if (index < 0)
         {
-            if (offered != shapeType)
+            // Legacy 1x1 with empty cells list: treat GridPosition as the only cell.
+            if ((cells == null || cells.Count == 0) && worldCell == gridPosition)
+            {
+                return TryConsumeLayerAtIndex(0, offered, out fullyComplete);
+            }
+
+            return false;
+        }
+
+        return TryConsumeLayerAtIndex(index, offered, out fullyComplete);
+    }
+
+    /// <summary>
+    /// Shape-only entry for tests. Uses the required color at the matched world cell.
+    /// Prefer the <see cref="MatchIdentity"/> overload for gameplay.
+    /// </summary>
+    public bool TryConsumeLayerAtWorld(Vector2Int worldCell, ShapeType offered, out bool fullyComplete)
+    {
+        return TryConsumeLayerAtWorld(
+            worldCell,
+            new MatchIdentity(offered, GetRequiredColorAtWorld(worldCell)),
+            out fullyComplete);
+    }
+
+    /// <summary>
+    /// Backward-compatible entry point. Prefer <see cref="TryConsumeLayerAtWorld"/> so the
+    /// matched nest cell is consumed — never an unrelated sibling cell of a multi-cell target.
+    /// </summary>
+    public bool TryConsumeLayer(ShapeType offered, out bool fullyComplete)
+    {
+        return TryConsumeLayerAtIndex(0, new MatchIdentity(offered, GetOuterColorAtIndex(0)), out fullyComplete);
+    }
+
+    public bool TryConsumeLayerAtIndex(int cellIndex, MatchIdentity offered, out bool fullyComplete)
+    {
+        fullyComplete = false;
+        if (cells == null || cells.Count == 0)
+        {
+            if (cellIndex != 0
+                || !ShapeMatch.AreMatchingLayers(
+                    new MatchIdentity(shapeType, ShapeColor.Default),
+                    offered))
             {
                 return false;
             }
@@ -146,24 +192,146 @@ public class Target : MonoBehaviour
             return true;
         }
 
-        if (ShapeLayout.ActiveShape(cell, shapeType) != offered)
+        if (cellIndex < 0 || cellIndex >= cells.Count)
         {
             return false;
         }
 
-        bool hadInner = cell.innerShapes != null && cell.innerShapes.Count > 0;
-        ShapeLayout.TryConsumeLayer(cell, offered);
-        if (hadInner)
+        ShapeCellData cell = cells[cellIndex];
+        if (cell == null)
         {
-            shapeType = ShapeLayout.ActiveShape(cell, cell.shapeType);
+            return false;
+        }
+
+        if (!ShapeLayout.TryConsumeLayer(cell, offered, out bool cellRemains))
+        {
+            return false;
+        }
+
+        if (cellRemains)
+        {
+            shapeType = ShapeLayout.ActiveShape(
+                cells != null && cells.Count > 0 ? cells[0] : null,
+                cell.shapeType);
             RebuildCache();
             RefreshVisual();
+            RebuildCellVisuals();
             fullyComplete = false;
             return true;
         }
 
-        fullyComplete = true;
+        // Outer layer matched with no remaining inners: remove only this nest cell.
+        cells.RemoveAt(cellIndex);
+        fullyComplete = cells.Count == 0;
+        if (fullyComplete)
+        {
+            return true;
+        }
+
+        NormalizeAnchorAndLocals();
+        shapeType = ShapeLayout.ActiveShape(
+            cells.Count > 0 ? cells[0] : null,
+            shapeType);
+        RebuildCache();
+        RefreshVisual();
+        RebuildCellVisuals();
+        if (boardManager != null)
+        {
+            boardManager.TryRegisterTarget(this);
+        }
+
+        RefreshWorldPresentation();
         return true;
+    }
+
+    public bool TryConsumeLayerAtIndex(int cellIndex, ShapeType offered, out bool fullyComplete)
+    {
+        return TryConsumeLayerAtIndex(
+            cellIndex,
+            new MatchIdentity(offered, GetOuterColorAtIndex(cellIndex)),
+            out fullyComplete);
+    }
+
+    public int FindCellIndexAtWorld(Vector2Int worldCell)
+    {
+        int count = cachedCellCount > 0 ? cachedCellCount : ShapeLayout.EffectiveCount(cells);
+        for (int i = 0; i < count; i++)
+        {
+            if (gridPosition + GetLocalCell(i) == worldCell)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    public ShapeType GetRequiredShapeAtWorld(Vector2Int worldCell)
+    {
+        int index = FindCellIndexAtWorld(worldCell);
+        if (index < 0)
+        {
+            return RequiredShape;
+        }
+
+        return GetShapeAtIndex(index);
+    }
+
+    public ShapeColor GetRequiredColorAtWorld(Vector2Int worldCell)
+    {
+        int index = FindCellIndexAtWorld(worldCell);
+        if (index < 0)
+        {
+            return cells == null || cells.Count == 0
+                ? ShapeColor.Default
+                : GetOuterColorAtIndex(0);
+        }
+
+        return GetOuterColorAtIndex(index);
+    }
+
+    public MatchIdentity GetRequiredIdentityAtWorld(Vector2Int worldCell)
+    {
+        return new MatchIdentity(GetRequiredShapeAtWorld(worldCell), GetRequiredColorAtWorld(worldCell));
+    }
+
+    /// <summary>
+    /// Re-anchors remaining cells so a (0,0) local always exists after a mid-footprint consume.
+    /// </summary>
+    private void NormalizeAnchorAndLocals()
+    {
+        if (cells == null || cells.Count == 0)
+        {
+            return;
+        }
+
+        Vector2Int bestWorld = gridPosition + cells[0].localPosition;
+        for (int i = 1; i < cells.Count; i++)
+        {
+            if (cells[i] == null)
+            {
+                continue;
+            }
+
+            Vector2Int world = gridPosition + cells[i].localPosition;
+            if (world.y < bestWorld.y || (world.y == bestWorld.y && world.x < bestWorld.x))
+            {
+                bestWorld = world;
+            }
+        }
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (cells[i] == null)
+            {
+                continue;
+            }
+
+            Vector2Int world = gridPosition + cells[i].localPosition;
+            cells[i].localPosition = world - bestWorld;
+        }
+
+        gridPosition = bestWorld;
     }
 
     public ShapeType ShapeType => RequiredShape;
@@ -311,6 +479,18 @@ public class Target : MonoBehaviour
         }
 
         return cachedOuters[index];
+    }
+
+    public ShapeColor GetOuterColorAtIndex(int index)
+    {
+        ShapeCellData cell = cells != null && index >= 0 && index < cells.Count ? cells[index] : null;
+        return ShapeLayout.EffectiveOuterColor(cell);
+    }
+
+    public ShapeColor GetInnerColorAtIndex(int index)
+    {
+        ShapeCellData cell = cells != null && index >= 0 && index < cells.Count ? cells[index] : null;
+        return ShapeLayout.ActiveInnerColor(cell);
     }
 
     public bool HasInnerLayerAt(int index)

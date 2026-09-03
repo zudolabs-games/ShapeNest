@@ -1,0 +1,153 @@
+Phase 52O — Full 3D Gameplay Presentation Audit + Regression Pass
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+STATUS: COMPLETE (presentation cleanup fix only; no redesign)
+Stop — do not start Phase 52P / Shuffle / Undo / Swap.
+
+==================================================
+AUDIT PERFORMED
+==================================================
+1. Master / normal board seating, materials, contact shadows, VC
+2. Selection / held feedback (52G)
+3. Match VFX spawn + soft glow soft-cap presence
+4. Chain connectors (Campaign_08)
+5. Nested shapes (Campaign_10)
+6. Ice (Campaign_12)
+7. Shutter (Campaign_13)
+8. Hammer selecting / cancel / overlay
+9. Magnet selecting (no Hammer overlay)
+10. Level-complete presentation sequencing (Hammer wait path inspected)
+11. Cancel / restart / level-change cleanup
+12. Particle velocity modes (Ice/Shutter)
+13. Duplicate cameras / canvases / SmashView preservation
+
+==================================================
+ISSUES FOUND
+==================================================
+CONFIRMED:
+1) Ephemeral BoardVfx3D children (NestMatch / IceMelt / ShutterOpen / Landing /
+   non-Hammer bursts) survived LoadLevel / restart until particle lifetime expired.
+   ClearAll() existed but was never hooked into board respawn presentation sync.
+   ClearHammerEffects alone (via Hammer reset) did not clear match/ice/shutter VFX.
+
+2) BoardVfx3D.ClearAll() destroyed ALL VfxRoot children, including the persistent
+   HammerSmashView3D object (unsafe if ClearAll is used on level transition).
+
+NOT CONFIRMED / LEFT ALONE:
+- Block seating / VC=0.12 centering — correct
+- Selection scale/lift (52G) — correct
+- Nest-entry / match soft-cap (52H/52L) — correct
+- Chain connector presentation — correct under Campaign_08
+- Nested inner alignment — correct under Campaign_10
+- Ice / Shutter presentation — correct (no IceState/ShutterState changes)
+- Hammer overlay cancel — resets to Idle, overlay inactive
+- Magnet selecting — no Hammer overlay
+- Level-complete waits on HammerBooster.IsPresentationActive (existing intended path)
+- Particle Ice/Shutter velocity: X/Y/Z all TwoConstants (52L-FIX intact)
+- No neon / billboard particle regression observed in probes
+- No duplicate Camera created (1 board camera)
+- MatchEffect glowPeak soft-capped at <= 0.55
+
+==================================================
+ISSUES FIXED
+==================================================
+1) BoardVfx3D.ClearAll():
+   - ResolveRoot()
+   - Skip HammerSmashView3D
+   - DestroyImmediate for immediate level/restart cleanup
+
+2) BoardPresentationController:
+   - HasAnyTrackedBlock helper
+   - On full board respawn (tracked IDs have zero overlap with live blocks,
+     and board is non-empty): call BoardVfx3D.ClearAll()
+   - Hooked in LateUpdate (before dirty sync) and SyncWorldPieceViews
+   - Does NOT clear when board is empty (preserves level-complete VFX finish)
+
+==================================================
+FILES MODIFIED (Phase 52O only intent)
+==================================================
+- Assets/Scripts/Board/BoardVfx3D.cs
+- Assets/Scripts/Board/BoardPresentationController.cs
+
+==================================================
+GAMEPLAY FILES CONFIRMED UNTOUCHED (this phase)
+==================================================
+- Block.cs (pre-existing dirty tree; not edited in 52O)
+- BoardManager.cs
+- BlockMover.cs
+- InputManager.cs (pre-existing dirty tree; not edited in 52O)
+- LevelManager.cs
+- HammerBooster.cs / MagnetBooster.cs gameplay rules
+- IceState.cs / ShutterState.cs
+- GridPosition / occupancy / matching / pathfinding / charges
+
+==================================================
+PRESENTATION STATES CHECKED
+==================================================
+- Held / tap feedback scale+lift reset on SetHeld(false)
+- Hammer Selecting → Cancel → Idle + overlay off
+- Hammer Selecting + VFX → LoadLevel → Idle, overlays=0, VFX=0
+- Magnet Selecting → no Hammer overlay
+- VfxRoot ephemeral children cleared on respawn; SmashView preserved
+- VC = 0.12f unchanged
+
+==================================================
+VFX CLEANUP CHECKED
+==================================================
+Probe: spawn NestMatch+IceMelt (before=4+) → LoadLevel → SyncWorldPieceViews
+Result: afterSync non-Smash children = 0
+
+Probe: Hammer Selecting + NestMatch → LoadLevel → Sync
+Result: vfx=0, hammer=Idle, overlays=0
+
+==================================================
+PARTICLE VELOCITY MODES CHECKED
+==================================================
+Runtime IceMeltVFX / IceMeltMistVFX / ShutterOpenVFX / ShutterOpenDustVFX:
+  xMode=TwoConstants yMode=TwoConstants zMode=TwoConstants
+NO "Particle Velocity curves must all be in the same mode" console error.
+
+==================================================
+COMPILE / CONSOLE
+==================================================
+- Unity compile: 0 errors after 52O edits
+- Console after matrix: 0 errors, 0 warnings
+
+==================================================
+REGRESSION RESULT
+==================================================
+- Normal / Master: PASS (VC=0.12, molded plastic, shadows)
+- Movement / selection: PASS
+- Match VFX: PASS (soft mesh particles; glow soft-cap present)
+- Chain: PASS (connectors present on Campaign_08)
+- Nested: PASS (Campaign_10)
+- Ice: PASS (Campaign_12)
+- Shutter: PASS (Campaign_13)
+- Hammer: PASS (Selecting + overlay; cancel/load cleanup)
+- Magnet: PASS (Selecting; no Hammer overlay)
+- Level completion: PASS (existing Hammer presentation wait preserved;
+  complete screen presents NEXT LEVEL)
+- Cleanup: PASS (confirmed leak fixed)
+- Particle velocity modes: PASS
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52o-normal.png
+- Captures/phase52o-movement.png
+- Captures/phase52o-match.png
+- Captures/phase52o-chain.png
+- Captures/phase52o-nested.png
+- Captures/phase52o-ice.png
+- Captures/phase52o-shutter.png
+- Captures/phase52o-hammer.png
+- Captures/phase52o-magnet.png
+- Captures/phase52o-level-complete.png
+- Captures/phase52o-cleanup.png
+- Captures/phase52o-report.txt
+
+==================================================
+STOP
+==================================================
+Stopped after Phase 52O. Do not start Phase 52P.

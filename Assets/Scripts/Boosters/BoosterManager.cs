@@ -5,6 +5,8 @@ using UnityEngine;
 /// Coordinates boosters. Does not move blocks, match, or own occupancy.
 /// Magnet gameplay stays on <see cref="MagnetBooster"/> / <see cref="BlockMover"/>.
 /// Hammer gameplay stays on <see cref="HammerBooster"/>.
+/// Shuffle gameplay stays on <see cref="ShuffleBooster"/>.
+/// Undo gameplay stays on <see cref="UndoBooster"/> / <see cref="BoardUndoHistory"/>.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(-100)]
@@ -54,6 +56,8 @@ public class BoosterManager : MonoBehaviour
     {
         EnsureMagnet();
         EnsureHammer();
+        EnsureShuffle();
+        EnsureUndo();
         RefreshRegistry();
     }
 
@@ -108,17 +112,89 @@ public class BoosterManager : MonoBehaviour
     /// <summary>
     /// Activates the booster if it can run and no other booster is busy.
     /// Same-booster toggle (Magnet cancel-while-selecting) is allowed.
+    /// Returns false when activation does not begin (charges, busy, no target, etc.).
     /// </summary>
     public bool TryActivate(BoosterType type)
     {
+        return TryActivate(type, out _);
+    }
+
+    /// <summary>
+    /// Same as <see cref="TryActivate(BoosterType)"/> with a presentation-friendly failure reason.
+    /// Does not change gameplay eligibility; reason mirrors existing early-outs.
+    /// </summary>
+    public bool TryActivate(BoosterType type, out BoosterFailureReason reason)
+    {
+        reason = BoosterFailureReason.None;
         IBooster booster = GetBooster(type);
-        if (booster == null || !booster.CanActivate || IsOtherBoosterBusy(booster))
+        if (booster == null)
         {
+            reason = BoosterFailureReason.Unavailable;
             return false;
         }
 
-        booster.Activate();
-        return true;
+        if (IsOtherBoosterBusy(booster))
+        {
+            reason = BoosterFailureReason.Busy;
+            return false;
+        }
+
+        switch (type)
+        {
+            case BoosterType.Magnet:
+            {
+                MagnetBooster magnet = booster as MagnetBooster;
+                if (magnet == null)
+                {
+                    reason = BoosterFailureReason.Unavailable;
+                    return false;
+                }
+
+                return magnet.TryBeginActivation(out reason);
+            }
+            case BoosterType.Hammer:
+            {
+                HammerBooster hammer = booster as HammerBooster;
+                if (hammer == null)
+                {
+                    reason = BoosterFailureReason.Unavailable;
+                    return false;
+                }
+
+                return hammer.TryBeginActivation(out reason);
+            }
+            case BoosterType.Shuffle:
+            {
+                ShuffleBooster shuffle = booster as ShuffleBooster;
+                if (shuffle == null)
+                {
+                    reason = BoosterFailureReason.Unavailable;
+                    return false;
+                }
+
+                return shuffle.TryBeginActivation(out reason);
+            }
+            case BoosterType.Undo:
+            {
+                UndoBooster undo = booster as UndoBooster;
+                if (undo == null)
+                {
+                    reason = BoosterFailureReason.Unavailable;
+                    return false;
+                }
+
+                return undo.TryBeginActivation(out reason);
+            }
+            default:
+                if (!booster.CanActivate)
+                {
+                    reason = BoosterFailureReason.Unavailable;
+                    return false;
+                }
+
+                booster.Activate();
+                return true;
+        }
     }
 
     public void Cancel(BoosterType type)
@@ -141,6 +217,8 @@ public class BoosterManager : MonoBehaviour
                 boosters[i].ResetState(reason);
             }
         }
+
+        BoosterFeedbackMessage.HideExisting(true);
     }
 
     /// <summary>Routes a board tap to the booster currently in targeting mode.</summary>
@@ -210,6 +288,41 @@ public class BoosterManager : MonoBehaviour
         }
 
         gameObject.AddComponent<HammerBooster>();
+    }
+
+    private void EnsureShuffle()
+    {
+        if (GetComponent<ShuffleBooster>() != null)
+        {
+            return;
+        }
+
+        if (FindFirstObjectByType<ShuffleBooster>() != null)
+        {
+            return;
+        }
+
+        gameObject.AddComponent<ShuffleBooster>();
+    }
+
+    private void EnsureUndo()
+    {
+        if (GetComponent<BoardUndoHistory>() == null && FindFirstObjectByType<BoardUndoHistory>() == null)
+        {
+            gameObject.AddComponent<BoardUndoHistory>();
+        }
+
+        if (GetComponent<UndoBooster>() != null)
+        {
+            return;
+        }
+
+        if (FindFirstObjectByType<UndoBooster>() != null)
+        {
+            return;
+        }
+
+        gameObject.AddComponent<UndoBooster>();
     }
 
     private void RefreshRegistry()

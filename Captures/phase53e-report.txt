@@ -1,0 +1,78 @@
+Phase 53E — Shuffle Animation Final Tuning & Regression
+========================================================
+
+INSPECTED (Phase 53D baseline)
+------------------------------
+- ShuffleBooster: logical shuffle → AnimateShuffleMove per cell → FinalizeShufflePresentation
+- WorldPieceMotion.AnimateShuffleMove: single ShuffleId tween (anticipate/travel/settle)
+- Stagger: 0.018s per Block unit; chain cells launch together per Block
+- PieceView3D: squash via SetPresentationAnticipation; nested inner follows outer mesh scale
+
+ISSUES FOUND
+------------
+1. Squash envelope had value discontinuities at anticipate→travel and travel→settle boundaries
+   (peak 0.14 → 0.128 → 0.031 → 0.039 jump), causing subtle “rubbery stop/start” feel.
+2. FinalizeShufflePresentation called SetGridPosition without preserveWorldPresentation,
+   forcing SyncWorldViewPosition after tween completion — potential visible snap at destination.
+3. peakSquash 0.14 and lift 3.2% were slightly strong for premium mobile feel.
+
+CHANGES MADE (presentation-only)
+--------------------------------
+WorldPieceMotion.AnimateShuffleMove:
+  BEFORE                          AFTER
+  anticipate 10% / settle 8%      anticipate 9% / settle 9%
+  peakSquash 0.14                 peakSquash 0.11
+  lift 3.2% cell axis             lift 2.8% cell axis
+  squash: cubic piecewise         squash: smoothstep piecewise (C1-continuous at handoffs)
+  travel easing: quintic (same)     travel easing: quintic (unchanged)
+
+ShuffleBooster.FinalizeShufflePresentation:
+  SetGridPosition(value)          SetGridPosition(value, preserveWorldPresentation: true)
+  (prevents post-animation world snap; logical grid already set in ApplyLogicalShuffle)
+
+TweenAnimationUtility:
+  Added IsTweeningId() for ShuffleId cleanup verification
+
+Phase53PlayModeVerify:
+  phase53e captures + T21–T25 animation regression checks
+
+UNCHANGED
+---------
+- Shuffle destination algorithm (TryBuildShufflePlan)
+- Occupancy, GridPosition logic, charges, BoosterManager
+- Stagger: 0.018s
+- BlockMover.secondsPerCell, Magnet, Hammer, Ice/Shutter gameplay
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- ShuffleBoosterButton feedback (Phase 53C)
+- Chain/nested gameplay; one Block = one animation unit
+
+EASING
+------
+- Position travel: quintic ease-in-out on normalized travel segment
+- Squash: smoothstep segments with matched boundary values (peak → peak×0.16 → 0)
+- Lift: sin(π × travelEased) arc
+
+STAGGER
+-------
+0.018 seconds (unchanged)
+
+VALIDATION
+----------
+dotnet build Assembly-CSharp.csproj:
+  EXIT_CODE=0
+  Errors: 0
+  Warnings: 73 (pre-existing project/package warnings; none in Phase 53E changed files)
+
+Unity verifier: Shape Nest → Phase 53 Verify Shuffle Booster (run in Editor for Play Mode + captures)
+
+Captures (written during verify):
+  Captures/phase53e-before.png
+  Captures/phase53e-button.png
+  Captures/phase53e-shuffle.png
+  Captures/phase53e-chain.png
+  Captures/phase53e-nested.png
+  Captures/phase53e-ice.png
+  Captures/phase53e-shutter.png
+  Captures/phase53e-after-shuffle.png
+  Captures/phase53e-cleanup.png
+  Captures/phase53e-regression.png

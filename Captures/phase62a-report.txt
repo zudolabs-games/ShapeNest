@@ -1,0 +1,62 @@
+PHASE 62A — LEVEL 43 CORRECTION REPORT
+======================================
+
+Files modified:
+- Assets/Levels/Campaign_43_Reference.asset
+- Assets/Scripts/Blocks/BlockEnums.cs (ShapeType.Pentagon added)
+- Assets/Scripts/UI/ShapeVisuals3D.cs (Pentagon color)
+- Assets/Scripts/UI/ShapeMeshFactory3D.cs (Pentagon mesh)
+- Assets/Scripts/Levels/LevelData.cs (blockedCells field)
+- Assets/Scripts/Board/BoardManager.cs (static obstacle collision)
+- Assets/Scripts/Levels/LevelManager.cs (apply/clear blocked cells)
+- Assets/Scripts/Board/BoardPresenter3D.cs (Obstacles3D root)
+- Assets/Scripts/Board/BoardPresentationController.cs (StaticObstacleView3D sync)
+- Assets/Scripts/Blocks/BlockMover.cs (impassable checks)
+- Assets/Scripts/Boosters/MagnetBooster.cs
+- Assets/Scripts/Boosters/ShuffleBooster.cs
+- Assets/Scripts/Boosters/HammerBooster.cs
+- Assets/Editor/Phase62Level43Verify.cs (Phase 62A validation)
+
+Files created:
+- Assets/Scripts/Board/StaticObstacleView3D.cs
+- Assets/Scripts/Board/StaticObstacleView3D.cs.meta
+
+Previous Level 43 errors fixed:
+- T4 was Star → now plain Square
+- T2 had nested diamonds → now plain Diamond
+- T8 had nested star/square → now plain Square
+- Shutters at wrong cells → removed entirely
+- Obstacle used shutter hack → replaced with blockedCells
+- P1 missing nesting → Pentagon + Circle inner on top 2 cells
+- P8 missing nesting → Diamond + Triangle (red) inner
+- P9 used Hexagon → now Pentagon
+- T9 uses Pentagon
+
+Shutter removal: shutters: [] (0 entries)
+
+Static obstacle:
+- LevelData.blockedCells at C3-R7 (2,6) and C4-R7 (3,6)
+- BoardManager.IsCellImpassable blocks movement
+- StaticObstacleView3D renders purple bar
+
+Final counts: 9 pieces, 10 targets, 0 shutters, 2 blocked cells
+
+Nesting (movable only):
+- P1: Pentagon → Circle inner (top 2 cells); plain Pentagon bottom cell
+- P4: Square → Square inner (all 3 cells)
+- P7: Circle → Circle inner (all 3 cells)
+- P8: Diamond → Triangle inner (red visual)
+
+Pentagon ShapeType: ADDED as enum value 6 (appended, existing values unchanged)
+
+Compile: Assembly-CSharp.csproj — Build succeeded (0 errors)
+
+Play Mode: NOT RUN (Unity editor open / batch blocked)
+
+Color limitations (schema):
+- Colors derive from ShapeType only; no per-piece color override
+- "Red diamond" uses Diamond (green palette)
+- "Pink circle" uses Circle (cyan palette)
+- Purple square inner uses Square nesting (same yellow family as outer)
+
+Run: Shape Nest → Phase 62A Verify Level 43

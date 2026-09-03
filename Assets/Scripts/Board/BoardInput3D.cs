@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// World3D pointer picking: camera ray → PieceView3D → gameplay <see cref="Block"/>.
-/// Does not move pieces; forwards selection into the existing <see cref="InputManager"/> path.
+/// Does not move pieces; used by <see cref="InputManager"/> fingerwise drag pickup.
 /// </summary>
 [DisallowMultipleComponent]
 public class BoardInput3D : MonoBehaviour
@@ -51,12 +51,33 @@ public class BoardInput3D : MonoBehaviour
         }
 
         ResolveReferences();
+        Block found = RaycastFindBlock(screenPosition);
+        if (found != null)
+        {
+            return found;
+        }
+
+        // Phase 60: if playable blocks exist without WorldView yet (post-spawn race),
+        // bind immediately and retry once — not a timed wait.
+        if (presentationController != null && presentationController.HasUnboundPlayableBlocks())
+        {
+            presentationController.EnsureWorldViewsBound();
+            found = RaycastFindBlock(screenPosition);
+        }
+
+        return found;
+    }
+
+    private Block RaycastFindBlock(Vector2 screenPosition)
+    {
         Camera camera = boardCamera3D != null ? boardCamera3D.Camera : null;
         if (camera == null || !camera.isActiveAndEnabled)
         {
             return null;
         }
 
+        Physics.SyncTransforms();
+        // ScreenPixel coords must match this camera's active pixel rect / targetTexture.
         Ray ray = camera.ScreenPointToRay(screenPosition);
         int hitCount = Physics.RaycastNonAlloc(
             ray,
@@ -76,7 +97,7 @@ public class BoardInput3D : MonoBehaviour
         for (int i = 0; i < hitCount; i++)
         {
             Collider collider = hitBuffer[i].collider;
-            if (collider == null)
+            if (collider == null || !collider.enabled)
             {
                 continue;
             }
@@ -88,7 +109,7 @@ public class BoardInput3D : MonoBehaviour
             }
 
             Block block = view.SourceBlock;
-            if (block == null)
+            if (block == null || block.IsSettled)
             {
                 continue;
             }
@@ -104,6 +125,16 @@ public class BoardInput3D : MonoBehaviour
         }
 
         return null;
+    }
+
+    /// <summary>Camera used for World3D pointer picking (BoardCamera3D).</summary>
+    public Camera PickCamera
+    {
+        get
+        {
+            ResolveReferences();
+            return boardCamera3D != null ? boardCamera3D.Camera : null;
+        }
     }
 
     private void ResolveReferences()

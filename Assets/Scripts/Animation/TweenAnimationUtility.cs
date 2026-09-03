@@ -10,12 +10,18 @@ public static class TweenAnimationUtility
     public const string PieceMotionId = "ShapeNest.PieceMotion";
     public const string CarryId = "ShapeNest.Carry";
     public const string SelectionId = "ShapeNest.Selection";
+    public const string InteractionId = "ShapeNest.Interaction";
+    public const string NestSocketId = "ShapeNest.NestSocket";
     public const string ReadyPulseId = "ShapeNest.ReadyPulse";
     public const string UiPressId = "ShapeNest.UiPress";
     public const string HudId = "ShapeNest.Hud";
     public const string MatchEffectId = "ShapeNest.MatchEffect";
     public const string VfxId = "ShapeNest.Vfx";
     public const string TravelerId = "ShapeNest.Traveler";
+    public const string ShuffleId = "ShapeNest.Shuffle";
+    public const string MagnetSelectionId = "ShapeNest.MagnetSelection";
+    public const string BoosterFeedbackId = "ShapeNest.BoosterFeedback";
+    public const string NestedExtractionId = "ShapeNest.NestedExtraction";
 
     public static Ease Linear => Ease.Linear;
 
@@ -34,7 +40,13 @@ public static class TweenAnimationUtility
 
     public static float EvaluateEaseInOutCubic(float t) => PieceMotionMath.EaseInOutCubic(t);
 
+    public static float EvaluateEaseInOutQuint(float t) => PieceMotionMath.EaseInOutQuint(t);
+
     public static float EvaluateEaseInQuad(float t) => PieceMotionMath.EaseInQuad(Mathf.Clamp01(t));
+
+    /// <summary>True when any active tween uses the given string id.</summary>
+    public static bool IsTweeningId(string id) =>
+        !string.IsNullOrEmpty(id) && DOTween.IsTweening(id);
 
     public static float EvaluateEaseInCubic(float t) => PieceMotionMath.EaseInCubic(t);
 

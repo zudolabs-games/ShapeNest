@@ -120,8 +120,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2ac7ee575b0e46818787917de30476d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlockMover
-  secondsPerCell: 0.14
-  normalHopAnticipateDuration: 0.04
+  secondsPerCell: 0.105
+  normalHopAnticipateDuration: 0.03
   normalHopAnticipatePercent: 0.04
   finalSettleDelay: 0.03
   hopTravelScale: 0.985

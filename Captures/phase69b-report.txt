@@ -1,0 +1,22 @@
+PHASE 69B — NESTED SOURCE REVEAL
+================================
+  T1: nestedChildren before=0 after=0 hasNested=False
+  T2: detached=True underAfterDetach=0 underAfterSync=0 recreated=False sameResidual=True
+  T3: SnapWorldPresentationToGrid=True ApplyGridPosition=True
+  T4: Resolve=True TryGet=True Notify=True Notify(cellIndex)=True
+  T5: Snap=True ResolveSource=True NotifyPerCell=True noLockedApplySeating=True bodyLen=4155
+  T6: same=True colorMismatch=True shapeMismatch=True
+  T7: Target.TryConsumeLayerAtWorld(MatchIdentity)=True
+  T8: CollectAlignedMatchActions=True BuildAlignedMovementGroups=True
+
+1 ConfigureNestedInner(show:false) no allocate: PASS
+2 detach + sync no duplicate NestedInner3D: PASS
+3 SnapWorldPresentationToGrid exists: PASS
+4 source-cell APIs exist: PASS
+5 reveal uses Snap / source seating (source scan): PASS
+6 Phase 65 Shape+Color untouched: PASS
+7 Phase 63 partial consume present: PASS
+8 Phase 67 grouping APIs present: PASS
+
+RESULT: PASS
+Note: Play Mode Level 43 yellow→purple source reveal was not executed by this editor check.

@@ -1,0 +1,94 @@
+Phase 52H — Nest Entry + Match Feedback Polish
+Unity 6000.3.8f1
+
+STATUS: COMPLETE (presentation-only).
+Phase 52E movement timings intact. Phase 52F materials intact. Phase 52G selection feel intact.
+
+## Goal
+Make BLOCK → NEST → MATCH feel more physical while preserving destinations, durations, occupancy, matching, chains, boosters, and centering.
+
+## Files changed
+- Assets/Scripts/UI/WorldPieceMotion.cs
+- Assets/Scripts/UI/PieceView3D.cs
+- Assets/Scripts/Effects/MatchEffect.cs
+- Assets/Scripts/Board/BoardVfx3D.cs
+- Assets/Scripts/Animation/TweenAnimationUtility.cs (NestSocketId)
+- Assets/Editor/Phase52HPlayModeVerify.cs (new)
+
+## Exact presentation values
+
+### Nest entry (WorldPieceMotion.AnimateNestEntry)
+- Destinations / arcDuration / sitDuration: unchanged (BlockMover values still authoritative)
+- Path easing: EaseInCubic along existing quadratic bezier (same start/control/end)
+- Root scale: eases toward insertMul (BlockMover hopScale, clamped ~0.96–0.99; default path ≈ 0.97)
+- Mesh feel phases (within existing arcDuration):
+  1. Compress (t ≤ 0.14): squash → 0.33 (≈ Y 0.92 / XZ ~1.05), mul 1.00, EaseOutCubic
+  2. Insert blend (0.14–0.32): squash 0.33→0.06, mul → insertMul, EaseInCubic
+  3. Seat (0.32–1.00): light press squash ~0.04–0.06, mul near insertMul
+- Sit settle (existing sitDuration): insertScale → restScale, EaseOutCubic
+  - settle press peak ~0.12 squash, mul dips to ~0.98 then recovers (no bounce)
+
+### Nest socket pulse (PieceView3D.PlayNestSocketPulse)
+- visualRoot only: 1.00 → 1.035 → 1.00
+- 0.07s EaseOutCubic + 0.08s EaseInCubic (~0.15s total)
+- Triggered at nest-entry sit start via PulseNestSocketAt (FindNestRendererAtCell)
+- Does not move nest gameplay root / GridPosition
+
+### Match impact (MatchEffect + BoardVfx3D)
+- Existing impactDuration / glowDuration / dissolveDuration unchanged
+- New: PlayNestMatchImpactFlash at contact start (7 particles, short life ~0.20s, small ring)
+- Existing PlayNestMatch burst/ring still fires on FinalizePresentation
+- No camera shake, no gameplay waits added
+
+### Nested coherence (PieceView3D)
+- nestedInnerRestScale cached on ConfigureNestedInner
+- ApplyCarryVisualScale multiplies nested inner by the same meshScale as visualRoot
+- Outer/inner squash, insert scale, and lift stay coupled
+
+### Contact shadow (PieceView3D)
+- Insert tighten: radius *= (1 − 0.18*squash − 0.12*(1−carryMeshScale))
+- Shadow still follows visualRoot; no independent motion
+- Phase 52G heldBoost retained
+
+## Phase 52G preserved
+- Selection scale ≈ 1.04, lift ≈ 0.045, tap pulse, invalid nudge
+- Destination highlight breath
+- Nested inner follows visualRoot lift
+- Hammer/Magnet selection paths untouched
+
+## Confirmations (gameplay untouched)
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- BlockMover / BoardManager / InputManager / occupancy / matching / chains / endpoints
+- MagnetBooster / HammerBooster / Ice / Shutter gameplay
+- No destination or duration changes
+- No material redesign / emission / metallic
+- No duplicate animation systems
+
+## Compile
+- Unity compile: OK, 0 errors
+- Console: 0 errors after play
+
+## Play Mode validation
+- API: PlayNestSocketPulse, PlayTapFeedback (52G), PlayNestMatchImpactFlash present
+- VC=0.12 throughout
+- Hammer selection accepted (Executing)
+- Nested scale coupling applied via presentation path
+- Captures produced via BoardCamera3D.Render with staged mesh feel
+
+## Captures
+- Captures/phase52h-before-match.png
+- Captures/phase52h-nest-approach.png
+- Captures/phase52h-nest-insertion.png
+- Captures/phase52h-nest-settle.png
+- Captures/phase52h-match-impact.png
+- Captures/phase52h-chain-match.png
+- Captures/phase52h-nested-match.png
+- Captures/phase52h-ice.png
+- Captures/phase52h-shutter.png
+- Captures/phase52h-hammer.png
+- Captures/phase52h-report.txt
+
+Feel target:
+  approach → slight compress → socket insertion → tiny settle → nest pulse → impact flash → existing match VFX → removal
+
+STOP after Phase 52H.

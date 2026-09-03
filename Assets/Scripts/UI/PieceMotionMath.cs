@@ -54,6 +54,21 @@ public static class PieceMotionMath
         return 1f - ((f * f * f) * 0.5f);
     }
 
+    /// <summary>
+    /// Quintic ease-in-out: smooth velocity at both ends for automated Shuffle travel.
+    /// </summary>
+    public static float EaseInOutQuint(float t)
+    {
+        t = Mathf.Clamp01(t);
+        if (t < 0.5f)
+        {
+            return 16f * t * t * t * t * t;
+        }
+
+        float f = -2f * t + 2f;
+        return 1f - ((f * f * f * f * f) * 0.5f);
+    }
+
     public static float EaseInQuad(float t)
     {
         return t * t;

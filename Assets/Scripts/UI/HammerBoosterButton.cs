@@ -76,18 +76,26 @@ public class HammerBoosterButton : MonoBehaviour
 
         if (hammerBooster.HammerCharges <= 0 && !hammerBooster.IsSelecting)
         {
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Hammer, BoosterFailureReason.NoCharges);
             Refresh();
             return;
         }
 
+        BoosterFailureReason reason;
+        bool activated;
         BoosterManager manager = FindFirstObjectByType<BoosterManager>();
         if (manager != null)
         {
-            manager.TryActivate(BoosterType.Hammer);
+            activated = manager.TryActivate(BoosterType.Hammer, out reason);
         }
         else
         {
-            hammerBooster.ToggleHammer();
+            activated = hammerBooster.TryBeginActivation(out reason);
+        }
+
+        if (!activated)
+        {
+            BoosterFeedbackMessage.NotifyFailure(BoosterType.Hammer, reason);
         }
 
         Refresh();
@@ -112,7 +120,7 @@ public class HammerBoosterButton : MonoBehaviour
         bool selecting = hammerBooster != null && hammerBooster.IsSelecting;
         bool executing = hammerBooster != null && hammerBooster.Phase == HammerBooster.HammerPhase.Executing;
         bool hasCharges = charges > 0;
-        bool interactable = hasCharges || selecting;
+        bool interactable = !executing;
 
         if (chargeText != null)
         {

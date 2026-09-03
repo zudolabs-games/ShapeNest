@@ -139,6 +139,8 @@ public class ShapeNestVisualCatalog3D : ScriptableObject
                 return catalog.blockHexagon;
             case ShapeType.Star:
                 return catalog.blockStar;
+            case ShapeType.Pentagon:
+                return null;
             default:
                 return catalog.blockSquare;
         }
@@ -164,6 +166,8 @@ public class ShapeNestVisualCatalog3D : ScriptableObject
                 return catalog.nestHexagon;
             case ShapeType.Star:
                 return catalog.nestStar;
+            case ShapeType.Pentagon:
+                return null;
             default:
                 return catalog.nestSquare;
         }

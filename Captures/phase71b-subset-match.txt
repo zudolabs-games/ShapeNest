@@ -1,0 +1,11 @@
+IMMEDIATE_AFTER steps=8 grid=(1, 0)
+  c0 logical=(1, 0) viewGrid=(1, 0) act=Square:Purple atSource=True purple=True noInner=True noNested=True tgtGone=True
+  c1 logical=(1, 1) viewGrid=(1, 1) act=Square:Purple atSource=True purple=True noInner=True noNested=True tgtGone=True
+  c2 logical=(1, 2) viewGrid=(1, 2) act=Square:Purple atSource=True purple=True noInner=True noNested=True tgtGone=True
+PASS_IMMEDIATE=True
+
+--- FIX VERIFY (post SeatPromotedNestedViewsAtSource) ---
+IMMEDIATE_AFTER 3-cell yellow nested subset match: PASS
+  logical SOURCE (1,0-2), viewGrid SOURCE, purple standalone, targets consumed
+Single-cell MatchFocusedChainCell: PASS
+Phase71B verifier: PASS (T1-T9)

@@ -1,0 +1,106 @@
+Phase 52P — Final 3D Presentation Coherence + Regression Audit
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+STATUS: COMPLETE — NO CODE CHANGES REQUIRED
+The current presentation is internally consistent after Phase 52O.
+Stop — do not start Shuffle / Undo / Swap / Phase 52Q+.
+
+==================================================
+FILES CHANGED
+==================================================
+NONE (audit-only phase).
+
+Pre-existing dirty presentation files from prior phases remain in the working tree
+but were NOT modified during Phase 52P.
+
+==================================================
+ACTUAL ISSUES FOUND
+==================================================
+NONE confirmed.
+
+Inspected and verified as already coherent:
+- Blocks (all six shapes): molded plastic, consistent depth, centered (VC=0.12)
+- Nests: physical sockets, darker cavity, no z-fighting observed
+- Nested inners: centered with outer (VC preserved)
+- Chains: capsule connectors Metallic=0 Smoothness=0.64 (same family)
+- Ice: frosted shell Metallic=0 Smoothness=0.48, no emission, readable piece
+- Shutter: 1:1 view/state, plate Metallic=0 Smoothness=0.58, slat 0.55
+- Interaction: 52G scale 1.04 / lift 0.045 intact; Hammer overlay=1 canvas family
+- Lighting: key 1.38 / shadow 0.50 / fill 0.52
+- Materials: Block 0.67 / Nest 0.62 / Connector 0.64; Metallic 0; emission off
+- VFX: Ice/Shutter velocity X/Y/Z TwoConstants; MatchEffect soft-cap ≤0.55;
+  Hammer fragment lifetime 0.50f present
+- Cleanup (52O): LoadLevel clears ephemeral VFX; overlays=0; Hammer Idle
+
+Intentionally left unchanged (not regressions):
+- Shutter diagonal plate ridges (read as “X” in screenshots) — intentional 52K design
+- Nested inner brighter center on hex — intentional nested composition, not emission
+
+==================================================
+ACTUAL FIXES MADE
+==================================================
+NONE.
+
+==================================================
+TESTS PERFORMED
+==================================================
+T1 Master / normal board — PASS (Campaign_15)
+T2 All six shapes — PASS
+T3 Movement / held selection — PASS (52G)
+T4 Chain — PASS (Campaign_08, connectors=3)
+T5 Nested — PASS (Campaign_10, VC=0.12)
+T6 Match VFX probe — PASS (soft mesh particles)
+T7 Magnet — (selection path available; no Hammer overlay when magnet selecting
+   verified in prior 52O; not re-broken)
+T8 Hammer selecting — PASS (phase=Selecting, overlays=1, cameras=1)
+T9 Ice — PASS (Campaign_12)
+T10 Shutter — PASS (Campaign_13)
+T11 Level completion UI present — PASS (LevelCompleteCanvas + Next Level button)
+T12 Restart / level-change cleanup — PASS (VFX after=0, Hammer Idle, overlays=0)
+T13 Hammer cancel via LoadLevel reset — PASS
+T14 Hammer completion wait path — preserved in LevelManager (code inspect; unchanged)
+T15 VFX cleanup + SmashView policy — PASS (ClearAll skips HammerSmashView3D)
+
+==================================================
+COMPILE / CONSOLE
+==================================================
+dotnet build Assembly-CSharp.csproj:
+- 0 Error(s)
+- 0 Warning(s)
+- (Unity file-lock may report “Build FAILED” with exit 0 — same as prior phases)
+
+Unity console after matrix:
+- 0 errors
+- 0 warnings
+- No “Particle Velocity curves must all be in the same mode”
+
+==================================================
+CONFIRMATIONS
+==================================================
+- Gameplay untouched this phase (Block/BoardManager/BlockMover/InputManager/
+  matching/chains/boosters/IceState/ShutterState not edited)
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- 52G–52O behavior intact (selection, nest-entry, materials, board, Ice/Shutter,
+  VFX, cleanup)
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52p-master.png
+- Captures/phase52p-all-shapes.png
+- Captures/phase52p-movement.png
+- Captures/phase52p-chain.png
+- Captures/phase52p-nested.png
+- Captures/phase52p-match.png
+- Captures/phase52p-hammer.png
+- Captures/phase52p-ice.png
+- Captures/phase52p-shutter.png
+- Captures/phase52p-level-complete.png
+- Captures/phase52p-cleanup.png
+- Captures/phase52p-report.txt
+
+==================================================
+STOP
+==================================================
+Stopped after Phase 52P. Do not implement Shuffle / Undo / Swap.

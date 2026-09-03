@@ -1,0 +1,23 @@
+PHASE 70B — MATCHING SUBSET MOVEMENT
+====================================
+  T1: CanTranslateMatchingSubset=True CanTranslateBlock=True
+  T1: subsetDestOnBoard=True wholeDestOnBoard=False
+  T2: Target A destinations inside 6x10=True
+  T3: BeginSubset=True EndSubset=True PlayMatchingSubset=True
+  T4: callsSubset=True avoidsWholeInResolved=True
+  T5: same=True colorMismatch=True
+  T6: TryConsumeLayerAtWorld(MatchIdentity)=True
+  T7: ResolveSource=True Snap=True
+  T8: A→TA0=(0, 5) B→TA1=(0, 5) sameTranslation=True
+
+1 subset vs whole-block validation: PASS
+2 selected destinations valid: PASS
+3 subset APIs exist: PASS
+4 PlayResolved routes to subset (source): PASS
+5 Phase 65 identity: PASS
+6 Phase 63 partial API: PASS
+7 Phase 69B source APIs: PASS
+8 Level 43 white triangle 2-action group: PASS
+
+RESULT: PASS
+Note: Full Play Mode rigid travel animation is not executed by this editor check.

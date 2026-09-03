@@ -1,0 +1,67 @@
+Phase 60 — Drag Control Final Feel + Presentation Readiness + Reliability
+Unity 6000.3.8f1
+Status: PLAY MODE PENDING
+
+VisualCenterBoardPlaneOffsetLocal=0.12
+
+Audit / root cause:
+- Phase 59: WorldView bound only in BoardPresentationController.LateUpdate.
+- LevelManager.LoadLevel spawned Blocks then RefreshBoardPresentation (UI only),
+  so playable pieces could exist with WorldView==null until the next LateUpdate.
+- That caused verifier/player pick failures (WorldView unbound / pick miss).
+
+Presentation readiness fix:
+- BoardPresentationController.EnsureWorldViewsBound() syncs PieceView3D immediately.
+- LevelManager.RefreshBoardPresentation calls EnsureWorldViewsBound after spawn.
+- BoardInput3D retries once if HasUnboundPlayableBlocks (no timed wait).
+- LateUpdate also dirties when unbound playable blocks remain.
+
+Control parameters (Phase 59 preserved — no feel retune):
+- DragThresholdPixels=20
+- FirstStepCellFraction=0.38
+- stride=0.92×cell
+- DirectionDominanceRatio=1.32
+- PerpendicularDeadband=0.20×cell
+- Mid-drag steer dominance=1.42
+- ReverseFlip=0.72×cell
+- BlockMover.secondsPerCell unchanged
+
+Files:
+- Assets/Scripts/Board/BoardPresentationController.cs
+- Assets/Scripts/Levels/LevelManager.cs
+- Assets/Scripts/Board/BoardInput3D.cs
+- Assets/Editor/Phase60PlayModeVerify.cs
+
+Compile:
+- Assembly-CSharp: 0 errors (pre-existing unrelated warnings OK)
+- Assembly-CSharp-Editor: 0 errors
+
+Unity Console:
+- Automated Play Mode entered playmode_transition but Time did not advance reliably via MCP.
+- Verifier did not finish writing PASS/FAIL for T1–T33.
+
+Play Mode: PENDING
+Menu: Shape Nest → Phase 60 Verify Drag Controls
+
+T1–T33: PENDING (honest — no fake PASS)
+
+Partial captures observed during stuck run:
+- Captures/phase60-master.png
+- Captures/phase60-before.png
+- Captures/phase60-pick.png
+- Captures/phase60-right.png
+- Captures/phase60-left.png
+- Captures/phase60-up.png
+- Captures/phase60-down.png
+- Captures/phase60-long-drag.png
+- Captures/phase60-blocked.png
+- Captures/phase60-reversal.png
+- Captures/phase60-fixed-direction.png
+
+Still need after full run:
+- Captures/phase60-chain.png
+- Captures/phase60-nested.png
+- Captures/phase60-booster-gate.png
+- Captures/phase60-cleanup.png
+
+RESULT pending

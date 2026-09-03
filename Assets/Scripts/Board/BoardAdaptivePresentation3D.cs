@@ -14,8 +14,98 @@ public static class BoardAdaptivePresentation3D
     public const float ThicknessRatio = 0.34f;
     public const float RecessRatio = 0.11f;
     public const float CornerRadiusRatio = 0.36f;
-    public const float BlockHeightRatio = 0.22f;
-    public const float NestHeightRatio = 0.09f;
+    public const float BlockHeightRatio = 0.42f;
+    public const float NestHeightRatio = 0.18f;
+
+    /// <summary>Visible recessed tile face as fraction of cell pitch (matches BoardPresenter3D).</summary>
+    public const float CellTileFaceRatio = 0.88f;
+
+    /// <summary>
+    /// Solid block XZ footprint as fraction of cell pitch. Phase 51B: ~67% pitch (~76% of tile face)
+    /// so extruded shapes sit inside the rounded cell with even visual breathing room.
+    /// </summary>
+    public const float BlockFootprintRatio = 0.67f;
+
+    /// <summary>Nest outer footprint as fraction of cell pitch (slightly larger than blocks).</summary>
+    public const float NestFootprintRatio = 0.80f;
+
+    /// <summary>Phase 52A: chain connector bar radius as fraction of cell pitch (~22% diameter).</summary>
+    public const float ConnectorRadiusRatio = 0.11f;
+
+    /// <summary>Phase 52A: connector span along the link as fraction of cell pitch (matches 2D ConnectorOverlap).</summary>
+    public const float ConnectorLengthOverlapRatio = 0.42f;
+
+    /// <summary>Phase 52A: connector cross-section height as fraction of block height (slightly inset from block top).</summary>
+    public const float ConnectorCrossHeightRatio = 0.88f;
+
+    /// <summary>Phase 52A: vertical midpoint drop as fraction of block height (keeps bar behind block faces).</summary>
+    public const float ConnectorOcclusionDropRatio = 0.16f;
+
+    /// <summary>
+    /// Phase 51F: presentation-only board-plane shift for block visuals (unit mesh space).
+    /// Moves the mesh toward screen-down on the XZ board without changing physical height,
+    /// so pieces read centered under BoardCamera3D without sinking into tiles.
+    /// Nests are not shifted. Does not move PieceView3D roots or chain spacing.
+    /// </summary>
+    public const float VisualCenterBoardPlaneOffsetLocal = 0.12f;
+
+    /// <summary>
+    /// Board-plane local offset for <see cref="PieceView3D"/> visualRoot.
+    /// Y is always 0. Nests return zero. Direction follows BoardCamera3D screen-up projected on XZ.
+    /// </summary>
+    public static Vector3 ComputeVisualCenterOffsetLocal(bool asNest, Transform pieceRoot)
+    {
+        if (asNest || pieceRoot == null)
+        {
+            return Vector3.zero;
+        }
+
+        float amount = VisualCenterBoardPlaneOffsetLocal;
+        if (amount <= 0.0001f || float.IsNaN(amount) || float.IsInfinity(amount))
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 screenDownWorld = ResolveBoardPlaneScreenDownWorld();
+        Vector3 local = pieceRoot.InverseTransformDirection(screenDownWorld);
+        local.y = 0f;
+        if (local.sqrMagnitude <= 0.0000001f)
+        {
+            local = new Vector3(0f, 0f, -1f);
+        }
+        else
+        {
+            local.Normalize();
+        }
+
+        return local * amount;
+    }
+
+    /// <summary>
+    /// Direction on the board XZ plane that moves a point downward in the Game View.
+    /// Opposite of camera.up projected onto the board plane.
+    /// </summary>
+    public static Vector3 ResolveBoardPlaneScreenDownWorld()
+    {
+        BoardCamera3D boardCam = Object.FindFirstObjectByType<BoardCamera3D>();
+        Transform cam = boardCam != null ? boardCam.transform : null;
+        if (cam == null && Camera.main != null)
+        {
+            cam = Camera.main.transform;
+        }
+
+        if (cam != null)
+        {
+            Vector3 projected = Vector3.ProjectOnPlane(cam.up, Vector3.up);
+            if (projected.sqrMagnitude > 0.0001f)
+            {
+                return -projected.normalized;
+            }
+        }
+
+        // BoardCamera3D default: pitch 66°, yaw 0° → screen-up on board is +Z.
+        return new Vector3(0f, 0f, -1f);
+    }
 
     /// <summary>Orthographic size used only while measuring Gameplay Area → world.</summary>
     public const float MeasurementOrthoSize = 5f;

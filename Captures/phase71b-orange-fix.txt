@@ -1,0 +1,5 @@
+frames=0 cells=2 grid=(4, 4) moving=False
+  c0 Pentagon:Cyan L=(4, 4) V=(4, 4) dist=0.000 lock=True ok=False
+  c1 Pentagon:Cyan L=(4, 5) V=(4, 5) dist=0.000 lock=True ok=False
+targetsGone=True
+RESULT: FAIL

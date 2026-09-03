@@ -1,0 +1,71 @@
+Phase 57 — Unified Booster Failure Message System
+Unity 6000.3.8f1
+VisualCenterBoardPlaneOffsetLocal=0.12
+Presentation-only: BoosterFeedbackMessage toast on failure reasons
+Gameplay: charges/eligibility/algorithms unchanged
+LOAD FeedbackBase
+SHOT Captures/phase57-before.png
+PASS T1 — feedback system exists
+PASS T2 — message can show
+PASS T3 — message hides
+PASS T4 — no duplicate message objects
+PASS T5 — repeated failure refreshes same message
+SHOT Captures/phase57-no-charges.png
+PASS T6 — Magnet no-charge feedback
+T7 note: board still had eligible targets; validated copy mapping
+PASS T7 — Magnet no-valid-target feedback
+SHOT Captures/phase57-magnet-no-target.png
+PASS T8 — Magnet invalid-target feedback
+T8 note: no ineligible block on board; validated selecting + message copy
+SHOT Captures/phase57-magnet-invalid.png
+PASS T9 — Magnet busy feedback
+PASS T20 — Magnet selection overlay remains intact
+PASS T10 — Hammer no-charge feedback
+PASS T11 — Hammer invalid-target feedback
+SHOT Captures/phase57-hammer-invalid.png
+PASS T12 — Hammer busy feedback
+PASS T21 — Hammer selection overlay remains intact
+PASS T22 — existing invalid nudge API remains intact
+PASS T13 — Shuffle no-charge feedback
+PASS T14 — Shuffle no-plan feedback
+SHOT Captures/phase57-shuffle-fail.png
+PASS T15 — Shuffle busy feedback
+PASS T16 — Undo no-charge feedback
+PASS T17 — Undo no-history feedback
+SHOT Captures/phase57-undo-empty.png
+PASS T18 — Undo busy feedback
+PASS T19 — successful booster does NOT show failure message
+SHOT Captures/phase57-success.png
+PASS T23 — restart cleanup
+SHOT Captures/phase57-cleanup.png
+LOAD CleanupLevel
+PASS T24 — level-change cleanup
+PASS T25 — tween cleanup
+PASS T26 — no gameplay-state mutation caused by feedback
+LOAD Regression
+PASS T27 — BoosterManager regression
+PASS T28 — Magnet regression
+PASS T29 — Hammer regression
+PASS T30 — Shuffle regression
+PASS T31 — Undo regression
+SHOT Captures/phase57-regression.png
+LOAD IceSanity
+Ice/Shutter levels loadable (sanity)
+
+Failure reasons: NoCharges, Busy, NoValidTarget, InvalidTarget, NoUndoAvailable, NoShufflePlan, Unavailable
+Presenter: Assets/Scripts/UI/BoosterFeedbackMessage.cs
+Tween id: ShapeNest.BoosterFeedback
+Show 0.18s EaseOutCubic / Hide 0.14s EaseInCubic / hold ~1.75s
+
+Files:
+- Assets/Scripts/Boosters/BoosterFailureReason.cs
+- Assets/Scripts/UI/BoosterFeedbackMessage.cs
+- Assets/Scripts/Boosters/BoosterManager.cs
+- Assets/Scripts/Boosters/MagnetBooster.cs
+- Assets/Scripts/Boosters/HammerBooster.cs
+- Assets/Scripts/Boosters/ShuffleBooster.cs
+- Assets/Scripts/Boosters/UndoBooster.cs
+- Assets/Scripts/UI/*BoosterButton.cs
+- Assets/Scripts/Animation/TweenAnimationUtility.cs
+- Assets/Editor/Phase57PlayModeVerify.cs
+RESULT ok

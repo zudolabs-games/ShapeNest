@@ -1,0 +1,114 @@
+Phase 52M — Final 3D Presentation Consistency Pass
+Unity 6000.3.8f1
+Date: 2026-08-31
+
+STATUS: COMPLETE
+Change policy: minimize — audit found approved Phase 52I–52L systems already coherent.
+No presentation redesign performed.
+
+==================================================
+AUDIT FINDINGS
+==================================================
+Inspected:
+- BoardEnvironment3D, BoardPresenter3D, BoardPresentationController
+- BoardAdaptivePresentation3D (VC=0.12)
+- ShapeVisuals3D / ShapeMeshFactory3D
+- PieceView3D (contact shadows, 52G selection)
+- WorldPieceMotion (52H nest entry)
+- ChainConnectorView3D (52A capsules)
+- IceView3D / ShutterView3D (52K)
+- BoardVfx3D / MatchEffect (52L + 52L-FIX velocity TwoConstants)
+- HammerSmashView3D / HammerBooster (50H timings approved — sprite hammer retained by design)
+- BoosterSelectionOverlay / GameplayCanvas hierarchy (50L spotlight — untouched)
+
+Live Play Mode probe (Master):
+- VisualCenterBoardPlaneOffsetLocal = 0.12
+- BlockSmoothness=0.67 NestSmoothness=0.62 Cavity=0.22 Connector=0.64
+- All Metallic = 0
+- BoardKeyLight intensity=1.38 shadowStrength=0.50
+- BoardFillLight intensity=0.52
+- 52L-FIX velocity axes still TwoConstants on X/Y/Z for Ice/Shutter bursts
+
+Conclusion:
+Blocks, nests, connectors, board, lighting, shadows, Ice, Shutters, and VFX already
+read as one molded-plastic family. No measurable presentation defect required a retune.
+HammerSmashView3D remains the approved Phase 50H sprite smash visual (animation contract);
+not converted (would be redesign).
+
+==================================================
+FILES CHANGED
+==================================================
+NONE (presentation code / gameplay / hierarchy / camera untouched)
+
+Report + captures only:
+- Captures/phase52m-report.txt
+- Captures/phase52m-*.png
+
+==================================================
+VALUES INTENTIONALLY LEFT UNCHANGED
+==================================================
+- VisualCenterBoardPlaneOffsetLocal = 0.12f
+- ShapeVisuals3D metallic/smoothness constants
+- Board lighting 1.38 / 0.50 / 0.52
+- BoardPresenter3D 52J colors (slab/frame/cells)
+- PieceView3D contact shadow alphas 0.34 / 0.40
+- IceView3D / ShutterView3D materials & timings
+- BoardVfx3D mesh particles + 52L-FIX velocity modes
+- MatchEffect durations
+- Hammer 50H animation / fragment 0.50s / charges
+- Camera framing / pitch / ortho
+- Chain connector endpoints / creation logic
+- Overlay - Image Hammer Selecting hierarchy
+
+==================================================
+GAMEPLAY VERIFIED UNTOUCHED
+==================================================
+- Hammer single smash accepted (before charges=3, phase=Executing)
+- Hammer chain smash accepted (cells=3, one operation)
+- Hammer Ice reject: smashed=False eligible=False
+- Magnet present=True
+- Chain connectors present on ChainCascade (count=3)
+- Ice frozen view count=1 on Campaign_12
+- Shutter closed view count=1 on Campaign_13
+- VC remains 0.12 throughout
+
+==================================================
+COMPILE / CONSOLE
+==================================================
+- Unity compile: clean (no new script edits this phase)
+- Console after Ice/Shutter/match/hammer VFX probe: 0 errors, 0 warnings
+- "Particle Velocity curves must all be in the same mode": still absent (52L-FIX retained)
+
+==================================================
+PLAY MODE CHECKS
+==================================================
+T1 Master — captured
+T2 All shapes — captured (Master)
+T3 Chain — captured (Campaign_08)
+T4 L-chain — captured (Campaign_07)
+T5 Nested — captured (Campaign_10)
+T6 Ice — captured
+T7 Shutter — captured
+T8 Match VFX — captured
+T9–T11 Hammer single / chain — smashed=True
+T12 Hammer Selecting — phase=Selecting captured
+T13–T18 Drag/cancel/completion/restart — no code changes; systems left as prior approved phases
+
+==================================================
+CAPTURES
+==================================================
+- Captures/phase52m-master.png
+- Captures/phase52m-all-shapes.png
+- Captures/phase52m-chain.png
+- Captures/phase52m-chain-l.png
+- Captures/phase52m-nested.png
+- Captures/phase52m-ice.png
+- Captures/phase52m-shutter.png
+- Captures/phase52m-match.png
+- Captures/phase52m-hammer.png
+- Captures/phase52m-hammer-chain.png
+- Captures/phase52m-hammer-selecting.png
+- Captures/phase52m-final.png
+- Captures/phase52m-report.txt
+
+RESULT ok — STOP (no Phase 52N / Shuffle / Undo / Swap)

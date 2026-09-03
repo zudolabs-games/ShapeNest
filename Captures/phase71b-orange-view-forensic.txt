@@ -1,0 +1,16 @@
+steps=8 orangeId=-945388 cells=2 grid=(4, 4)
+WorldView=-947092 lock=True
+extras=1
+  extra0=-947106 pos=(-0.28, 0.33, 4.76) active=True
+cell0 id=Pentagon:Cyan L=(4, 4) V=(2, 7) viewId=-947092 pos=(-0.28, 0.33, 4.21) distXZ=1.999 shape=Pentagon
+cell1 id=Pentagon:Cyan L=(4, 5) V=(2, 8) viewId=-947106 pos=(-0.28, 0.33, 4.76) distXZ=1.999 shape=Pentagon
+VIEW id=-947520 cell=(4, 5) shape=Triangle srcBlock=0 pos=(0.83, 0.22, 3.10)
+VIEW id=-947608 cell=(2, 1) shape=Pentagon srcBlock=0 pos=(-0.28, 0.22, 0.88)
+VIEW id=-947034 cell=(2, 8) shape=Star srcBlock=-945516 pos=(-0.28, 0.33, 4.76)
+VIEW id=-947498 cell=(4, 4) shape=Triangle srcBlock=0 pos=(0.83, 0.22, 2.55)
+VIEW id=-947586 cell=(2, 0) shape=Pentagon srcBlock=0 pos=(-0.28, 0.22, 0.33)
+VIEW id=-947010 cell=(2, 7) shape=Star srcBlock=-945516 pos=(-0.28, 0.33, 4.21)
+VIEW id=-947092 cell=(2, 7) shape=Pentagon srcBlock=-945388 pos=(-0.28, 0.33, 4.21)
+VIEW id=-947106 cell=(2, 8) shape=Pentagon srcBlock=-945388 pos=(-0.28, 0.33, 4.76)
+VIEW id=-947872 cell=(2, 9) shape=Triangle srcBlock=0 pos=(-0.28, 0.22, 5.32)
+activeViewsOnBoardApprox pent/relevant logged; total active on board scan skipped countRelevant

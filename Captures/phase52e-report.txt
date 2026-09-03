@@ -1,0 +1,88 @@
+Phase 52E — Smooth 3D Block Movement & Normal Match Animation Polish
+Unity 6000.3.8f1
+
+## Architecture (inspected, reused)
+- BlockMover: gameplay hop/nest sequencing + serialized durations (UNCHANGED)
+- WorldPieceMotion: World3D IPieceMotion presentation (POLISHED)
+- PieceView3D: SetPresentationAnticipation mesh squash + visualRoot centering (reused)
+- MatchEffect / BoardVfx3D: existing match VFX (subtle default tune)
+- TweenAnimationUtility / PieceMotionMath: existing easings (reused)
+
+Destinations still come only from gameplay GridPosition / CellRestWorldPosition.
+No second movement system.
+
+## Files changed
+- Assets/Scripts/UI/WorldPieceMotion.cs
+- Assets/Scripts/Effects/MatchEffect.cs (default impact values only; prefab may override)
+
+## Exact movement timings (presentation)
+BlockMover durations UNCHANGED (still authoritative):
+- secondsPerCell = 0.14
+- normalHopAnticipateDuration = 0.04
+- matchingTargetArcDuration = 0.14
+- matchingTargetSitDuration = 0.05
+- matchingTargetAnticipateDuration = 0.08
+
+WorldPieceMotion carry (presentation-only, not hop duration):
+- PickupDuration 0.10 → 0.08
+- SettleDuration 0.12 → 0.10
+- CarryScaleBoost 0.07 → 0.05
+
+Hop presentation portions (within existing hop duration — no extension):
+- HopAnticipatePortion = 0.16 of hop t
+- HopSettlePortion = 0.18 of hop t
+
+## Exact easing
+- First hop / non-continuation: EaseInOutCubic
+- Chained continuation hops: EaseHopCruise(linearWeight 0.88)
+- Turn hops: EaseInOutSine
+- Nest arc: EaseInOutCubic (unchanged)
+- Nest sit / AppendWorldMoveScale easeOut: EaseOutCubic (was EaseOutQuad)
+- Carry lift: EaseOutCubic (unchanged)
+
+## Exact match animation timings
+MatchEffect script defaults (prefab serialized values may still apply):
+- impactScale 1.08 → 1.06
+- impactDuration 0.12 → 0.10
+- glowDuration / dissolveDuration unchanged
+- BoardVfx3D.PlayNestMatch still used
+
+Nest entry presentation:
+- Uses BlockMover hopScale when < 1 (0.97 squash) instead of forcing NestJumpFlightScale 1.22
+- NestJumpFlightScale capped default 1.10 when hopScale≈1
+- NestAnticipateScaleMin 1.12 → 1.0 (honors BlockMover 1.06)
+- Mesh press during sit via SetPresentationAnticipation
+
+## Confirmations
+- Gameplay logic untouched (BlockMover / BoardManager / InputManager / boosters / matching)
+- GridPosition / cell coordinates unchanged
+- Chain connector endpoint logic unchanged
+- VisualCenterBoardPlaneOffsetLocal = 0.12f confirmed
+- Mesh local Z still -0.12 after SnapToGrid
+- Squash does not move PieceView3D root
+- Hammer / Magnet activate+cancel still work
+- No new BlockMovers / no sprite pieces
+
+## Compile
+- Unity script compile: OK, 0 errors
+- Console: 0 errors / 0 warnings after play
+- dotnet build Assembly-CSharp.csproj: hung/incomplete in this environment (Unity compile is the project source of truth)
+
+## Play Mode validation
+- Levels: ChainIntro, ChainCascade, ChainPlanning, ShapeInShape, Ice, Shutter, Master
+- Magnet selecting + cancel
+- Hammer selecting + cancel
+- WorldPieceMotion bind + SnapToGrid preserves centering
+- Connectors present on chain levels
+
+## Captures
+- Captures/phase52e-before-board.png
+- Captures/phase52e-after-master.png
+- Captures/phase52e-after-chain.png
+
+## Tradeoffs
+- Hop squash is mesh-only and subtle (from hopTravelScale 0.985); may be hard to see on tiny pieces.
+- MatchEffect prefab serialized fields may still use older impact values until the prefab is re-saved; runtime WorldPieceMotion polish is the primary feel change.
+- Hop settle is folded into existing hop duration (no extra wait) so gameplay timing is preserved.
+
+STOP after Phase 52E.

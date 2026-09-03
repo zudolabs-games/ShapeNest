@@ -24,6 +24,8 @@ public class BoardCellDestinationHighlight3D : MonoBehaviour
     private const float RimAlpha = 0.44f;
     private const float CornerFactor = 0.16f;
     private const float MoveDuration = 0.12f;
+    private const float BreathAmplitude = 0.028f;
+    private const float BreathHz = 0.55f;
 
     // Soft light blue (#9AD9FF) with a slightly brighter rim of the same hue.
     private static readonly Color FillColor = new Color(0.6039216f, 0.8509804f, 1f, FillAlpha);
@@ -130,6 +132,34 @@ public class BoardCellDestinationHighlight3D : MonoBehaviour
     private void OnDestroy()
     {
         HideNow();
+    }
+
+    private void LateUpdate()
+    {
+        if (!isActiveAndEnabled || tiles.Count == 0)
+        {
+            return;
+        }
+
+        float breath = 1f + (BreathAmplitude * Mathf.Sin(Time.unscaledTime * (Mathf.PI * 2f * BreathHz)));
+        if (!PieceMotionMath.IsFinite(breath))
+        {
+            breath = 1f;
+        }
+
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            OverlayTile tile = tiles[i];
+            if (tile == null
+                || tile.transform == null
+                || tile.meshRenderer == null
+                || !tile.meshRenderer.enabled)
+            {
+                continue;
+            }
+
+            tile.transform.localScale = Vector3.one * breath;
+        }
     }
 
     private bool TryResolveUserDragAimingBlock(Block[] blocks, out Block block, out BlockMover mover)
@@ -463,7 +493,7 @@ public class BoardCellDestinationHighlight3D : MonoBehaviour
         }
 
         tile.transform.SetPositionAndRotation(world, presenter.transform.rotation);
-        tile.transform.localScale = Vector3.one;
+        // Scale is driven by LateUpdate breath; pose only writes position/rotation.
     }
 
     private void EnsureMeshForCurrentCellSize(OverlayTile tile)

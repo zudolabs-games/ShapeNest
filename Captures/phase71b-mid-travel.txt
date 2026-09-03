@@ -1,0 +1,12 @@
+TRAVEL step=4 residual=True nestedOnTraveler=False atTarget=True atSource=False
+  c0 viewGrid=(0, 0) nestedChild=False res=True rs=(1, 0) act=Square:Yellow
+  c1 viewGrid=(0, 1) nestedChild=False res=True rs=(1, 1) act=Square:Yellow
+  c2 viewGrid=(0, 2) nestedChild=False res=True rs=(1, 2) act=Square:Yellow
+PROMOTE step=5 pending0=True
+  c0 viewGrid=(0, 0) act=Square:Purple nested=False res=True pend=True
+  c1 viewGrid=(0, 1) act=Square:Purple nested=False res=True pend=True
+  c2 viewGrid=(0, 2) act=Square:Purple nested=False res=True pend=True
+DONE steps=14 sawTravel=True sawPromote=True
+FINAL c0 logical=(1, 0) viewGrid=(1, 0) act=Square:Purple nested=False
+FINAL c1 logical=(1, 1) viewGrid=(1, 1) act=Square:Purple nested=False
+FINAL c2 logical=(1, 2) viewGrid=(1, 2) act=Square:Purple nested=False

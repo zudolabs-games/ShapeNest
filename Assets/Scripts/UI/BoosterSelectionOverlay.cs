@@ -1,10 +1,11 @@
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Drives GameplayCanvas/Parent/Overlay - Image for Hammer targeting.
+/// Drives GameplayCanvas/Parent/Overlay - Image for Hammer/Magnet targeting.
 /// Dims the scene with the existing overlay and punches screen-space holes
-/// so eligible 3D PieceView3D meshes and HammerButton keep their original look.
+/// so eligible 3D PieceView3D meshes and the active booster button keep their original look.
 /// Does not tint block materials, move hierarchy, or create canvases/cameras.
 /// </summary>
 [DisallowMultipleComponent]
@@ -30,9 +31,17 @@ public class BoosterSelectionOverlay : MonoBehaviour
     private Material spotlightMaterial;
     private readonly Vector4[] holes = new Vector4[MaxHoles];
     private RectTransform hammerButtonRect;
+    private RectTransform magnetButtonRect;
     private Camera boardCamera;
+    private float targetOverlayAlpha = -1f;
+    private Tween fadeTween;
+    private bool fadingOut;
 
-    public bool IsVisible => wantVisible && gameObject.activeSelf;
+    public bool IsVisible => wantVisible && gameObject.activeSelf && !fadingOut;
+    public bool IsFading => fadeTween != null && fadeTween.IsActive();
+
+    private const float FadeInDuration = 0.15f;
+    private const float FadeOutDuration = 0.12f;
 
     public static BoosterSelectionOverlay Ensure()
     {
@@ -66,10 +75,15 @@ public class BoosterSelectionOverlay : MonoBehaviour
 
     public static void HideExisting()
     {
+        HideExisting(false);
+    }
+
+    public static void HideExisting(bool immediate)
+    {
         BoosterSelectionOverlay existing = FindExisting();
         if (existing != null)
         {
-            existing.SetVisible(false);
+            existing.SetVisible(false, immediate);
             return;
         }
 
@@ -82,31 +96,96 @@ public class BoosterSelectionOverlay : MonoBehaviour
 
     public void SetVisible(bool visible)
     {
+        SetVisible(visible, false);
+    }
+
+    public void SetVisible(bool visible, bool immediate)
+    {
         CacheImage();
         wantVisible = visible;
+        KillFade();
+
         if (!visible)
         {
-            ClearHoles();
-            if (gameObject.activeSelf)
+            if (immediate || !gameObject.activeSelf || !Application.isPlaying)
             {
-                gameObject.SetActive(false);
+                ClearHoles();
+                RestoreOverlayAlpha();
+                fadingOut = false;
+                if (gameObject.activeSelf)
+                {
+                    gameObject.SetActive(false);
+                }
+
+                return;
             }
 
+            fadingOut = true;
+            float from = GetOverlayAlpha();
+            fadeTween = TweenAnimationUtility.Progress(FadeOutDuration, t =>
+                {
+                    float eased = TweenAnimationUtility.EvaluateEaseInCubic(t);
+                    SetOverlayAlpha(Mathf.LerpUnclamped(from, 0f, eased));
+                })
+                .SetId(TweenAnimationUtility.MagnetSelectionId)
+                .SetLink(gameObject)
+                .SetUpdate(true);
+            fadeTween.OnComplete(() =>
+            {
+                fadeTween = null;
+                fadingOut = false;
+                ClearHoles();
+                RestoreOverlayAlpha();
+                if (!wantVisible && gameObject.activeSelf)
+                {
+                    gameObject.SetActive(false);
+                }
+            });
+            fadeTween.OnKill(() =>
+            {
+                fadeTween = null;
+                fadingOut = false;
+            });
             return;
         }
 
+        fadingOut = false;
         if (!gameObject.activeSelf)
         {
             gameObject.SetActive(true);
         }
 
         ConfigureExistingImage();
+        CaptureTargetAlpha();
         ApplySpotlightHoles();
+
+        if (immediate || !Application.isPlaying)
+        {
+            SetOverlayAlpha(targetOverlayAlpha);
+            return;
+        }
+
+        SetOverlayAlpha(0f);
+        float to = targetOverlayAlpha;
+        fadeTween = TweenAnimationUtility.Progress(FadeInDuration, t =>
+            {
+                float eased = TweenAnimationUtility.EvaluateEaseOutCubic(t);
+                SetOverlayAlpha(Mathf.LerpUnclamped(0f, to, eased));
+            })
+            .SetId(TweenAnimationUtility.MagnetSelectionId)
+            .SetLink(gameObject)
+            .SetUpdate(true);
+        fadeTween.OnComplete(() =>
+        {
+            fadeTween = null;
+            SetOverlayAlpha(to);
+        });
+        fadeTween.OnKill(() => { fadeTween = null; });
     }
 
     private void LateUpdate()
     {
-        if (!wantVisible || !gameObject.activeSelf)
+        if ((!wantVisible && !fadingOut) || !gameObject.activeSelf)
         {
             return;
         }
@@ -116,14 +195,18 @@ public class BoosterSelectionOverlay : MonoBehaviour
 
     private void OnDisable()
     {
+        KillFade();
+        fadingOut = false;
         if (!wantVisible)
         {
             ClearHoles();
+            RestoreOverlayAlpha();
         }
     }
 
     private void OnDestroy()
     {
+        KillFade();
         if (spotlightMaterial != null)
         {
             if (Application.isPlaying)
@@ -136,6 +219,56 @@ public class BoosterSelectionOverlay : MonoBehaviour
             }
 
             spotlightMaterial = null;
+        }
+    }
+
+    private void KillFade()
+    {
+        if (fadeTween != null && fadeTween.IsActive())
+        {
+            fadeTween.Kill(false);
+        }
+
+        fadeTween = null;
+        TweenAnimationUtility.KillById(transform, TweenAnimationUtility.MagnetSelectionId, false);
+    }
+
+    private void CaptureTargetAlpha()
+    {
+        if (overlayImage == null)
+        {
+            return;
+        }
+
+        if (targetOverlayAlpha < 0f)
+        {
+            float a = overlayImage.color.a;
+            targetOverlayAlpha = a > 0.01f ? a : 0.55f;
+        }
+    }
+
+    private float GetOverlayAlpha()
+    {
+        return overlayImage != null ? overlayImage.color.a : 0f;
+    }
+
+    private void SetOverlayAlpha(float alpha)
+    {
+        if (overlayImage == null)
+        {
+            return;
+        }
+
+        Color c = overlayImage.color;
+        c.a = Mathf.Clamp01(alpha);
+        overlayImage.color = c;
+    }
+
+    private void RestoreOverlayAlpha()
+    {
+        if (targetOverlayAlpha >= 0f)
+        {
+            SetOverlayAlpha(targetOverlayAlpha);
         }
     }
 
@@ -161,6 +294,7 @@ public class BoosterSelectionOverlay : MonoBehaviour
             overlayImage.sprite = ResolveWhiteSprite();
         }
 
+        CaptureTargetAlpha();
         EnsureSpotlightMaterial();
         if (spotlightMaterial != null)
         {
@@ -196,11 +330,12 @@ public class BoosterSelectionOverlay : MonoBehaviour
         }
 
         int count = 0;
-        AddRectHole(ResolveHammerButtonRect(), ref count);
-
         HammerBooster hammer = Object.FindFirstObjectByType<HammerBooster>(FindObjectsInactive.Exclude);
+        MagnetBooster magnet = Object.FindFirstObjectByType<MagnetBooster>(FindObjectsInactive.Exclude);
+
         if (hammer != null && hammer.IsBusy)
         {
+            AddRectHole(ResolveHammerButtonRect(), ref count);
             Camera cam = ResolveBoardCamera();
             PieceView3D[] pieces = Object.FindObjectsByType<PieceView3D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             int i;
@@ -208,6 +343,23 @@ public class BoosterSelectionOverlay : MonoBehaviour
             {
                 PieceView3D view = pieces[i];
                 if (view == null || !hammer.IsHammerEligibleVisual(view))
+                {
+                    continue;
+                }
+
+                AddPieceHoles(view, cam, ref count);
+            }
+        }
+        else if (magnet != null && magnet.IsSelecting)
+        {
+            AddRectHole(ResolveMagnetButtonRect(), ref count);
+            Camera cam = ResolveBoardCamera();
+            PieceView3D[] pieces = Object.FindObjectsByType<PieceView3D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            int i;
+            for (i = 0; i < pieces.Length; i++)
+            {
+                PieceView3D view = pieces[i];
+                if (view == null || !magnet.IsMagnetEligibleVisual(view))
                 {
                     continue;
                 }
@@ -421,6 +573,28 @@ public class BoosterSelectionOverlay : MonoBehaviour
         }
 
         return hammerButtonRect;
+    }
+
+    private RectTransform ResolveMagnetButtonRect()
+    {
+        if (magnetButtonRect != null)
+        {
+            return magnetButtonRect;
+        }
+
+        Transform parent = transform.parent;
+        if (parent == null)
+        {
+            return null;
+        }
+
+        Transform button = parent.Find("BoostersContainer/MagnetButton");
+        if (button != null)
+        {
+            magnetButtonRect = button as RectTransform;
+        }
+
+        return magnetButtonRect;
     }
 
     private Camera ResolveBoardCamera()
