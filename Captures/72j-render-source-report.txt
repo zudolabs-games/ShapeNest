@@ -1,0 +1,103 @@
+PHASE 72J — GAME VIEW RENDER SOURCE TRACE
+frame=2096 t=28.959 paused=True
+BoardPresentationController Mode=World3D IsWorld3DActive=True goActive=True
+serialized mode=1
+legacyBoardCamera=null
+--- CAMERAS ---
+CAM id=313170 name=Main Camera path=Main Camera depth=-1 goActive=False en=True target=Screen/GameView mask=-1 clear=SolidColor type=Base post=False stack=[]
+CAM id=315004 name=BoardCamera3D path=BoardCamera3D depth=0 goActive=True en=True target=Screen/GameView mask=-1 clear=SolidColor type=Base post=False stack=[Main Camera:act=False:en=True;]
+--- CANVASES ---
+CANVAS UIController/MainMenuCanvas mode=ScreenSpaceOverlay active=True en=False sort=100 cam=null imagesTotal=3 imagesEnabledActive=3
+CANVAS UIController/LevelCompleteCanvas mode=ScreenSpaceOverlay active=True en=False sort=20 cam=null imagesTotal=4 imagesEnabledActive=4
+CANVAS UIController/Settings mode=ScreenSpaceOverlay active=True en=False sort=15 cam=null imagesTotal=6 imagesEnabledActive=6
+CANVAS UIController/GameplayCanvas mode=ScreenSpaceOverlay active=True en=True sort=10 cam=null imagesTotal=217 imagesEnabledActive=27
+CANVAS UIController/GameOverCanvas mode=ScreenSpaceOverlay active=True en=False sort=21 cam=null imagesTotal=3 imagesEnabledActive=3
+--- InnerLayer / legacy board names ---
+HIT name=InnerLayer active=True imgEn=True srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=Board active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=True srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+HIT name=InnerLayer active=True imgEn=False srEn=False path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+blockImagesEnabled=4 targetImagesEnabled=13 greenDiaImgs=0
+spriteRenderersTotal=0 spriteRenderersEnabled=0
+--- DISABLE TESTS (restored after) ---
+TEST 0_baseline greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC 0_baseline (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST A_MainCamera_off greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC A_MainCamera_off (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST A2_MainCamera_restored greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC A2_MainCamera_restored (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST B_BoardCamera_off greenish=0 limeStrong=0
+  BC B_BoardCamera_off SKIPPED (BoardCamera inactive)
+TEST B2_BoardCamera_restored greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC B2_BoardCamera_restored (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST C_GameplayCanvas_off greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC C_GameplayCanvas_off (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST C2_GameplayCanvas_restored greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC C2_GameplayCanvas_restored (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST D_Board3D_off greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC D_Board3D_off (1,8)=RGBA(0.090, 0.055, 0.278, 1.000)
+TEST D2_Board3D_restored greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC D2_Board3D_restored (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST E_allOverlayCanvases_off greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC E_allOverlayCanvases_off (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+TEST E2_canvases_restored greenish=0 limeStrong=0 sampleFlip=RGBA(0.000, 0.000, 0.000, 1.000)
+  BC E2_canvases_restored (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+RESTORED all

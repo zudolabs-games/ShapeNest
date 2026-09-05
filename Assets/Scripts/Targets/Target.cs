@@ -225,6 +225,10 @@ public class Target : MonoBehaviour
         fullyComplete = cells.Count == 0;
         if (fullyComplete)
         {
+            // EffectiveCount(empty) returns 1 for legacy 1x1 — do NOT use it here.
+            // Consumed nests must report CellCount=0 so presentation never remounts them.
+            cachedCellCount = 0;
+            Phase72CNestLifecycle.LogTargetConsumed(this);
             return true;
         }
 
@@ -351,6 +355,29 @@ public class Target : MonoBehaviour
     /// <summary>True after a successful full match presentation has completed.</summary>
     public bool IsMatched => visualState == VisualState.Matched;
 
+    /// <summary>
+    /// True while this nest still has at least one logical cell stack to present.
+    /// After a full consume, <see cref="cells"/> is empty even if presentation cache is briefly stale.
+    /// </summary>
+    public bool HasLiveNestCells => cells != null && cells.Count > 0;
+
+    /// <summary>
+    /// BoardManager occupancy registration. Cleared by <see cref="NotifyBoardUnregistered"/>.
+    /// </summary>
+    public bool IsBoardRegistered => isRegistered;
+
+    /// <summary>Presentation/bookkeeping: BoardManager removed this nest from occupancy.</summary>
+    public void NotifyBoardUnregistered()
+    {
+        isRegistered = false;
+    }
+
+    /// <summary>Presentation/bookkeeping: BoardManager wrote this nest into occupancy.</summary>
+    public void NotifyBoardRegistered()
+    {
+        isRegistered = true;
+    }
+
     public RectTransform RectTransform
     {
         get
@@ -395,15 +422,20 @@ public class Target : MonoBehaviour
 
     private void OnEnable()
     {
+        Phase72CNestLifecycle.LogTargetEnable(this);
         RefreshVisual();
     }
 
     private void OnDisable()
     {
+        Phase72CNestLifecycle.LogTargetDisable(this);
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         // Preserve Matched so a disable/destroy cannot resurrect a finished nest as Normal.
-        if (visualState != VisualState.Matched)
+        // Phase 72C: also preserve Entering when nest cells are already empty (consumed) so
+        // EnsureMatchPresentationCompleted can still finalize instead of demoting to Normal
+        // and allowing SyncWorldPieceViews to treat the shell as a live nest.
+        if (visualState != VisualState.Matched && HasLiveNestCells)
         {
             visualState = VisualState.Normal;
             ApplyRestVisuals();
@@ -733,13 +765,22 @@ public class Target : MonoBehaviour
 
         StopReadyRoutine();
 
-        if (!isReadyFeedbackActive)
+        // Ready pulse borrows Entering. Restore Normal when the pulse ends so
+        // SyncWorldPieceViews does not treat the nest as mid-match forever.
+        // Match BeginMatchPresentation clears ready first, so Hide after BeginMatch
+        // (wasReady=false) will not demote match Entering.
+        bool wasReady = isReadyFeedbackActive;
+        if (!wasReady)
         {
             ApplyRestVisuals();
             return;
         }
 
         isReadyFeedbackActive = false;
+        if (visualState == VisualState.Entering)
+        {
+            visualState = VisualState.Normal;
+        }
 
         if (!isActiveAndEnabled || readyRestoreDuration <= 0f)
         {
@@ -755,8 +796,17 @@ public class Target : MonoBehaviour
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         visualState = VisualState.Entering;
+        Phase72CNestLifecycle.LogTargetState(this, "BeginMatchPresentation");
         CacheImage();
         ApplyRestVisuals();
+
+        // Phase 72C: consumed nest (cells emptied) must not keep Nest3D alive for MatchEffect
+        // SetMatchPresentation(1,1) to pop the mesh back after it was already hidden.
+        // Glow VFX still plays; mesh is cleared immediately.
+        if (!HasLiveNestCells)
+        {
+            HideAllWorldViews();
+        }
     }
 
     public void SetMatchPresentation(float scale, float alpha)
@@ -767,6 +817,16 @@ public class Target : MonoBehaviour
         }
 
         visualState = VisualState.Entering;
+
+        // Consumed nest: WorldViews already cleared in BeginMatchPresentation — do not
+        // remount mesh via scale=1 at MatchEffect start (the disappear→appear flash).
+        if (!HasLiveNestCells && worldView == null && extraWorldViews.Count == 0)
+        {
+            CacheImage();
+            ApplyTargetVisualAlpha(Mathf.Clamp01(alpha), alpha > 0.001f);
+            return;
+        }
+
         PieceView.LocalScale = restScale * scale;
         ApplyWorldViewMatchScale(Mathf.Max(0f, scale));
 
@@ -777,6 +837,7 @@ public class Target : MonoBehaviour
     public void CompleteMatchPresentation()
     {
         visualState = VisualState.Matched;
+        Phase72CNestLifecycle.LogTargetState(this, "CompleteMatchPresentation");
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         PieceView.LocalScale = Vector3.zero;
@@ -797,6 +858,7 @@ public class Target : MonoBehaviour
     public void ResetMatchPresentation()
     {
         visualState = VisualState.Normal;
+        Phase72CNestLifecycle.LogTargetState(this, "ResetMatchPresentation");
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         if (restScale.sqrMagnitude < 0.0001f)

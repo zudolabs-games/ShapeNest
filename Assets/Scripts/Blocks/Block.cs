@@ -556,7 +556,11 @@ public class Block : MonoBehaviour
     /// <summary>
     /// Binds an optional world-space presentation view (Phase 5+). Gameplay state stays on Block.
     /// </summary>
-    public void SetWorldView(PieceView3D view, IGridSpace space, bool syncPosition = true)
+    public void SetWorldView(
+        PieceView3D view,
+        IGridSpace space,
+        bool syncPosition = true,
+        bool ensureVisible = true)
     {
         if (worldView != null && worldView != view)
         {
@@ -569,7 +573,8 @@ public class Block : MonoBehaviour
         {
             worldView.BindSourceBlock(this);
             // Rebind must never inherit a prior match's zero scale / disabled renderer.
-            if (!IsMatchVisual)
+            // Pending nested extraction: traveler stays hidden until remesh (green ghost).
+            if (ensureVisible && !IsMatchVisual && !HasPendingLayerExtraction)
             {
                 worldView.EnsurePresentationVisible();
             }

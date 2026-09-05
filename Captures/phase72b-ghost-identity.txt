@@ -1,0 +1,286 @@
+[DUMP manual]
+PiecesRoot children renderers(incl inactive)=56
+REN name=Mesh id=-654664 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,4.17) cell=(4, 7) path=Block3D_Square_-653504/Mesh
+    view=Block3D_Square_-653504#-654662 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Yellow
+REN name=ContactShadow3D id=-654672 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.19,4.17) cell=(4, 7) path=Block3D_Square_-653504/ContactShadow3D
+    view=Block3D_Square_-653504#-654662 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654680 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,4.17) cell=(4, 7) path=Block3D_Square_-653504/NestedInner3D
+    view=Block3D_Square_-653504#-654662 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Purple
+REN name=Mesh id=-654696 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,4.72) cell=(4, 8) path=Block3D_Square_-653504_c1/Mesh
+    view=Block3D_Square_-653504_c1#-654694 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Yellow
+REN name=ContactShadow3D id=-654718 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.19,4.72) cell=(4, 8) path=Block3D_Square_-653504_c1/ContactShadow3D
+    view=Block3D_Square_-653504_c1#-654694 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654728 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,4.72) cell=(4, 8) path=Block3D_Square_-653504_c1/NestedInner3D
+    view=Block3D_Square_-653504_c1#-654694 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Purple
+REN name=Mesh id=-654710 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,5.28) cell=(4, 9) path=Block3D_Square_-653504_c2/Mesh
+    view=Block3D_Square_-653504_c2#-654708 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Yellow
+REN name=ContactShadow3D id=-654736 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.19,5.28) cell=(4, 9) path=Block3D_Square_-653504_c2/ContactShadow3D
+    view=Block3D_Square_-653504_c2#-654708 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654746 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.33,5.28) cell=(4, 9) path=Block3D_Square_-653504_c2/NestedInner3D
+    view=Block3D_Square_-653504_c2#-654708 tracked=True shape=Square nest=True srcBlock=-653504 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=ShapeSolid_Square mat=Block3D_Square_Purple
+REN name=ChainLink_-653504_0 id=-654754 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.29,4.49) cell=(4, 8) path=ChainLink_-653504_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653504_1 id=-654764 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.29,5.04) cell=(4, 8) path=ChainLink_-653504_1
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653504 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=Mesh id=-654780 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,3.61) cell=(1, 6) path=Block3D_Pentagon_-653292/Mesh
+    view=Block3D_Pentagon_-653292#-654778 tracked=True shape=Pentagon nest=False srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=ShapeSolid_Pentagon mat=Block3D_Pentagon_Orange
+REN name=ContactShadow3D id=-654788 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,3.61) cell=(1, 6) path=Block3D_Pentagon_-653292/ContactShadow3D
+    view=Block3D_Pentagon_-653292#-654778 tracked=True shape=Pentagon nest=False srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=Mesh id=-654804 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,4.17) cell=(1, 7) path=Block3D_Pentagon_-653292_c1/Mesh
+    view=Block3D_Pentagon_-653292_c1#-654802 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=ShapeSolid_Pentagon mat=Block3D_Pentagon_Orange
+REN name=ContactShadow3D id=-654826 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,4.17) cell=(1, 7) path=Block3D_Pentagon_-653292_c1/ContactShadow3D
+    view=Block3D_Pentagon_-653292_c1#-654802 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654836 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,4.17) cell=(1, 7) path=Block3D_Pentagon_-653292_c1/NestedInner3D
+    view=Block3D_Pentagon_-653292_c1#-654802 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=ShapeSolid_Pentagon mat=Block3D_Pentagon_Cyan
+REN name=Mesh id=-654818 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,4.72) cell=(1, 8) path=Block3D_Pentagon_-653292_c2/Mesh
+    view=Block3D_Pentagon_-653292_c2#-654816 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=ShapeSolid_Pentagon mat=Block3D_Pentagon_Orange
+REN name=ContactShadow3D id=-654844 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,4.72) cell=(1, 8) path=Block3D_Pentagon_-653292_c2/ContactShadow3D
+    view=Block3D_Pentagon_-653292_c2#-654816 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654854 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,4.72) cell=(1, 8) path=Block3D_Pentagon_-653292_c2/NestedInner3D
+    view=Block3D_Pentagon_-653292_c2#-654816 tracked=True shape=Pentagon nest=True srcBlock=-653292 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=ShapeSolid_Pentagon mat=Block3D_Pentagon_Cyan
+REN name=ChainLink_-653292_0 id=-654862 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.29,3.93) cell=(1, 6) path=ChainLink_-653292_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653292_1 id=-654872 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.29,4.49) cell=(1, 8) path=ChainLink_-653292_1
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653292 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=Mesh id=-654888 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,0.29) cell=(1, 0) path=Block3D_Diamond_-653938/Mesh
+    view=Block3D_Diamond_-653938#-654886 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Green
+    *** GREEN MAT HIT ***
+REN name=ContactShadow3D id=-654896 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,0.29) cell=(1, 0) path=Block3D_Diamond_-653938/ContactShadow3D
+    view=Block3D_Diamond_-653938#-654886 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654904 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,0.29) cell=(1, 0) path=Block3D_Diamond_-653938/NestedInner3D
+    view=Block3D_Diamond_-653938#-654886 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Red
+REN name=Mesh id=-654920 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,0.84) cell=(1, 1) path=Block3D_Diamond_-653938_c1/Mesh
+    view=Block3D_Diamond_-653938_c1#-654918 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Green
+    *** GREEN MAT HIT ***
+REN name=ContactShadow3D id=-654928 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,0.84) cell=(1, 1) path=Block3D_Diamond_-653938_c1/ContactShadow3D
+    view=Block3D_Diamond_-653938_c1#-654918 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-654938 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,0.84) cell=(1, 1) path=Block3D_Diamond_-653938_c1/NestedInner3D
+    view=Block3D_Diamond_-653938_c1#-654918 tracked=True shape=Diamond nest=True srcBlock=-653938 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Red
+REN name=ChainLink_-653938_0 id=-654946 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.29,0.61) cell=(1, 1) path=ChainLink_-653938_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653938 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=Mesh id=-654962 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,2.51) cell=(1, 4) path=Block3D_Triangle_-653634/Mesh
+    view=Block3D_Triangle_-653634#-654960 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=ShapeSolid_Triangle mat=Block3D_Triangle_White
+REN name=ContactShadow3D id=-654970 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,2.51) cell=(1, 4) path=Block3D_Triangle_-653634/ContactShadow3D
+    view=Block3D_Triangle_-653634#-654960 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=Mesh id=-654986 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.33,2.51) cell=(2, 4) path=Block3D_Triangle_-653634_c1/Mesh
+    view=Block3D_Triangle_-653634_c1#-654984 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=ShapeSolid_Triangle mat=Block3D_Triangle_White
+REN name=ContactShadow3D id=-655022 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,2.51) cell=(2, 4) path=Block3D_Triangle_-653634_c1/ContactShadow3D
+    view=Block3D_Triangle_-653634_c1#-654984 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=Mesh id=-655000 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.33,3.06) cell=(1, 5) path=Block3D_Triangle_-653634_c2/Mesh
+    view=Block3D_Triangle_-653634_c2#-654998 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=ShapeSolid_Triangle mat=Block3D_Triangle_White
+REN name=ContactShadow3D id=-655032 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,3.06) cell=(1, 5) path=Block3D_Triangle_-653634_c2/ContactShadow3D
+    view=Block3D_Triangle_-653634_c2#-654998 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=Mesh id=-655014 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.33,3.06) cell=(2, 5) path=Block3D_Triangle_-653634_c3/Mesh
+    view=Block3D_Triangle_-653634_c3#-655012 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=ShapeSolid_Triangle mat=Block3D_Triangle_White
+REN name=ContactShadow3D id=-655042 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,3.06) cell=(2, 5) path=Block3D_Triangle_-653634_c3/ContactShadow3D
+    view=Block3D_Triangle_-653634_c3#-655012 tracked=True shape=Triangle nest=False srcBlock=-653634 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=ChainLink_-653634_0 id=-655052 type=MeshRenderer enabled=True active=True hier=True pos=(-0.55,0.29,2.55) cell=(2, 4) path=ChainLink_-653634_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653634_1 id=-655062 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.29,2.82) cell=(1, 4) path=ChainLink_-653634_1
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653634_2 id=-655072 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.29,2.82) cell=(2, 4) path=ChainLink_-653634_2
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653634_3 id=-655082 type=MeshRenderer enabled=True active=True hier=True pos=(-0.55,0.29,3.10) cell=(2, 5) path=ChainLink_-653634_3
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653634 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=Mesh id=-655098 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,0.29) cell=(3, 0) path=Block3D_Circle_-653808/Mesh
+    view=Block3D_Circle_-653808#-655096 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Cyan
+REN name=ContactShadow3D id=-655106 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.19,0.29) cell=(3, 0) path=Block3D_Circle_-653808/ContactShadow3D
+    view=Block3D_Circle_-653808#-655096 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-655114 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,0.29) cell=(3, 0) path=Block3D_Circle_-653808/NestedInner3D
+    view=Block3D_Circle_-653808#-655096 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Pink
+REN name=Mesh id=-655130 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,0.84) cell=(3, 1) path=Block3D_Circle_-653808_c1/Mesh
+    view=Block3D_Circle_-653808_c1#-655128 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Cyan
+REN name=ContactShadow3D id=-655152 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.19,0.84) cell=(3, 1) path=Block3D_Circle_-653808_c1/ContactShadow3D
+    view=Block3D_Circle_-653808_c1#-655128 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-655162 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,0.84) cell=(3, 1) path=Block3D_Circle_-653808_c1/NestedInner3D
+    view=Block3D_Circle_-653808_c1#-655128 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Pink
+REN name=Mesh id=-655144 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,1.40) cell=(3, 2) path=Block3D_Circle_-653808_c2/Mesh
+    view=Block3D_Circle_-653808_c2#-655142 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Cyan
+REN name=ContactShadow3D id=-655170 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.19,1.40) cell=(3, 2) path=Block3D_Circle_-653808_c2/ContactShadow3D
+    view=Block3D_Circle_-653808_c2#-655142 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=NestedInner3D id=-655180 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.33,1.40) cell=(3, 2) path=Block3D_Circle_-653808_c2/NestedInner3D
+    view=Block3D_Circle_-653808_c2#-655142 tracked=True shape=Circle nest=True srcBlock=-653808 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=ShapeSolid_Circle mat=Block3D_Circle_Pink
+REN name=ChainLink_-653808_0 id=-655188 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.29,0.61) cell=(3, 1) path=ChainLink_-653808_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=ChainLink_-653808_1 id=-655198 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.29,1.16) cell=(3, 2) path=ChainLink_-653808_1
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653808 targetAtCell=False mesh=Capsule mat=ChainLink3D
+REN name=Mesh id=-655214 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.33,4.17) cell=(2, 7) path=Block3D_Star_-653420/Mesh
+    view=Block3D_Star_-653420#-655212 tracked=True shape=Star nest=False srcBlock=-653420 srcTarget=0 logicalBlockAtCell=-653420 targetAtCell=False mesh=ShapeSolid_Star mat=Block3D_Star_Purple
+REN name=ContactShadow3D id=-655222 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,4.17) cell=(2, 7) path=Block3D_Star_-653420/ContactShadow3D
+    view=Block3D_Star_-653420#-655212 tracked=True shape=Star nest=False srcBlock=-653420 srcTarget=0 logicalBlockAtCell=-653420 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=Mesh id=-655238 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.33,4.72) cell=(2, 8) path=Block3D_Star_-653420_c1/Mesh
+    view=Block3D_Star_-653420_c1#-655236 tracked=True shape=Star nest=False srcBlock=-653420 srcTarget=0 logicalBlockAtCell=-653420 targetAtCell=False mesh=ShapeSolid_Star mat=Block3D_Star_Purple
+REN name=ContactShadow3D id=-655246 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,4.72) cell=(2, 8) path=Block3D_Star_-653420_c1/ContactShadow3D
+    view=Block3D_Star_-653420_c1#-655236 tracked=True shape=Star nest=False srcBlock=-653420 srcTarget=0 logicalBlockAtCell=-653420 targetAtCell=False mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime
+REN name=ChainLink_-653420_0 id=-655256 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.29,4.49) cell=(2, 8) path=ChainLink_-653420_0
+    view=null tracked=False shape=- nest=False srcBlock=0 srcTarget=0 logicalBlockAtCell=-653420 targetAtCell=False mesh=Capsule mat=ChainLink3D
+CHILD Block3D_Square_-653504 id=-654660 active=True hier=True pos=(0.83,0.33,4.21) cell=(4, 7)
+CHILD Block3D_Square_-653504_c1 id=-654692 active=True hier=True pos=(0.83,0.33,4.76) cell=(4, 8)
+CHILD Block3D_Square_-653504_c2 id=-654706 active=True hier=True pos=(0.83,0.33,5.32) cell=(4, 9)
+CHILD Block3D_Pentagon_-653292 id=-654776 active=True hier=True pos=(-0.83,0.33,3.66) cell=(1, 6)
+CHILD Block3D_Pentagon_-653292_c1 id=-654800 active=True hier=True pos=(-0.83,0.33,4.21) cell=(1, 7)
+CHILD Block3D_Pentagon_-653292_c2 id=-654814 active=True hier=True pos=(-0.83,0.33,4.76) cell=(1, 8)
+CHILD Block3D_Diamond_-653938 id=-654884 active=True hier=True pos=(-0.83,0.33,0.33) cell=(1, 0)
+CHILD Block3D_Diamond_-653938_c1 id=-654916 active=True hier=True pos=(-0.83,0.33,0.88) cell=(1, 1)
+CHILD Block3D_Triangle_-653634 id=-654958 active=True hier=True pos=(-0.83,0.33,2.55) cell=(1, 4)
+CHILD Block3D_Triangle_-653634_c1 id=-654982 active=True hier=True pos=(-0.28,0.33,2.55) cell=(2, 4)
+CHILD Block3D_Triangle_-653634_c2 id=-654996 active=True hier=True pos=(-0.83,0.33,3.10) cell=(1, 5)
+CHILD Block3D_Triangle_-653634_c3 id=-655010 active=True hier=True pos=(-0.28,0.33,3.10) cell=(2, 5)
+CHILD Block3D_Circle_-653808 id=-655094 active=True hier=True pos=(0.28,0.33,0.33) cell=(3, 0)
+CHILD Block3D_Circle_-653808_c1 id=-655126 active=True hier=True pos=(0.28,0.33,0.88) cell=(3, 1)
+CHILD Block3D_Circle_-653808_c2 id=-655140 active=True hier=True pos=(0.28,0.33,1.44) cell=(3, 2)
+CHILD Block3D_Star_-653420 id=-655210 active=True hier=True pos=(-0.28,0.33,4.21) cell=(2, 7)
+CHILD Block3D_Star_-653420_c1 id=-655234 active=True hier=True pos=(-0.28,0.33,4.76) cell=(2, 8)
+
+NestsRoot children renderers(incl inactive)=54
+REN name=Mesh id=-655272 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.22,5.32) cell=(1, 9) path=Nest3D_Triangle_-652394/Mesh
+    view=Nest3D_Triangle_-652394#-655270 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652394 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Triangle mat=Nest3D_Triangle_White
+REN name=ContactShadow3D id=-655280 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,5.32) cell=(1, 9) path=Nest3D_Triangle_-652394/ContactShadow3D
+    view=Nest3D_Triangle_-652394#-655270 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652394 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655294 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.22,5.32) cell=(2, 9) path=Nest3D_Triangle_-652394_c1/Mesh
+    view=Nest3D_Triangle_-652394_c1#-655292 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652394 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Triangle mat=Nest3D_Triangle_White
+REN name=ContactShadow3D id=-655302 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,5.32) cell=(2, 9) path=Nest3D_Triangle_-652394_c1/ContactShadow3D
+    view=Nest3D_Triangle_-652394_c1#-655292 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652394 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655316 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.22,0.33) cell=(2, 0) path=Nest3D_Pentagon_-653058/Mesh
+    view=Nest3D_Pentagon_-653058#-655314 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-653058 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Pentagon mat=Nest3D_Pentagon_Cyan
+REN name=ContactShadow3D id=-655324 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,0.33) cell=(2, 0) path=Nest3D_Pentagon_-653058/ContactShadow3D
+    view=Nest3D_Pentagon_-653058#-655314 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-653058 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655338 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.22,0.88) cell=(2, 1) path=Nest3D_Pentagon_-653058_c1/Mesh
+    view=Nest3D_Pentagon_-653058_c1#-655336 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-653058 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Pentagon mat=Nest3D_Pentagon_Cyan
+REN name=ContactShadow3D id=-655346 type=MeshRenderer enabled=True active=True hier=True pos=(-0.28,0.19,0.88) cell=(2, 1) path=Nest3D_Pentagon_-653058_c1/ContactShadow3D
+    view=Nest3D_Pentagon_-653058_c1#-655336 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-653058 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655360 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,0.33) cell=(5, 0) path=Nest3D_Circle_-653126/Mesh
+    view=Nest3D_Circle_-653126#-655358 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Pink
+REN name=ContactShadow3D id=-655368 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,0.33) cell=(5, 0) path=Nest3D_Circle_-653126/ContactShadow3D
+    view=Nest3D_Circle_-653126#-655358 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655382 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,0.88) cell=(5, 1) path=Nest3D_Circle_-653126_c1/Mesh
+    view=Nest3D_Circle_-653126_c1#-655380 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Pink
+REN name=ContactShadow3D id=-655404 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,0.88) cell=(5, 1) path=Nest3D_Circle_-653126_c1/ContactShadow3D
+    view=Nest3D_Circle_-653126_c1#-655380 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655396 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,1.44) cell=(5, 2) path=Nest3D_Circle_-653126_c2/Mesh
+    view=Nest3D_Circle_-653126_c2#-655394 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Pink
+REN name=ContactShadow3D id=-655412 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,1.44) cell=(5, 2) path=Nest3D_Circle_-653126_c2/ContactShadow3D
+    view=Nest3D_Circle_-653126_c2#-655394 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-653126 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655426 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.22,2.55) cell=(4, 4) path=Nest3D_Triangle_-652726/Mesh
+    view=Nest3D_Triangle_-652726#-655424 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652726 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Triangle mat=Nest3D_Triangle_White
+REN name=ContactShadow3D id=-655434 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.19,2.55) cell=(4, 4) path=Nest3D_Triangle_-652726/ContactShadow3D
+    view=Nest3D_Triangle_-652726#-655424 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652726 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655448 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.22,3.10) cell=(4, 5) path=Nest3D_Triangle_-652726_c1/Mesh
+    view=Nest3D_Triangle_-652726_c1#-655446 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652726 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Triangle mat=Nest3D_Triangle_White
+REN name=ContactShadow3D id=-655456 type=MeshRenderer enabled=True active=True hier=True pos=(0.83,0.19,3.10) cell=(4, 5) path=Nest3D_Triangle_-652726_c1/ContactShadow3D
+    view=Nest3D_Triangle_-652726_c1#-655446 tracked=True shape=Triangle nest=False srcBlock=0 srcTarget=-652726 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655470 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,2.55) cell=(0, 4) path=Nest3D_Circle_-652628/Mesh
+    view=Nest3D_Circle_-652628#-655468 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Cyan
+REN name=ContactShadow3D id=-655478 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,2.55) cell=(0, 4) path=Nest3D_Circle_-652628/ContactShadow3D
+    view=Nest3D_Circle_-652628#-655468 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655492 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,3.10) cell=(0, 5) path=Nest3D_Circle_-652628_c1/Mesh
+    view=Nest3D_Circle_-652628_c1#-655490 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Cyan
+REN name=ContactShadow3D id=-655514 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,3.10) cell=(0, 5) path=Nest3D_Circle_-652628_c1/ContactShadow3D
+    view=Nest3D_Circle_-652628_c1#-655490 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655506 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,3.66) cell=(0, 6) path=Nest3D_Circle_-652628_c2/Mesh
+    view=Nest3D_Circle_-652628_c2#-655504 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Circle mat=Nest3D_Circle_Cyan
+REN name=ContactShadow3D id=-655522 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,3.66) cell=(0, 6) path=Nest3D_Circle_-652628_c2/ContactShadow3D
+    view=Nest3D_Circle_-652628_c2#-655504 tracked=True shape=Circle nest=False srcBlock=0 srcTarget=-652628 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655536 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,1.99) cell=(5, 3) path=Nest3D_Pentagon_-652794/Mesh
+    view=Nest3D_Pentagon_-652794#-655534 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Pentagon mat=Nest3D_Pentagon_Orange
+REN name=ContactShadow3D id=-655544 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,1.99) cell=(5, 3) path=Nest3D_Pentagon_-652794/ContactShadow3D
+    view=Nest3D_Pentagon_-652794#-655534 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655558 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,2.55) cell=(5, 4) path=Nest3D_Pentagon_-652794_c1/Mesh
+    view=Nest3D_Pentagon_-652794_c1#-655556 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Pentagon mat=Nest3D_Pentagon_Orange
+REN name=ContactShadow3D id=-655580 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,2.55) cell=(5, 4) path=Nest3D_Pentagon_-652794_c1/ContactShadow3D
+    view=Nest3D_Pentagon_-652794_c1#-655556 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655572 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,3.10) cell=(5, 5) path=Nest3D_Pentagon_-652794_c2/Mesh
+    view=Nest3D_Pentagon_-652794_c2#-655570 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Pentagon mat=Nest3D_Pentagon_Orange
+REN name=ContactShadow3D id=-655588 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,3.10) cell=(5, 5) path=Nest3D_Pentagon_-652794_c2/ContactShadow3D
+    view=Nest3D_Pentagon_-652794_c2#-655570 tracked=True shape=Pentagon nest=False srcBlock=0 srcTarget=-652794 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655602 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,4.21) cell=(5, 7) path=Nest3D_Square_-652530/Mesh
+    view=Nest3D_Square_-652530#-655600 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Purple
+REN name=ContactShadow3D id=-655610 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,4.21) cell=(5, 7) path=Nest3D_Square_-652530/ContactShadow3D
+    view=Nest3D_Square_-652530#-655600 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655624 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,4.76) cell=(5, 8) path=Nest3D_Square_-652530_c1/Mesh
+    view=Nest3D_Square_-652530_c1#-655622 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Purple
+REN name=ContactShadow3D id=-655646 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,4.76) cell=(5, 8) path=Nest3D_Square_-652530_c1/ContactShadow3D
+    view=Nest3D_Square_-652530_c1#-655622 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655638 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.22,5.32) cell=(5, 9) path=Nest3D_Square_-652530_c2/Mesh
+    view=Nest3D_Square_-652530_c2#-655636 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Purple
+REN name=ContactShadow3D id=-655654 type=MeshRenderer enabled=True active=True hier=True pos=(1.39,0.19,5.32) cell=(5, 9) path=Nest3D_Square_-652530_c2/ContactShadow3D
+    view=Nest3D_Square_-652530_c2#-655636 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652530 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655668 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,4.21) cell=(0, 7) path=Nest3D_Diamond_-652462/Mesh
+    view=Nest3D_Diamond_-652462#-655666 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-652462 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Diamond mat=Nest3D_Diamond_Green
+    *** GREEN MAT HIT ***
+REN name=ContactShadow3D id=-655676 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,4.21) cell=(0, 7) path=Nest3D_Diamond_-652462/ContactShadow3D
+    view=Nest3D_Diamond_-652462#-655666 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-652462 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655690 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,4.76) cell=(0, 8) path=Nest3D_Diamond_-652462_c1/Mesh
+    view=Nest3D_Diamond_-652462_c1#-655688 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-652462 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Diamond mat=Nest3D_Diamond_Green
+    *** GREEN MAT HIT ***
+REN name=ContactShadow3D id=-655698 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,4.76) cell=(0, 8) path=Nest3D_Diamond_-652462_c1/ContactShadow3D
+    view=Nest3D_Diamond_-652462_c1#-655688 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-652462 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655712 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.22,4.21) cell=(3, 7) path=Nest3D_Diamond_-653224/Mesh
+    view=Nest3D_Diamond_-653224#-655710 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-653224 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Diamond mat=Nest3D_Diamond_Red
+REN name=ContactShadow3D id=-655720 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.19,4.21) cell=(3, 7) path=Nest3D_Diamond_-653224/ContactShadow3D
+    view=Nest3D_Diamond_-653224#-655710 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-653224 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655734 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.22,4.76) cell=(3, 8) path=Nest3D_Diamond_-653224_c1/Mesh
+    view=Nest3D_Diamond_-653224_c1#-655732 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-653224 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Diamond mat=Nest3D_Diamond_Red
+REN name=ContactShadow3D id=-655742 type=MeshRenderer enabled=True active=True hier=True pos=(0.28,0.19,4.76) cell=(3, 8) path=Nest3D_Diamond_-653224_c1/ContactShadow3D
+    view=Nest3D_Diamond_-653224_c1#-655732 tracked=True shape=Diamond nest=False srcBlock=0 srcTarget=-653224 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655756 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,0.33) cell=(0, 0) path=Nest3D_Square_-652960/Mesh
+    view=Nest3D_Square_-652960#-655754 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Yellow
+REN name=ContactShadow3D id=-655764 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,0.33) cell=(0, 0) path=Nest3D_Square_-652960/ContactShadow3D
+    view=Nest3D_Square_-652960#-655754 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655778 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,0.88) cell=(0, 1) path=Nest3D_Square_-652960_c1/Mesh
+    view=Nest3D_Square_-652960_c1#-655776 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Yellow
+REN name=ContactShadow3D id=-655800 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,0.88) cell=(0, 1) path=Nest3D_Square_-652960_c1/ContactShadow3D
+    view=Nest3D_Square_-652960_c1#-655776 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655792 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.22,1.44) cell=(0, 2) path=Nest3D_Square_-652960_c2/Mesh
+    view=Nest3D_Square_-652960_c2#-655790 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Square mat=Nest3D_Square_Yellow
+REN name=ContactShadow3D id=-655808 type=MeshRenderer enabled=True active=True hier=True pos=(-1.39,0.19,1.44) cell=(0, 2) path=Nest3D_Square_-652960_c2/ContactShadow3D
+    view=Nest3D_Square_-652960_c2#-655790 tracked=True shape=Square nest=False srcBlock=0 srcTarget=-652960 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655822 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.22,1.44) cell=(1, 2) path=Nest3D_Star_-652892/Mesh
+    view=Nest3D_Star_-652892#-655820 tracked=True shape=Star nest=False srcBlock=0 srcTarget=-652892 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Star mat=Nest3D_Star_Purple
+REN name=ContactShadow3D id=-655830 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,1.44) cell=(1, 2) path=Nest3D_Star_-652892/ContactShadow3D
+    view=Nest3D_Star_-652892#-655820 tracked=True shape=Star nest=False srcBlock=0 srcTarget=-652892 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+REN name=Mesh id=-655844 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.22,1.99) cell=(1, 3) path=Nest3D_Star_-652892_c1/Mesh
+    view=Nest3D_Star_-652892_c1#-655842 tracked=True shape=Star nest=False srcBlock=0 srcTarget=-652892 logicalBlockAtCell=0 targetAtCell=True mesh=ShapeNest_Star mat=Nest3D_Star_Purple
+REN name=ContactShadow3D id=-655852 type=MeshRenderer enabled=True active=True hier=True pos=(-0.83,0.19,1.99) cell=(1, 3) path=Nest3D_Star_-652892_c1/ContactShadow3D
+    view=Nest3D_Star_-652892_c1#-655842 tracked=True shape=Star nest=False srcBlock=0 srcTarget=-652892 logicalBlockAtCell=0 targetAtCell=True mesh=SoftContactShadowDisc_v2 mat=NestContactShadow3D_Runtime
+CHILD Nest3D_Triangle_-652394 id=-655268 active=True hier=True pos=(-0.83,0.22,5.32) cell=(1, 9)
+CHILD Nest3D_Triangle_-652394_c1 id=-655290 active=True hier=True pos=(-0.28,0.22,5.32) cell=(2, 9)
+CHILD Nest3D_Pentagon_-653058 id=-655312 active=True hier=True pos=(-0.28,0.22,0.33) cell=(2, 0)
+CHILD Nest3D_Pentagon_-653058_c1 id=-655334 active=True hier=True pos=(-0.28,0.22,0.88) cell=(2, 1)
+CHILD Nest3D_Circle_-653126 id=-655356 active=True hier=True pos=(1.39,0.22,0.33) cell=(5, 0)
+CHILD Nest3D_Circle_-653126_c1 id=-655378 active=True hier=True pos=(1.39,0.22,0.88) cell=(5, 1)
+CHILD Nest3D_Circle_-653126_c2 id=-655392 active=True hier=True pos=(1.39,0.22,1.44) cell=(5, 2)
+CHILD Nest3D_Triangle_-652726 id=-655422 active=True hier=True pos=(0.83,0.22,2.55) cell=(4, 4)
+CHILD Nest3D_Triangle_-652726_c1 id=-655444 active=True hier=True pos=(0.83,0.22,3.10) cell=(4, 5)
+CHILD Nest3D_Circle_-652628 id=-655466 active=True hier=True pos=(-1.39,0.22,2.55) cell=(0, 4)
+CHILD Nest3D_Circle_-652628_c1 id=-655488 active=True hier=True pos=(-1.39,0.22,3.10) cell=(0, 5)
+CHILD Nest3D_Circle_-652628_c2 id=-655502 active=True hier=True pos=(-1.39,0.22,3.66) cell=(0, 6)
+CHILD Nest3D_Pentagon_-652794 id=-655532 active=True hier=True pos=(1.39,0.22,1.99) cell=(5, 3)
+CHILD Nest3D_Pentagon_-652794_c1 id=-655554 active=True hier=True pos=(1.39,0.22,2.55) cell=(5, 4)
+CHILD Nest3D_Pentagon_-652794_c2 id=-655568 active=True hier=True pos=(1.39,0.22,3.10) cell=(5, 5)
+CHILD Nest3D_Square_-652530 id=-655598 active=True hier=True pos=(1.39,0.22,4.21) cell=(5, 7)
+CHILD Nest3D_Square_-652530_c1 id=-655620 active=True hier=True pos=(1.39,0.22,4.76) cell=(5, 8)
+CHILD Nest3D_Square_-652530_c2 id=-655634 active=True hier=True pos=(1.39,0.22,5.32) cell=(5, 9)
+CHILD Nest3D_Diamond_-652462 id=-655664 active=True hier=True pos=(-1.39,0.22,4.21) cell=(0, 7)
+CHILD Nest3D_Diamond_-652462_c1 id=-655686 active=True hier=True pos=(-1.39,0.22,4.76) cell=(0, 8)
+CHILD Nest3D_Diamond_-653224 id=-655708 active=True hier=True pos=(0.28,0.22,4.21) cell=(3, 7)
+CHILD Nest3D_Diamond_-653224_c1 id=-655730 active=True hier=True pos=(0.28,0.22,4.76) cell=(3, 8)
+CHILD Nest3D_Square_-652960 id=-655752 active=True hier=True pos=(-1.39,0.22,0.33) cell=(0, 0)
+CHILD Nest3D_Square_-652960_c1 id=-655774 active=True hier=True pos=(-1.39,0.22,0.88) cell=(0, 1)
+CHILD Nest3D_Square_-652960_c2 id=-655788 active=True hier=True pos=(-1.39,0.22,1.44) cell=(0, 2)
+CHILD Nest3D_Star_-652892 id=-655818 active=True hier=True pos=(-0.83,0.22,1.44) cell=(1, 2)
+CHILD Nest3D_Star_-652892_c1 id=-655840 active=True hier=True pos=(-0.83,0.22,1.99) cell=(1, 3)
+
+VfxRoot children renderers(incl inactive)=0
+
+--- SCENE GREEN / DIAMOND RENDERERS ---
+GREEN mat=Block3D_Diamond_Green go=Mesh id=-654920 enabled=True hier=True pos=(-0.83,0.33,0.84) cell=(1, 1) view=Block3D_Diamond_-653938_c1 tracked=True shadow=True path=Board3D/Pieces3D/Block3D_Diamond_-653938_c1/Mesh
+DIAMOND mat=Block3D_Diamond_Red go=NestedInner3D id=-654904 enabled=True hier=True pos=(-0.83,0.33,0.29) cell=(1, 0) view=Block3D_Diamond_-653938 tracked=True shadow=True path=Board3D/Pieces3D/Block3D_Diamond_-653938/NestedInner3D
+GREEN mat=Nest3D_Diamond_Green go=Mesh id=-655668 enabled=True hier=True pos=(-1.39,0.22,4.21) cell=(0, 7) view=Nest3D_Diamond_-652462 tracked=True shadow=True path=Board3D/Nests3D/Nest3D_Diamond_-652462/Mesh
+GREEN mat=Nest3D_Diamond_Green go=Mesh id=-655690 enabled=True hier=True pos=(-1.39,0.22,4.76) cell=(0, 8) view=Nest3D_Diamond_-652462_c1 tracked=True shadow=True path=Board3D/Nests3D/Nest3D_Diamond_-652462_c1/Mesh
+DIAMOND mat=Nest3D_Diamond_Red go=Mesh id=-655712 enabled=True hier=True pos=(0.28,0.22,4.21) cell=(3, 7) view=Nest3D_Diamond_-653224 tracked=True shadow=True path=Board3D/Nests3D/Nest3D_Diamond_-653224/Mesh
+DIAMOND mat=Block3D_Diamond_Red go=NestedInner3D id=-654938 enabled=True hier=True pos=(-0.83,0.33,0.84) cell=(1, 1) view=Block3D_Diamond_-653938_c1 tracked=True shadow=True path=Board3D/Pieces3D/Block3D_Diamond_-653938_c1/NestedInner3D
+GREEN mat=Block3D_Diamond_Green go=Mesh id=-654888 enabled=True hier=True pos=(-0.83,0.33,0.29) cell=(1, 0) view=Block3D_Diamond_-653938 tracked=True shadow=True path=Board3D/Pieces3D/Block3D_Diamond_-653938/Mesh
+DIAMOND mat=Nest3D_Diamond_Red go=Mesh id=-655734 enabled=True hier=True pos=(0.28,0.22,4.76) cell=(3, 8) view=Nest3D_Diamond_-653224_c1 tracked=True shadow=True path=Board3D/Nests3D/Nest3D_Diamond_-653224_c1/Mesh
+sceneGreenOrDiamondHits=8
+

@@ -1,0 +1,49 @@
+PHASE 73 — REQUIREMENT VALIDATION SUITE
+frame=211 t=33.939
+ROUTING_MARKERS=True
+LOAD_DB Campaign_43_Reference index=0
+CANDIDATE cells=4 pick=2 t=(0, 4) shapes=Triangle@(1, 5),Triangle@(2, 5) dests=[(1, 9),(2, 9)]
+collect focus=(1, 9) ok=True nestCount=2
+TRAVEL PASS n=2 t=(0, 4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=2
+LOAD_ASSET DIAGNOSTIC_Phase73_RigidChain path=Assets/Levels/Diagnostic/DIAGNOSTIC_Phase73_RigidChain.asset
+CANDIDATE cells=3 pick=3 t=(0, -3) shapes=Triangle@(1, 6),Triangle@(2, 6),Triangle@(3, 6) dests=[(1, 3),(2, 3),(3, 3)]
+collect focus=(1, 3) ok=True nestCount=3
+TRAVEL PASS n=3 t=(0, -3) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
+LOAD_ASSET DIAGNOSTIC_Phase73_RigidChain path=Assets/Levels/Diagnostic/DIAGNOSTIC_Phase73_RigidChain.asset
+CANDIDATE cells=5 pick=4 t=(0, -6) shapes=Triangle@(0, 8),Diamond@(1, 8),Circle@(2, 8),Star@(3, 8) dests=[(0, 2),(1, 2),(2, 2),(3, 2)]
+collect focus=(0, 2) ok=True nestCount=5
+TRAVEL PASS n=4 t=(0, -6) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=5
+LOAD_ASSET DIAGNOSTIC_Phase73_RigidChain path=Assets/Levels/Diagnostic/DIAGNOSTIC_Phase73_RigidChain.asset
+CANDIDATE cells=5 pick=5 t=(0, -6) shapes=Triangle@(0, 8),Diamond@(1, 8),Circle@(2, 8),Star@(3, 8),Square@(4, 8) dests=[(0, 2),(1, 2),(2, 2),(3, 2),(4, 2)]
+collect focus=(0, 2) ok=True nestCount=5
+TRAVEL PASS n=5 t=(0, -6) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=5
+LOAD_ASSET DIAGNOSTIC_Phase73_RigidChain path=Assets/Levels/Diagnostic/DIAGNOSTIC_Phase73_RigidChain.asset
+CANDIDATE cells=3 pick=3 t=(0, -4) shapes=Triangle@(6, 7),Triangle@(7, 7),Triangle@(7, 8) dests=[(6, 3),(7, 3),(7, 4)]
+collect focus=(6, 3) ok=True nestCount=3
+TRAVEL PASS n=3 t=(0, -4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
+LOAD_DB Campaign_43_Reference index=0
+T6_STRUCT structural nestedId=-344034 cells=3 subsetMethod=True nestedPrefer=True
+LOAD_ASSET Debug_FixedDirection path=Assets/Levels/Debug_FixedDirection.asset
+T7_DETAIL=dir=Up allow((0, 1))=True deny((1, 0))=True buildRejectsIllegal=True
+LOAD_DB Campaign_43_Reference index=0
+T8_DETAIL=subsetRejectsBadT=True notForcedTogether=True diagonalRejected=True groups=1
+
+=== SUMMARY ===
+T1 PASS — 2 identical shapes → matching targets
+    Campaign_43_Reference | n=2 t=(0, 4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=2
+T2 PASS — 3 identical shapes → matching targets
+    DIAGNOSTIC_Phase73_RigidChain | n=3 t=(0, -3) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
+T3 PASS — mixed shapes → corresponding targets
+    DIAGNOSTIC_Phase73_RigidChain | n=4 t=(0, -6) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=5
+T4 PASS — 5+ cell chain → corresponding targets
+    DIAGNOSTIC_Phase73_RigidChain | n=5 t=(0, -6) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=5
+T5 PASS — L-shaped chain → same L targets
+    DIAGNOSTIC_Phase73_RigidChain | n=3 t=(0, -4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
+T6 PASS — nested chain behavior preserved
+    structural nestedId=-344034 cells=3 subsetMethod=True nestedPrefer=True
+T7 PASS — fixed-direction restriction enforced
+    dir=Up allow((0, 1))=True deny((1, 0))=True buildRejectsIllegal=True
+T8 PASS — invalid/non-same-translation NOT forced
+    subsetRejectsBadT=True notForcedTogether=True diagonalRejected=True groups=1
+OVERALL=PASS 8/8
+RESULT=PASS note=all requirement cases PASS

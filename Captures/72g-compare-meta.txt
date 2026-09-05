@@ -1,0 +1,9 @@
+paused=True
+a=True b=True
+A rid=-1002502 en=True shared=Block3D_Diamond_Red bc=RGBA(0.950, 0.220, 0.280, 1.000)
+A live bc=RGBA(0.950, 0.220, 0.280, 1.000) colorProp=RGBA(1.000, 1.000, 1.000, 1.000)
+B rid=-1002540 en=True shared=Block3D_Diamond_Red bc=RGBA(0.950, 0.220, 0.280, 1.000)
+wrote Captures/72g-boardcam-sameframe.png
+boardCam type=Base post=False stack=1
+ stack[0]=Main Camera goActive=False hier=False camEn=True
+  overlayType=Base post=False

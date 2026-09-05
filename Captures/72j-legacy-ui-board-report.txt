@@ -1,0 +1,58 @@
+PHASE 72J-B — LEGACY UI BOARD
+frame=2096 paused=True
+FOUND UIController/GameplayCanvas/Parent/Gameplay Area/Board activeSelf=True hier=True
+canvas=GameplayCanvas mode=ScreenSpaceOverlay en=True
+EN_IMG sprite=TargetTriangle col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetSquare col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetSquare col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetCircle col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetCircle col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetHexagon col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetHexagon col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetSquare col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetSquare col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetHexagon col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetCircle col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetCircle col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=TargetDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) green=False path=Board/Target(Clone)/ShapeCell
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_1
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_0
+EN_IMG sprite=BlockHexagon col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockHexagon col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockHexagon col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockHexagon col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockSquare col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/InnerWell
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_1
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_0
+EN_IMG sprite=BlockSquare col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockSquare col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockSquare col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockSquare col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockSquare col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/InnerLayer
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_0
+EN_IMG sprite=BlockCircle col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/InnerWell
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_1
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_0
+EN_IMG sprite=BlockCircle col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockCircle col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockCircle col=RGBA(0.120, 0.100, 0.180, 0.380) green=False path=Board/Block (Clone)/ShapeCell/InnerWell
+EN_IMG sprite=BlockCircle col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/ShapeCell/InnerLayer
+EN_IMG sprite=BlockCircle col=RGBA(0.900, 0.900, 0.900, 1.000) green=False path=Board/Block (Clone)/InnerLayer
+EN_IMG sprite=null col=RGBA(0.450, 0.400, 0.750, 0.900) green=False path=Board/Block (Clone)/ChainLink_0
+enabledImages=37 greenishEnabled=0
+DIA_SPRITE en=False active=True sprite=TargetDiamond col=RGBA(1.000, 1.000, 1.000, 0.000) path=Board/Target(Clone)
+DIA_SPRITE en=False active=True sprite=TargetDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Target(Clone)
+DIA_SPRITE en=False active=True sprite=TargetDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Target(Clone)/ShapeCell
+DIA_SPRITE en=True active=True sprite=TargetDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Target(Clone)/ShapeCell
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Block (Clone)
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(0.120, 0.100, 0.180, 0.380) path=Board/Block (Clone)/InnerWell
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Block (Clone)/ShapeCell
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(0.120, 0.100, 0.180, 0.380) path=Board/Block (Clone)/ShapeCell/InnerWell
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(0.900, 0.900, 0.900, 1.000) path=Board/Block (Clone)/ShapeCell/InnerLayer
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(1.000, 1.000, 1.000, 1.000) path=Board/Block (Clone)/ShapeCell
+DIA_SPRITE en=False active=True sprite=BlockDiamond col=RGBA(0.900, 0.900, 0.900, 1.000) path=Board/Block (Clone)/InnerLayer
+GV before BoardUI off limeStrong=0
+DISABLED Gameplay Area/Board
+GV BoardUI off limeStrong=0
+GV BoardUI off RenderView(false) limeStrong=0
+GV BoardUI restored limeStrong=126

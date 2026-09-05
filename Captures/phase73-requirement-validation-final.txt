@@ -1,0 +1,63 @@
+PHASE 73 — FINAL REQUIREMENT VALIDATION
+=======================================
+Date: 2026-09-05
+Implementation: UNCHANGED (BlockMover Phase 73 path left as-is)
+Overall: PASS 8/8
+
+Source report: Captures/phase73-requirement-suite.txt
+Menu: Shape Nest → Phase 73 Requirement Suite (T1-T8)
+Diagnostic level: Assets/Levels/Diagnostic/DIAGNOSTIC_Phase73_RigidChain.asset
+  (validation fixture only — not a gameplay change)
+
+Per-case results
+----------------
+T1 PASS — 2 identical shapes → matching targets
+  Campaign_43_Reference | n=2 t=(0,4)
+  midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True
+
+T2 PASS — 3 identical shapes → matching targets
+  DIAGNOSTIC_Phase73_RigidChain | n=3 t=(0,-3)
+  midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True
+
+T3 PASS — mixed shapes → corresponding targets
+  DIAGNOSTIC_Phase73_RigidChain | n=4 t=(0,-6) (Triangle/Diamond/Circle/Star)
+  midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True
+
+T4 PASS — 5+ cell chain → corresponding targets
+  DIAGNOSTIC_Phase73_RigidChain | n=5 t=(0,-6)
+  midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True
+
+T5 PASS — L-shaped chain → same L targets
+  DIAGNOSTIC_Phase73_RigidChain | n=3 t=(0,-4) L footprint
+  midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True
+
+T6 PASS — nested chain behavior preserved
+  Campaign_43_Reference nested 3-cell present
+  TryPlayNestedSubsetMatch + PreferNestedCellForSingleMatch +
+  PlayAllPendingNestedExtractionReveals still wired
+
+T7 PASS — fixed-direction restriction enforced
+  Debug_FixedDirection | dir=Up
+  allow(up)=True deny(right)=True
+  TryBuildNestedSubsetGroup rejects illegal axis
+
+T8 PASS — invalid/non-same-translation NOT forced
+  CanTranslateMatchingSubset rejects bad T=(3,7)
+  BuildAlignedMovementGroups does not force-merge mixed translations
+  Diagonal translation rejected by TryBuildNestedSubsetGroup
+
+Rigid travel criteria (valid groups)
+------------------------------------
+For every live travel case (T1–T5):
+  * all members start together (shared PlayMatchingSubsetAlignedMatch)
+  * same movement progress (midSameProgress / midNoLag)
+  * relative offsets constant (midRigid)
+  * arrive together + consumeOk
+  * no sequential one-cell fallback observed on these paths
+
+Console errors: none
+
+Conclusion
+----------
+Phase 73 presentation behavior matches the original requirement.
+No implementation changes were required by this validation pass.

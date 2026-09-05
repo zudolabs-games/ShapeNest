@@ -1,0 +1,10 @@
+PHASE 72J FIX VALIDATION
+loaded idx=0
+Mode=World3D IsWorld3D=True
+Board GO active=True (must stay true for BoardManager)
+CanvasGroup=True alpha=0 blocksRaycasts=False interactable=False
+Board3D=True
+BoardCamera3D=True
+GameplayCanvas active=True canvasEn=True
+Images enabled=0 effectivelyVisible(alpha>0)=0
+boardcam limeStrong=119

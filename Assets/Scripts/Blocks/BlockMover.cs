@@ -122,6 +122,9 @@ public class BlockMover : MonoBehaviour
     private bool hopBlockedCuePlayed;
     private bool fingerVisualActive;
     private bool fingerDrivenDrag;
+    private Vector3 fingerVisualTarget;
+    private Vector3 fingerVisualVelocity;
+    private bool fingerVisualHasTarget;
     private Coroutine dragRoutine;
     private Vector2Int dragSessionStart;
     private bool dragSessionMatchEntered;
@@ -411,6 +414,8 @@ public class BlockMover : MonoBehaviour
         magnetPresenting = false;
         fingerVisualActive = false;
         fingerDrivenDrag = false;
+        fingerVisualHasTarget = false;
+        fingerVisualVelocity = Vector3.zero;
         if (activeMatchEffect != null)
         {
             Destroy(activeMatchEffect.gameObject);
@@ -545,6 +550,8 @@ public class BlockMover : MonoBehaviour
         hopBlockedCuePlayed = false;
         fingerDrivenDrag = fingerDriven;
         fingerVisualActive = false;
+        fingerVisualHasTarget = false;
+        fingerVisualVelocity = Vector3.zero;
         isMoving = true;
         dragRoutine = StartCoroutine(DragRoutine(board));
         BoardUndoHistory undoHistory = BoardUndoHistory.Resolve();
@@ -656,8 +663,8 @@ public class BlockMover : MonoBehaviour
 
     /// <summary>
     /// Presentation-only continuous finger follow while aiming.
-    /// Constrains board-plane world pose with existing direction / clamp rules;
-    /// does not change occupancy (that stays in <see cref="DragRoutine"/>).
+    /// Constrains board-plane world pose with existing direction / clamp rules,
+    /// then applies low-latency visual smoothing. Occupancy stays in DragRoutine.
     /// </summary>
     public void SetFingerDragWorld(Vector3 desiredBoardWorld)
     {
@@ -674,7 +681,20 @@ public class BlockMover : MonoBehaviour
         }
 
         Vector3 constrained = ConstrainFingerDragWorld(board, space, desiredBoardWorld);
-        ApplyFingerVisualWorld(constrained);
+        fingerVisualTarget = constrained;
+        fingerVisualHasTarget = true;
+        fingerVisualActive = true;
+        ApplySmoothedFingerVisual(forceSnap: false);
+    }
+
+    private void LateUpdate()
+    {
+        if (!fingerVisualActive || !fingerVisualHasTarget || !IsDragAiming || !fingerDrivenDrag)
+        {
+            return;
+        }
+
+        ApplySmoothedFingerVisual(forceSnap: false);
     }
 
     private Vector3 ConstrainFingerDragWorld(BoardManager board, IGridSpace space, Vector3 desiredBoardWorld)
@@ -711,25 +731,10 @@ public class BlockMover : MonoBehaviour
         float axisLenSq = (axisVec.x * axisVec.x) + (axisVec.z * axisVec.z);
         if (axisLenSq < 0.000001f)
         {
-            // No legal forward cell — allow fractional preview toward the blocked neighbor
-            // up to half a pitch, still without leaving the origin cell occupancy.
-            Vector3 stepWorld = SeatedCellWorld(space, originCell + axis) - originWorld;
-            stepWorld.y = 0f;
-            float stepLen = Mathf.Sqrt((stepWorld.x * stepWorld.x) + (stepWorld.z * stepWorld.z));
-            if (stepLen < 0.0001f)
-            {
-                return originWorld;
-            }
-
-            Vector3 stepDir = stepWorld / stepLen;
-            Vector3 toFinger = desiredBoardWorld - originWorld;
-            toFinger.y = 0f;
-            float along = Vector3.Dot(toFinger, stepDir);
-            // Tiny preview only; occupancy stays on origin until Clamp allows a hop.
-            along = Mathf.Clamp(along, 0f, stepLen * 0.45f);
-            Vector3 preview = originWorld + (stepDir * along);
-            preview.y = originWorld.y;
-            return preview;
+            // Next cell is blocked (target, obstacle, board edge, etc.).
+            // Stay seated on the legal cell — do not preview into the barrier.
+            // Matching still consumes into the target on release via EndDrag.
+            return originWorld;
         }
 
         float axisLen = Mathf.Sqrt(axisLenSq);
@@ -769,35 +774,91 @@ public class BlockMover : MonoBehaviour
         return world;
     }
 
-    private void ApplyFingerVisualWorld(Vector3 seatedWorld)
+    /// <summary>
+    /// Smooth toward the already-constrained target. Never eases past the target
+    /// (no overshoot into blocked cells). Gameplay cells are untouched.
+    /// </summary>
+    private void ApplySmoothedFingerVisual(bool forceSnap)
     {
-        if (block == null || block.WorldView == null)
+        if (block == null || block.WorldView == null || !fingerVisualHasTarget)
         {
             return;
         }
 
-        if (!PieceMotionMath.IsFinite(seatedWorld))
+        if (!PieceMotionMath.IsFinite(fingerVisualTarget))
         {
             return;
         }
 
-        fingerVisualActive = true;
         if (TryGetWorldMotion(block, out WorldPieceMotion worldMotion))
         {
             worldMotion.InterruptTweensForFingerDrag();
         }
 
-        block.WorldView.transform.position = seatedWorld;
+        Transform view = block.WorldView.transform;
+        Vector3 current = view.position;
+        if (forceSnap || !PieceMotionMath.IsFinite(current))
+        {
+            fingerVisualVelocity = Vector3.zero;
+            view.position = fingerVisualTarget;
+            return;
+        }
+
+        // Low-latency attach feel (~30ms). Constraint already applied to target.
+        const float smoothTime = 0.03f;
+        Vector3 next = Vector3.SmoothDamp(
+            current,
+            fingerVisualTarget,
+            ref fingerVisualVelocity,
+            smoothTime,
+            Mathf.Infinity,
+            Time.deltaTime);
+
+        // Hard clamp: never travel past the constrained target on XZ.
+        Vector3 toTarget = fingerVisualTarget - current;
+        toTarget.y = 0f;
+        Vector3 moved = next - current;
+        moved.y = 0f;
+        float targetLenSq = toTarget.sqrMagnitude;
+        if (targetLenSq > 0.0000001f)
+        {
+            float along = Vector3.Dot(moved, toTarget);
+            if (along > targetLenSq)
+            {
+                next.x = fingerVisualTarget.x;
+                next.z = fingerVisualTarget.z;
+                fingerVisualVelocity.x = 0f;
+                fingerVisualVelocity.z = 0f;
+            }
+        }
+        else
+        {
+            next.x = fingerVisualTarget.x;
+            next.z = fingerVisualTarget.z;
+            fingerVisualVelocity.x = 0f;
+            fingerVisualVelocity.z = 0f;
+        }
+
+        // Keep seated Y from the constrained target (includes carry lift).
+        next.y = fingerVisualTarget.y;
+        if (PieceMotionMath.IsFinite(next))
+        {
+            view.position = next;
+        }
+
+        fingerVisualActive = true;
     }
 
     private void FinishFingerVisualAndSnapToLogical()
     {
-        if (!fingerVisualActive)
+        if (!fingerVisualActive && !fingerVisualHasTarget)
         {
             return;
         }
 
         fingerVisualActive = false;
+        fingerVisualHasTarget = false;
+        fingerVisualVelocity = Vector3.zero;
         BoardManager board = cachedBoard != null ? cachedBoard : GetBoard();
         IGridSpace space = MotionGridSpace(board);
         if (block == null || block.WorldView == null || space == null)
@@ -968,6 +1029,8 @@ public class BlockMover : MonoBehaviour
         finally
         {
             fingerVisualActive = false;
+            fingerVisualHasTarget = false;
+            fingerVisualVelocity = Vector3.zero;
             fingerDrivenDrag = false;
             FinalizeDragUndoSession(board);
             dragActive = false;
@@ -1296,34 +1359,45 @@ public class BlockMover : MonoBehaviour
             yield break;
         }
 
-        if (BlockHasAnyNestedInner(subject) && nestCellIndices.Count >= 2)
+        // Phase 73: when 2+ cells share one rigid translation into matching targets,
+        // travel them together (nested and non-nested). Falls back to one-cell travel
+        // only when CanTranslateMatchingSubset rejects the group.
+        if (nestCellIndices.Count >= 2)
         {
-            if (TryPlayNestedSubsetMatch(board, subject, occupancy, out AlignedMovementGroup nestedGroup))
+            if (TryPlayNestedSubsetMatch(board, subject, occupancy, out AlignedMovementGroup rigidGroup))
             {
-                yield return PlayMatchingSubsetAlignedMatch(board, subject, nestedGroup);
+                yield return PlayMatchingSubsetAlignedMatch(board, subject, rigidGroup);
                 yield break;
             }
 
-            PreferNestedCellForSingleMatch(subject);
+            if (BlockHasAnyNestedInner(subject))
+            {
+                PreferNestedCellForSingleMatch(subject);
+            }
+            else
+            {
+                KeepOnlyNearestMatch(subject, occupancy, focus);
+            }
+        }
+
+        if (nestCellIndices.Count == 0)
+        {
+            yield break;
         }
 
         int cellIndex = nestCellIndices[0];
         Vector2Int cellWorld = occupancy + subject.GetLocalCell(cellIndex);
         Target focusedTarget = nestTargets.Count > 0 ? nestTargets[0] : null;
+        targetWorld = nestTargetWorlds.Count > 0 ? nestTargetWorlds[0] : targetWorld;
         // Outer-first matching: nest entry always travels the active outer shell.
         // Nested children are promoted after consume and are not travelers here.
         bool travelInnerLayer = false;
         subject.CancelDragSelectionImmediate();
         PieceGameplayVisuals.ClearConnectors(rect);
 
-        // Multi-cell final match: NEVER TryMoveBlock the whole chain.
-        // Only the focused cell traveler moves toward targetWorld; siblings stay put.
+        // Single-cell fallback: traveler-only; siblings stay at source occupancy.
         // (1×1 magnet still uses TryMoveBlock in EnterMatchingTargetBody.)
-        // Debug.Log(
-        //     $"[CHAIN MATCH] focused cell = {cellWorld}\n" +
-        //     $"[CHAIN MATCH] target = {targetWorld}\n" +
-        //     $"[CHAIN MATCH] chain cell count = {subject.CellCount}\n" +
-        //     "[CHAIN MATCH] WHOLE CHAIN MOVE = FALSE");
+        // Multi-cell rigid travel uses PlayMatchingSubsetAlignedMatch above (Phase 73).
         LogChainMatchCells("BEFORE", subject);
 
         pendingCellTraveler = null;
@@ -1417,12 +1491,12 @@ public class BlockMover : MonoBehaviour
 
         RememberLastMatch(cellWorld, targetWorld);
 
-        // Phase 64: outer consumption promotes the nested child to a normal-sized piece.
-        // The player must drag it manually — do not auto-enter another nest.
+        // Phase 64: outer consumption promotes nested children to normal-sized pieces.
+        // Always reveal every pending cell — a single-index reveal leaves sibling chain
+        // cells stuck on pre-promote visuals (outer + nested inner ghost).
         if (consumedInnerLayer && subject != null && !subject.IsSettled)
         {
-            int revealIndex = FindCellIndexAtWorld(subject, cellWorld);
-            yield return PlayNestedExtractionReveal(subject, revealIndex);
+            yield return PlayAllPendingNestedExtractionReveals(subject);
             subject.ClearTravelState(cellIndex);
             SeatPromotedNestedViewsAtSource(subject);
             ForceUnlockPieceViews(subject);
@@ -1503,10 +1577,13 @@ public class BlockMover : MonoBehaviour
                 view.transform.position);
 
             // Promote mesh now that outer match VFX is done — full-size standalone at SOURCE.
+            // Clears residual + remeshes traveler to the logical survivor (no consumed-outer ghost).
             Phase68CForensic.LogCell("REVEAL_BEFORE_PROMOTE", subject, cellIndex);
             BoardPresentationController.NotifyNestedLayerPromoted(subject, cellIndex);
             subject.ClearPendingLayerExtraction(cellIndex);
             subject.SetCellVisualVisible(cellIndex, true);
+            // Promote remeshed while held inactive — release now so the reveal tween shows RED.
+            BoardPresentationController.ReleasePromotedExtractionView(view);
             Phase68CForensic.LogCell("REVEAL_AFTER_PROMOTE", subject, cellIndex);
             Phase68CForensic.DumpDuplicates(subject, cellIndex);
 
@@ -1670,16 +1747,12 @@ public class BlockMover : MonoBehaviour
             {
                 KeepOnlyCellAtWorld(subject, occupancy, focus);
             }
-            else if (BlockHasAnyNestedInner(subject))
-            {
-                // Nested outer match: keep every cell that shares the nearest cell's
-                // translation. KeepOnlyNearestMatch would pick the plain orange cell
-                // and leave nested siblings unextracted (diamond worked, orange did not).
-                KeepNestedSameTranslationMatches(subject, occupancy, focus);
-            }
             else
             {
-                KeepOnlyNearestMatch(subject, occupancy, focus);
+                // Phase 73: keep every match that shares the focus-nearest cell's
+                // translation so the chain can travel as one rigid group. Nested and
+                // plain multi-cell chains share this path (was nested-only in 71B).
+                KeepSameTranslationMatches(subject, occupancy, focus);
             }
 
             if (nestCellIndices.Count == 0)
@@ -1699,56 +1772,73 @@ public class BlockMover : MonoBehaviour
             return false;
         }
 
+        // Phase 73: infer ONE axis-aligned translation from focus, then collect every
+        // chain cell that maps to a matching target under that same translation.
+        Vector2Int inferredTranslation = Vector2Int.zero;
+        bool haveTranslation = false;
+
         Vector2Int delta = focus - occupancy;
-        bool cardinalDelta = delta == Vector2Int.up
+        bool unitCardinal = delta == Vector2Int.up
             || delta == Vector2Int.down
             || delta == Vector2Int.left
             || delta == Vector2Int.right;
-
-        if (cardinalDelta)
+        if (unitCardinal)
         {
-            for (int i = 0; i < count; i++)
-            {
-                Vector2Int world = occupancy + subject.GetLocalCell(i);
-                Vector2Int dest = world + delta;
-                Target target = board.GetTargetAt(dest);
-                if (target == null
-                    || !ShapeMatch.AreMatchingLayers(
-                        target.GetRequiredIdentityAtWorld(dest),
-                        subject.GetActiveIdentity(i)))
-                {
-                    continue;
-                }
-
-                nestCellIndices.Add(i);
-                nestTargets.Add(target);
-                nestTargetWorlds.Add(dest);
-            }
+            inferredTranslation = delta;
+            haveTranslation = true;
         }
         else
         {
-            // Auto-match may pass nestTo as a sibling cell's dest, not occupancy+dir.
+            int bestDist = int.MaxValue;
             for (int i = 0; i < count; i++)
             {
                 Vector2Int world = occupancy + subject.GetLocalCell(i);
-                if (!IsFourAdjacent(world, focus))
-                {
-                    continue;
-                }
-
-                Target target = board.GetTargetAt(focus);
-                if (target == null
+                Target focusTarget = board.GetTargetAt(focus);
+                if (focusTarget == null
                     || !ShapeMatch.AreMatchingLayers(
-                        target.GetRequiredIdentityAtWorld(focus),
+                        focusTarget.GetRequiredIdentityAtWorld(focus),
                         subject.GetActiveIdentity(i)))
                 {
                     continue;
                 }
 
-                nestCellIndices.Add(i);
-                nestTargets.Add(target);
-                nestTargetWorlds.Add(focus);
+                Vector2Int candidate = focus - world;
+                if ((candidate.x != 0 && candidate.y != 0) || candidate == Vector2Int.zero)
+                {
+                    continue;
+                }
+
+                int dist = Mathf.Abs(candidate.x) + Mathf.Abs(candidate.y);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    inferredTranslation = candidate;
+                    haveTranslation = true;
+                }
             }
+        }
+
+        if (!haveTranslation)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = occupancy + subject.GetLocalCell(i);
+            Vector2Int dest = world + inferredTranslation;
+            Target target = board.GetTargetAt(dest);
+            if (target == null
+                || !ShapeMatch.AreMatchingLayers(
+                    target.GetRequiredIdentityAtWorld(dest),
+                    subject.GetActiveIdentity(i)))
+            {
+                continue;
+            }
+
+            nestCellIndices.Add(i);
+            nestTargets.Add(target);
+            nestTargetWorlds.Add(dest);
         }
 
         if (nestCellIndices.Count == 0)
@@ -1756,20 +1846,16 @@ public class BlockMover : MonoBehaviour
             return false;
         }
 
-        if (BlockHasAnyNestedInner(subject))
+        KeepSameTranslationMatches(subject, occupancy, focus);
+
+        if (nestCellIndices.Count == 0)
         {
-            KeepNestedSameTranslationMatches(subject, occupancy, focus);
-        }
-        else
-        {
-            KeepOnlyNearestMatch(subject, occupancy, focus);
+            return false;
         }
 
-        int cellIndex = nestCellIndices[0];
-        Vector2Int source = occupancy + subject.GetLocalCell(cellIndex);
         targetWorld = nestTargetWorlds.Count > 0
             ? nestTargetWorlds[0]
-            : (cardinalDelta ? source + delta : focus);
+            : occupancy + subject.GetLocalCell(nestCellIndices[0]) + inferredTranslation;
         return true;
     }
 
@@ -2311,7 +2397,7 @@ public class BlockMover : MonoBehaviour
         // Phase 64: reveal promoted inner at full size; player must drag manually.
         if (consumedInnerLayer)
         {
-            yield return PlayNestedExtractionReveal(block, 0);
+            yield return PlayAllPendingNestedExtractionReveals(block);
         }
 
         if (IsAutoMatchRunning)
@@ -2491,7 +2577,7 @@ public class BlockMover : MonoBehaviour
             && block != null
             && !block.IsSettled)
         {
-            yield return PlayNestedExtractionReveal(block, 0);
+            yield return PlayAllPendingNestedExtractionReveals(block);
         }
 
         if (!IsAutoMatchRunning)
@@ -2579,7 +2665,7 @@ public class BlockMover : MonoBehaviour
 
         if (!fullyConsumed && nestedPromoted && subject != null && !subject.IsSettled)
         {
-            yield return PlayNestedExtractionReveal(subject, 0);
+            yield return PlayAllPendingNestedExtractionReveals(subject);
         }
     }
 
@@ -3455,6 +3541,9 @@ public class BlockMover : MonoBehaviour
             }
 
             SeatPromotedNestedViewsAtSource(revealSubject);
+            // Safety net: any cell that still shows a pre-promote outer+residual pair must
+            // reconcile to logical survivors only (presentation; gameplay already advanced).
+            BoardPresentationController.ReconcileNestedSurvivorVisuals(revealSubject);
         }
     }
 
@@ -3497,6 +3586,12 @@ public class BlockMover : MonoBehaviour
 
             view.SnapWorldPresentationToGrid(space, sourceCell);
             view.SetPresentationAnticipation(0f, 1f, 0f);
+
+            // Force survivor remesh after seating — catches any green mesh that survived promote.
+            if (!subject.IsPendingLayerExtraction(i))
+            {
+                BoardPresentationController.NotifyNestedLayerPromoted(subject, i);
+            }
 
             // Extraction seating owns the pose — drop leftover locks so drag works.
             int guard = 8;
@@ -3742,7 +3837,7 @@ public class BlockMover : MonoBehaviour
 
         if (!fullyConsumed && consumedInnerLayer && subject != null && !subject.IsSettled)
         {
-            yield return PlayNestedExtractionReveal(subject, cellIndex);
+            yield return PlayAllPendingNestedExtractionReveals(subject);
         }
     }
 
@@ -3765,10 +3860,11 @@ public class BlockMover : MonoBehaviour
     }
 
     /// <summary>
-    /// Phase 71B: for nested blocks, keep every collected match that shares the nearest
-    /// cell's translation. White-triangle drag still uses KeepOnlyNearestMatch.
+    /// Phase 73 (from 71B nested helper): keep every collected match that shares the
+    /// focus-nearest cell's translation. Used for nested and plain multi-cell chains
+    /// so rigid group travel can consume the full same-geometry subset.
     /// </summary>
-    private void KeepNestedSameTranslationMatches(
+    private void KeepSameTranslationMatches(
         Block subject,
         Vector2Int occupancyAnchor,
         Vector2Int focusWorld)
@@ -3822,6 +3918,15 @@ public class BlockMover : MonoBehaviour
         nestCellIndices.AddRange(keepIndices);
         nestTargets.AddRange(keepTargets);
         nestTargetWorlds.AddRange(keepWorlds);
+    }
+
+    /// <summary>Compatibility alias for Phase 71B call sites / diagnostics.</summary>
+    private void KeepNestedSameTranslationMatches(
+        Block subject,
+        Vector2Int occupancyAnchor,
+        Vector2Int focusWorld)
+    {
+        KeepSameTranslationMatches(subject, occupancyAnchor, focusWorld);
     }
 
     /// <summary>
@@ -3878,6 +3983,30 @@ public class BlockMover : MonoBehaviour
         }
 
         Vector2Int translation = actions[0].Translation;
+        if (translation != Vector2Int.zero)
+        {
+            // Phase 73: rigid hop must be axis-aligned and legal for fixed-direction blocks.
+            Vector2Int axis;
+            if (translation.x != 0 && translation.y == 0)
+            {
+                axis = translation.x > 0 ? Vector2Int.right : Vector2Int.left;
+            }
+            else if (translation.y != 0 && translation.x == 0)
+            {
+                axis = translation.y > 0 ? Vector2Int.up : Vector2Int.down;
+            }
+            else
+            {
+                return false;
+            }
+
+            BlockMover subjectMover = subject.GetComponent<BlockMover>();
+            if (subjectMover != null && !subjectMover.IsDirectionAllowed(axis))
+            {
+                return false;
+            }
+        }
+
         if (!board.CanTranslateMatchingSubset(subject, cellIndices, translation))
         {
             return false;
@@ -5223,10 +5352,20 @@ public class BlockMover : MonoBehaviour
         {
             // Outer consumed, inner promoted: keep cell, occupancy, and chain topology.
             // Defer World3D mesh promote until PlayNestedExtractionReveal (avoids mid-VFX pop).
+            // Hide travelers while residuals cover SOURCE — otherwise the consumed outer
+            // stays rendered under/around the survivor for the whole VFX window (and forever
+            // if a sibling cell never gets a reveal).
             subject.RefreshActiveLayers(syncWorldPresentation: false);
             for (int i = 0; i < promotedIndices.Count; i++)
             {
                 subject.BeginPendingLayerExtraction(promotedIndices[i]);
+            }
+
+            pendingExtractionRevealBlocks.Clear();
+            if (subject.HasPendingLayerExtraction)
+            {
+                pendingExtractionRevealBlocks.Add(subject);
+                BoardPresentationController.HoldPendingExtractionViewsAtSource(subject);
             }
 
             Phase68CForensic.Log(

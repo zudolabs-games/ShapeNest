@@ -1,0 +1,89 @@
+PHASE 72G — GAME VIEW vs BoardCamera3D.Render() COMPARE
+=======================================================
+Frame captured while paused after green peel; survivors at (1,7)/(1,8).
+
+1) SAME-FRAME COLOR COMPARE
+---------------------------
+Game view capture:     Captures/72g-gameview-sameframe.png
+BoardCamera3D.Render:  Captures/72g-boardcam-sameframe.png
+Scene view capture:    Captures/72g-sceneview-sameframe.png
+
+Result in THIS session (post-peel, paused):
+- Game view diamonds at (1,7)/(1,8): RED / salmon-red
+- BoardCamera3D.Render diamonds:     RED
+- Scene view diamonds:               RED
+- No green MeshRenderer / no green UI Image / greenishHits=0
+
+Conclusion for this frame:
+Game view and BoardCamera3D.Render() AGREE. Both show red.
+We did NOT reproduce a Game=green / Camera=red split in this paused state.
+(Your earlier editor screenshot at 16:55 may be a different moment — e.g. mid-presentation.)
+
+2) SURVIVOR MESH RUNTIME (same frame)
+-------------------------------------
+rid A=-1002502 cell=(1,7)
+  sharedMaterial = Block3D_Diamond_Red
+  shared._BaseColor = RGBA(0.950, 0.220, 0.280, 1.000)
+  material (instance)._BaseColor = same red
+  material._Color = RGBA(1,1,1,1)  (unused by URP Lit base)
+  MPB = empty
+  enabled = True
+
+rid B=-1002540 cell=(1,8)
+  identical red material state
+
+3) PIPELINE / CAMERA / EFFECTS
+------------------------------
+Cameras:
+- Main Camera: GO inactive (activeSelf=False), depth=-1, type=Base, post=False
+- BoardCamera3D: active, depth=0, type=Base, post=False, HDR=True
+  cameraStack count=1 → contains Main Camera (INACTIVE)
+  NOTE: stacked Main Camera UACD renderType is also Base (misconfigured;
+  overlay cams should be Overlay). Inactive so should not draw.
+
+Volumes: 0
+Post-processing on BoardCamera3D: False
+SpriteRenderers: 0
+GameplayCanvas: ScreenSpaceOverlay present (HUD only)
+InnerLayer UI Images: all Image.enabled=False; visibleDiamondUI=0
+greenish UI images: 0
+
+4) GAME VIEW DISABLE TEST
+-------------------------
+Prior BoardCamera.Render() disable test (Phase 72F):
+- Disable A → that cell's solid diamond disappears
+- Disable B → that cell's solid diamond disappears
+- Both off → both solid diamonds gone
+
+Paused Game-view ScreenCapture.CaptureScreenshot batch produced 4 identical
+files (async capture race) — not usable.
+
+manage_camera Game view while paused often shows a stale composite.
+
+Reliable Game-view disable observation still depends on prior camera-path
+proof that those MeshRenderers own the pixels.
+
+5) WHAT THIS RULES OUT / IN
+---------------------------
+Ruled out for the paused post-peel frame:
+- Separate green MeshRenderer
+- Green MaterialPropertyBlock
+- Green UI InnerLayer overlay
+- Active post-processing volume / bloom stack
+- Active second camera drawing green (Main Camera inactive)
+
+Still open for the moment YOU saw Game=green while Scene=red:
+- Transient mid-match presentation / traveler / dissolve tint
+- Brief window before remesh to Red
+- Editor Game view timing vs Scene view
+- Need a dump the INSTANT Game view shows green (pause then 72F + this compare)
+
+6) NEXT IF GREEN RETURNS IN GAME VIEW
+-------------------------------------
+Pause IMMEDIATELY when Game view looks green, then:
+Shape Nest → Phase 72F Dump Survivor Cell Renderers NOW
+AND capture Game view + BoardCamera.Render in that same paused frame.
+If Game=green and BoardCamera=red in that exact frame, inspect Game-view-only
+path (Screen Space Overlay + inactive stack edge cases) next.
+If both green, materials/shader are lying or mid-remesh.
+If both red, display/perception or a different earlier moment.

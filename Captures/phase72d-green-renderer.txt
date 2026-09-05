@@ -1,0 +1,68 @@
+PHASE 72F RUNTIME — SURVIVOR CELL LIVE DUMP
+frame=1814 t=24.799
+--- LOGICAL DIAMONDS ---
+BLOCK id=-1049104 grid=(1, 7) pending=False matchPres=False
+  c0 cell=(1, 7) outer=Diamond:Red color=Red inner=False
+  view=Block3D_Diamond_-1049104 id=-1049836 hier=True nested=False cfgMat=Block3D_Diamond_Red lift=0 scale=(0.344,0.216,0.344)
+    TR Block3D_Diamond_-1049104 id=-1049834 self=True hier=True lscale=(0.344,0.216,0.344) wscale=(0.344,0.216,0.344) pos=(-0.832,0.327,4.210)
+    TR Mesh id=-1049840 self=True hier=True lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) pos=(-0.832,0.327,4.169)
+    TR ContactShadow3D id=-1049852 self=True hier=True lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) pos=(-0.832,0.195,4.169)
+VIEW go=Mesh goId=-1049838 rid=-1049844 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 7) pos=(-0.832,0.327,4.169) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+VIEW go=ContactShadow3D goId=-1049850 rid=-1049856 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 7) pos=(-0.832,0.195,4.169) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+  c1 cell=(1, 8) outer=Diamond:Red color=Red inner=False
+  view=Block3D_Diamond_-1049104_c1 id=-1049874 hier=True nested=False cfgMat=Block3D_Diamond_Red lift=0 scale=(0.344,0.216,0.344)
+    TR Block3D_Diamond_-1049104_c1 id=-1049872 self=True hier=True lscale=(0.344,0.216,0.344) wscale=(0.344,0.216,0.344) pos=(-0.832,0.327,4.764)
+    TR Mesh id=-1049878 self=True hier=True lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) pos=(-0.832,0.327,4.723)
+    TR ContactShadow3D id=-1049886 self=True hier=True lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) pos=(-0.832,0.195,4.723)
+VIEW go=Mesh goId=-1049876 rid=-1049882 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 8) pos=(-0.832,0.327,4.723) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+VIEW go=ContactShadow3D goId=-1049884 rid=-1049890 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 8) pos=(-0.832,0.195,4.723) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+--- ALL RENDERERS AT FOCUS CELLS ---
+FOCUS go=Highlight_1 goId=-1051532 rid=-1051538 en=False self=True hier=True mesh=BoardHighlightTile cell=(1, 8) pos=(-0.832,0.262,4.764) lscale=(0.972,0.972,0.972) wscale=(0.972,0.972,0.972) path=Board3D/CellDestinationHighlight3D/Highlight_1
+  shared[0]=BoardCellDestinationHighlight3D_Fill color=RGBA(0.604, 0.851, 1.000, 0.300)
+  shared[1]=BoardCellDestinationHighlight3D_Rim color=RGBA(0.750, 0.910, 1.000, 0.440)
+  mpb=none
+FOCUS go=ContactShadow3D goId=-1049850 rid=-1049856 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 7) pos=(-0.832,0.195,4.169) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+FOCUS go=ChainLink_-1049104_0 goId=-1049902 rid=-1049910 en=True self=True hier=True mesh=Capsule cell=(1, 8) pos=(-0.832,0.293,4.487) lscale=(0.122,0.116,0.190) wscale=(0.122,0.116,0.190) path=Board3D/Pieces3D/ChainLink_-1049104_0
+  shared[0]=ChainLink3D color=RGBA(0.450, 0.400, 0.750, 1.000)
+  mpb=none
+FOCUS go=Mesh goId=-1049838 rid=-1049844 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 7) pos=(-0.832,0.327,4.169) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+FOCUS go=ContactShadow3D goId=-1049884 rid=-1049890 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 8) pos=(-0.832,0.195,4.723) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+FOCUS go=Mesh goId=-1049876 rid=-1049882 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 8) pos=(-0.832,0.327,4.723) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+FOCUS go=Highlight_0 goId=-1051518 rid=-1051524 en=False self=True hier=True mesh=BoardHighlightTile cell=(1, 7) pos=(-0.832,0.262,4.210) lscale=(0.972,0.972,0.972) wscale=(0.972,0.972,0.972) path=Board3D/CellDestinationHighlight3D/Highlight_0
+  shared[0]=BoardCellDestinationHighlight3D_Fill color=RGBA(0.604, 0.851, 1.000, 0.300)
+  shared[1]=BoardCellDestinationHighlight3D_Rim color=RGBA(0.750, 0.910, 1.000, 0.440)
+  mpb=none
+focusRendererCount=7
+--- PiecesRoot diamond/residual/travel/nested ---
+CHILD Block3D_Diamond_-1049104 id=-1049834 self=True hier=True cell=(1, 7) pos=(-0.832,0.327,4.210) lscale=(0.344,0.216,0.344)
+ROOTCHILD go=Mesh goId=-1049838 rid=-1049844 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 7) pos=(-0.832,0.327,4.169) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+ROOTCHILD go=ContactShadow3D goId=-1049850 rid=-1049856 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 7) pos=(-0.832,0.195,4.169) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+CHILD Block3D_Diamond_-1049104_c1 id=-1049872 self=True hier=True cell=(1, 8) pos=(-0.832,0.327,4.764) lscale=(0.344,0.216,0.344)
+ROOTCHILD go=Mesh goId=-1049876 rid=-1049882 en=True self=True hier=True mesh=ShapeSolid_Diamond cell=(1, 8) pos=(-0.832,0.327,4.723) lscale=(1.000,1.000,1.000) wscale=(0.344,0.216,0.344) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/Mesh
+  shared[0]=Block3D_Diamond_Red color=RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb=none
+ROOTCHILD go=ContactShadow3D goId=-1049884 rid=-1049890 en=True self=True hier=True mesh=SoftContactShadowDisc_v2 cell=(1, 8) pos=(-0.832,0.195,4.723) lscale=(0.480,0.010,0.480) wscale=(0.165,0.002,0.165) path=Board3D/Pieces3D/Block3D_Diamond_-1049104_c1/ContactShadow3D
+  shared[0]=PieceContactShadow3D_Runtime color=RGBA(0.032, 0.018, 0.085, 0.340)
+  mpb=none
+--- GREENISH LIVE COLOR ---
+greenishHits=0

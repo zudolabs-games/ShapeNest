@@ -1,0 +1,64 @@
+PHASE 72H — INTERPRETATION OF USER 72F DUMP + EDITOR SCREENSHOT
+================================================================
+Source dump: Captures/phase72d-green-renderer.txt lines 1–69
+Source shot: Captures/72h-user-game-scene-split.png (user 17:12 editor screenshot)
+Console: 72F wrote dump at 17:11:45 while green still visible in Game view
+
+DUMP FACTS (post-peel, frame=1350, matchPres=False, pending=False)
+-------------------------------------------------------------------
+(1,7) Mesh rid=-1021546:
+  logical = Diamond:Red, inner=False, nested=False
+  sharedMaterial = Block3D_Diamond_Red
+  _BaseColor = RGBA(0.950, 0.220, 0.280, 1.000)
+  mpb = none
+  hierarchy = Mesh + ContactShadow3D only (no NestedInner)
+
+(1,8) Mesh rid=-1021584: identical red state
+
+Focus cell renderers: only red Mesh, contact shadows, disabled highlights, chain link
+greenishHits = 0
+
+SCREENSHOT FACTS (same session, ~1s later)
+------------------------------------------
+Scene view (zoomed on survivors): BOTH diamonds SOLID RED
+Game view (player-facing): at least one diamond in that column appears LIME GREEN
+  (top survivor green; lower survivor red — split within Game itself)
+
+VERDICT
+-------
+This is a VALID post-peel dump taken while Game view still showed green.
+The MeshRenderer that owns those cells is objectively RED in CPU-side state.
+Scene view agrees with the dump (red).
+Game view disagrees (green pixels present in the same OS screenshot as Scene red).
+
+Therefore the green appearance is NOT explained by:
+  - wrong sharedMaterial / instance material color
+  - MaterialPropertyBlock tint
+  - NestedInner3D still present
+  - a second greenish MeshRenderer at the focus cells (dump lists none)
+
+It IS explained by one of:
+  A) Game-view framebuffer / compositor showing different pixels than Scene
+     (stale Game buffer, camera stack, UI overlay, or display path)
+  B) BoardCamera3D.Render() path producing green while Scene lighting path is red
+     — ONLY confirmable by BoardCamera.Render() capture in THIS green Game frame
+  C) An extra green draw that is NOT at the focus-cell Mesh list but still
+     composites in Game (wrong cell, traveler sibling, UI) — full-scene scan
+     needed in the green Game frame
+
+NOTE: Play mode ended before MCP could capture BoardCamera + Game RTT for this frame.
+Prior Phase 72G paused capture (different moment) showed Game≈BoardCamera≈RED.
+This user frame is the first dump+screenshot pair proving Game≠Scene while materials=red.
+
+NEXT REQUIRED CAPTURE (no gameplay code changes)
+------------------------------------------------
+While Game still shows green:
+1. Pause
+2. Keep Play Mode running
+3. Run GameView RTT read + BoardCamera3D.Render() same frame
+4. Disable rid for (1,7) → does Game green disappear?
+5. Disable rid for (1,8) → does the other disappear?
+
+If BoardCamera=RED and Game=GREEN → Game-view-only path (compositor/stack/UI/stale).
+If BoardCamera=GREEN and materials=RED → shader/lighting/camera render path.
+If disabling Mesh removes Game green → those Mesh pixels are green in Game despite red material.

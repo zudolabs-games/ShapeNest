@@ -32,6 +32,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private Vector3 restScale = Vector3.one;
     private bool hasRestScale;
     private ShapeType configuredShape = ShapeType.Square;
+    private Material configuredSolidMaterial;
     private bool configuredAsNest;
     private ShapeType configuredInnerShape = ShapeType.Square;
     private bool hasNestedInner;
@@ -70,6 +71,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     public float PieceHeight => pieceHeight;
     public float SurfaceLift => surfaceLift;
     public ShapeType ConfiguredShape => configuredShape;
+    public Material ConfiguredSolidMaterial => configuredSolidMaterial;
     public bool ConfiguredAsNest => configuredAsNest;
     public bool HasNestedInner => hasNestedInner && nestedInnerRoot != null && nestedInnerRoot.gameObject.activeSelf;
     public ShapeType ConfiguredInnerShape => configuredInnerShape;
@@ -1031,24 +1033,38 @@ public class PieceView3D : MonoBehaviour, IPieceView
             return;
         }
 
-        if (designerVisualRenderer != null)
+        if (designerVisualInstance == null)
         {
+            return;
+        }
+
+        MeshRenderer[] renderers = designerVisualInstance.GetComponentsInChildren<MeshRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
             if (asNest)
             {
                 if (nestMaterials != null && nestMaterials.Length > 0)
                 {
-                    designerVisualRenderer.sharedMaterials = nestMaterials;
+                    renderer.sharedMaterials = nestMaterials;
                 }
                 else if (material != null)
                 {
-                    designerVisualRenderer.sharedMaterials = new[] { material, material };
+                    renderer.sharedMaterials = new[] { material, material };
                 }
             }
             else if (material != null)
             {
-                designerVisualRenderer.sharedMaterial = material;
+                renderer.sharedMaterial = material;
             }
         }
+
+        designerVisualRenderer = designerVisualInstance.GetComponentInChildren<MeshRenderer>(true);
     }
 
     public void SetPieceHeight(float height)
@@ -1060,11 +1076,19 @@ public class PieceView3D : MonoBehaviour, IPieceView
     /// Applies shape mesh (solid block or hollow nest) and material.
     /// Footprint scale is XY on XZ plane; Y scale maps extruded unit height to <see cref="pieceHeight"/>.
     /// </summary>
-    public void ConfigureVisual(ShapeType shape, Material material, bool asNest, float footprint, float height, Material[] nestMaterials = null)
+    public void ConfigureVisual(
+        ShapeType shape,
+        Material material,
+        bool asNest,
+        float footprint,
+        float height,
+        Material[] nestMaterials = null,
+        bool activate = true)
     {
         EnsureMeshComponents();
         configuredShape = shape;
         configuredAsNest = asNest;
+        configuredSolidMaterial = material;
         pieceHeight = Mathf.Max(0.01f, height);
 
         if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
@@ -1100,7 +1124,26 @@ public class PieceView3D : MonoBehaviour, IPieceView
         ApplyVisualCenterOffset(footprint);
         ClearCarryPresentation(applyToTransform: false);
         RefreshPickCollider();
-        EnsurePresentationVisible();
+        if (activate)
+        {
+            EnsurePresentationVisible();
+        }
+    }
+
+    /// <summary>
+    /// Presentation-only: drop any cached designer instance then build a solid block mesh.
+    /// Used after nested outer peel so Diamond:Green cannot reuse the prior designer materials.
+    /// </summary>
+    public void ForceRebuildSolidVisual(
+        ShapeType shape,
+        Material material,
+        float footprint,
+        float height,
+        bool activate = true)
+    {
+        ClearDesignerVisual();
+        designerVisualPrefab = null;
+        ConfigureVisual(shape, material, asNest: false, footprint, height, nestMaterials: null, activate: activate);
     }
 
     /// <summary>
@@ -1174,14 +1217,26 @@ public class PieceView3D : MonoBehaviour, IPieceView
         // Phase 69B: show=false must not allocate NestedInner3D. After detach, the anchored
         // residual owns the nested presentation — recreating under the traveler caused the
         // duplicate-inner / target-promotion bug.
+        // Phase 72D: destroy NestedInner3D entirely on hide. Leaving it inactive under the
+        // traveler let EnsurePresentationVisible / residual races flash green-over-red.
         if (!show)
         {
             hasNestedInner = false;
             configuredInnerShape = default;
+            ClearDesignerInner();
             if (nestedInnerRoot != null)
             {
-                nestedInnerRoot.gameObject.SetActive(false);
-                ClearDesignerInner();
+                DestroyVisualObject(nestedInnerRoot.gameObject);
+                nestedInnerRoot = null;
+                nestedInnerFilter = null;
+                nestedInnerRenderer = null;
+            }
+
+            // Stray child left by a failed detach / rebind — remove so it cannot ghost.
+            Transform stray = transform.Find("NestedInner3D");
+            if (stray != null)
+            {
+                DestroyVisualObject(stray.gameObject);
             }
 
             return;
@@ -1372,7 +1427,8 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
 
         pickCollider.center = center;
-        pickCollider.size = Vector3.one;
+        // Slightly larger than the unit mesh so edge / near-edge taps register.
+        pickCollider.size = new Vector3(1.22f, 1.1f, 1.22f);
     }
 
     private void EnsureMeshComponents()

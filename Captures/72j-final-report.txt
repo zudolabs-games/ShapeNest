@@ -1,0 +1,127 @@
+PHASE 72J — FINAL REPORT: Game view render sources
+==================================================
+
+1) Which Camera(s) render the Game view?
+---------------------------------------
+Only two cameras exist:
+
+- Main Camera
+  goActive=False (inactive), enabled=True, depth=-1, type=Base,
+  target=Screen/GameView, stack=[]
+  → does NOT draw while inactive
+
+- BoardCamera3D
+  goActive=True, enabled=True, depth=0, type=Base, post=False,
+  target=Screen/GameView, mask=-1
+  cameraStack=[Main Camera (inactive)]
+  → the only active world camera contributing to Game view
+
+BoardCamera3D.Render() of survivors = RED (correct live 3D).
+
+2) Which Canvas/UI objects render the board?
+--------------------------------------------
+GameplayCanvas (ScreenSpaceOverlay, enabled=True, sort=10)
+  path: UIController/GameplayCanvas/Parent/Gameplay Area/Board
+  Board root: activeSelf=True, activeInHierarchy=True
+
+Under that Board at capture time:
+  - 37+ enabled Images (targets, chain links, InnerLayer/InnerWell on some blocks)
+  - BlockDiamond Images: present but mostly Image.enabled=False
+  - TargetDiamond: at least one ShapeCell enabled (white color, nest sprite)
+  - greenishEnabled Image.color count = 0 (no Image.color lime tint)
+
+Other canvases (MainMenu/Settings/GameOver/LevelComplete): Canvas.enabled=False
+  (objects active but canvas component off)
+
+SpriteRenderers: 0
+
+3) Is the legacy 2D board active?
+---------------------------------
+YES. Despite BoardPresentationMode.World3D:
+
+- Mode property = World3D, IsWorld3DActive = True
+- legacyBoardCamera = null
+- SetUiBoardVisualsActive(false) only toggles uiBoardVisualRoots /
+  BoardBackground / RuntimeGrid / gameplay BG Image
+- It does NOT deactivate UIController/.../Gameplay Area/Board
+- Block/Target clones under that Board remain in hierarchy with many
+  Images still enabled (targets especially; some block InnerLayer)
+
+So: World3D mode is “on”, but the legacy UI Board GameObject is still live
+as a Screen Space Overlay layer on top of the Game view.
+
+4) Are Board3D and legacy UI both rendering?
+--------------------------------------------
+YES, simultaneously into the Editor Game view composite:
+
+- Board3D → BoardCamera3D (world) → RED survivors in Camera.Render()
+- GameplayCanvas/.../Board → ScreenSpaceOverlay → 2D piece/nest Images
+
+Scene view shows Board3D only (no Overlay) → red 3D diamonds.
+Game view = camera RT + Overlay UI → can show 2D board chrome/pieces
+and/or stale camera pixels + UI.
+
+Critical disable test (Gameplay Area/Board SetActive false, then restore):
+
+- Board UI OFF → Game view capture shows EMPTY grid + HUD only
+  (Captures/72j-gv-boardui-off.png)
+  → piece pixels in the Game composite depended on that UI Board root
+    (given current Game-view update behavior)
+
+- Board UI RESTORED → 2D-looking pieces return
+  (Captures/72j-gv-boardui-restored.png)
+
+- BoardCamera.Render() while Board UI off still had live 3D when Board3D on
+  (earlier tests); empty Game view with Board UI off indicates Game view was
+  not displaying a fresh BoardCamera frame (stale/cleared RT + Overlay only).
+
+5) Exact source of the GREEN diamond?
+-------------------------------------
+Not proven as a single live green MeshRenderer (greenDiamondMats=0).
+
+Two contributing facts:
+
+A) Legacy UI Board is active and owns Game-view piece visibility in the
+   disable test (empty board when UI Board off).
+
+B) Prior 72I: Game view RT had lime diamond OFFSET on red while
+   BoardCamera.Render was pure red; forcing BoardCamera into Game RT
+   cleared lime. That is camera-RT staleness / composite mismatch,
+   not a second 3D mesh.
+
+UI Image.color scan found no lime tint; BlockDiamond UI Images were
+disabled. Green block-shaped pixels in older Game captures are therefore
+either:
+  - stale BoardCamera/Game RT pixels from mid-peel (green 3D outer), and/or
+  - a UI sprite path not caught by Image.color (needs sprite-pixel check
+    on any re-enabled BlockDiamond during the peel frame)
+
+6) Disable-test results summary
+-------------------------------
+A Main Camera off: no change expected (already inactive)
+B BoardCamera3D off: Game RT tests were invalidated by RenderView(clear)
+C GameplayCanvas / Board UI off: Game view pieces disappear (empty grid)
+D Board3D off: BoardCamera sample becomes empty cell (3D gone) — 3D path real
+E All overlay canvases off: HUD/pieces from overlay gone
+
+7) Smallest presentation fix (PROPOSAL ONLY — not applied)
+----------------------------------------------------------
+Do NOT add PieceView/Nest cleanup.
+
+Proposed smallest fix (after you approve):
+1. While World3D active, deactivate the legacy board root
+   `UIController/GameplayCanvas/Parent/Gameplay Area/Board`
+   (or wire it into uiBoardVisualRoots and keep SetUiBoardVisualsActive(false)).
+2. Ensure SuppressGameplayPieceUiImages stays true and no path re-enables
+   Block/Target Images during match presentation.
+3. Separately, investigate why Editor Game view RT stops refreshing after peel
+   (so Overlay-only / stale frames cannot show an old green 3D frame).
+
+Goal: Game view shows only live BoardCamera3D (+ HUD), matching Scene.
+
+Artifacts:
+- Captures/72j-render-source-report.txt
+- Captures/72j-legacy-ui-board-report.txt
+- Captures/72j-gv-boardui-off.png
+- Captures/72j-gv-boardui-restored.png
+- Menu: Shape Nest / Phase 72J Trace Game View Render Sources

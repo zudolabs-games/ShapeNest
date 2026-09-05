@@ -1,0 +1,42 @@
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockSquare path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockDiamond path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockHexagon path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockSquare path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockSquare path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockCircle path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockCircle path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockDiamond path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockCircle path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(0.900, 0.900, 0.900, 1.000) sprite=BlockHexagon path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Block (Clone)/ShapeCell/InnerLayer
+INNER en=False hier=True a=1.00 color=RGBA(1.000, 1.000, 1.000, 1.000) sprite=null path=UIController/GameplayCanvas/Parent/Gameplay Area/Board/Target(Clone)/InnerLayer
+innerCount=40 visibleInner=0 greenVisImages=0
+visibleDiamondUI=0

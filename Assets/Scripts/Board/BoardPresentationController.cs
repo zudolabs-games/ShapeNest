@@ -29,6 +29,12 @@ public class BoardPresentationController : MonoBehaviour
     [Tooltip("Opaque gameplay Screen Space Overlay plate (GameplayCanvas/BG). Image is disabled in World3D so the 3D board can show through; GameObject stays active.")]
     private Image gamePlayOverlayBackground;
 
+    /// <summary>
+    /// Phase 72J: CanvasGroup on Gameplay Area/Board (BoardManager root). Keeps BoardManager
+    /// alive while alpha=0 hides legacy Overlay board/piece Graphics over Board3D.
+    /// </summary>
+    private CanvasGroup legacyUiBoardCanvasGroup;
+
     [SerializeField]
     private BoardCamera3D boardCamera3D;
 
@@ -182,6 +188,19 @@ public class BoardPresentationController : MonoBehaviour
         if (controller != null)
         {
             controller.HoldPendingExtractionViewsAtSourceInternal(block);
+        }
+    }
+
+    /// <summary>
+    /// Presentation-only: after NotifyNestedLayerPromoted remeshed a held traveler to the
+    /// survivor color, release hold so the extraction reveal tween can show it.
+    /// </summary>
+    public static void ReleasePromotedExtractionView(PieceView3D view)
+    {
+        BoardPresentationController controller = FindController();
+        if (controller != null)
+        {
+            controller.ReleaseExtractionHold(view);
         }
     }
 
@@ -483,6 +502,7 @@ public class BoardPresentationController : MonoBehaviour
 
         FollowMultiCellWorldViews(blocks, targets);
         PinAnchoredNestedResidualsToSource();
+        ReconcilePeeledSurvivorVisuals(blocks);
         SyncDragDestinationHighlight(blocks);
 
         CleanupFinishedObstacleViews();
@@ -492,6 +512,151 @@ public class BoardPresentationController : MonoBehaviour
 
         // Layout systems may re-enable UI board chrome — keep it hidden.
         SetUiBoardVisualsActive(false);
+    }
+
+    /// <summary>
+    /// Presentation-only safety net: after nested outer peel, any leftover green mesh /
+    /// NestedInner3D / residual under a logical survivor must be remeshed or destroyed.
+    /// Does not change gameplay layers.
+    /// </summary>
+    private void ReconcilePeeledSurvivorVisuals(Block[] blocks)
+    {
+        if (blocks == null || boardPresenter3D == null)
+        {
+            return;
+        }
+
+        float cellSize = boardPresenter3D.CellWorldSize;
+        for (int b = 0; b < blocks.Length; b++)
+        {
+            Block block = blocks[b];
+            if (block == null || block.IsSettled || block.IsMatchPresentationActive)
+            {
+                continue;
+            }
+
+            if (block.HasPendingLayerExtraction)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < block.CellCount; i++)
+            {
+                if (block.HasInnerLayerAt(i))
+                {
+                    continue;
+                }
+
+                ClearAnchoredNestedResidualInternal(block, i);
+
+                PieceView3D view = block.GetWorldViewForCellIndex(i);
+                if (view == null)
+                {
+                    continue;
+                }
+
+                // No logical inner — never keep a NestedInner3D child (red under green ghost).
+                view.ConfigureNestedInner(false, ShapeType.Square, null, NestedInnerRelativeScale(), asNest: false);
+
+                ShapeType outer = block.GetOuterShape(i);
+                ShapeColor outerColor = block.GetOuterColor(i);
+                Material expected = ShapeVisuals3D.BlockMaterial(outer, outerColor, theme);
+                bool staleGreen = outerColor != ShapeColor.Green && ViewHasGreenRenderer(view);
+                bool matMismatch = view.ConfiguredSolidMaterial != expected
+                    || (view.OuterMeshRenderer != null
+                        && view.OuterMeshRenderer.sharedMaterial != null
+                        && view.OuterMeshRenderer.sharedMaterial != expected);
+
+                if (staleGreen || matMismatch)
+                {
+                    view.ForceRebuildSolidVisual(
+                        outer,
+                        expected,
+                        footprint: cellSize * blockFootprintFactor,
+                        height: blockHeight,
+                        activate: true);
+                }
+            }
+        }
+
+        SweepOrphanNestedResiduals(blocks);
+    }
+
+    private static bool ViewHasGreenRenderer(PieceView3D view)
+    {
+        if (view == null)
+        {
+            return false;
+        }
+
+        MeshRenderer[] renderers = view.GetComponentsInChildren<MeshRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            MeshRenderer renderer = renderers[i];
+            if (renderer == null || renderer.sharedMaterial == null)
+            {
+                continue;
+            }
+
+            if (renderer.gameObject.name.IndexOf("Shadow", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                continue;
+            }
+
+            string matName = renderer.sharedMaterial.name;
+            if (matName.IndexOf("Green", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void SweepOrphanNestedResiduals(Block[] blocks)
+    {
+        if (boardPresenter3D == null || boardPresenter3D.PiecesRoot == null)
+        {
+            return;
+        }
+
+        var livePendingNames = new HashSet<string>();
+        if (blocks != null)
+        {
+            for (int b = 0; b < blocks.Length; b++)
+            {
+                Block block = blocks[b];
+                if (block == null || block.IsSettled)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < block.CellCount; i++)
+                {
+                    if (block.IsPendingLayerExtraction(i))
+                    {
+                        livePendingNames.Add($"NestedInnerResidual_{block.GetInstanceID()}_c{i}");
+                    }
+                }
+            }
+        }
+
+        Transform root = boardPresenter3D.PiecesRoot;
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            Transform child = root.GetChild(i);
+            if (child == null
+                || child.name == null
+                || !child.name.StartsWith("NestedInnerResidual_", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!livePendingNames.Contains(child.name))
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
     }
 
     private void OnDisable()
@@ -784,7 +949,14 @@ public class BoardPresentationController : MonoBehaviour
             }
 
             if (!block.IsPendingLayerExtraction(block.AnchorCellIndex)
-                && NeedsPieceViewResync(block.WorldView, block.GetOuterShape(block.AnchorCellIndex), expectNest: false))
+                && NeedsPieceViewResync(
+                    block.WorldView,
+                    block.GetOuterShape(block.AnchorCellIndex),
+                    expectNest: false,
+                    ShapeVisuals3D.BlockMaterial(
+                        block.GetOuterShape(block.AnchorCellIndex),
+                        block.GetOuterColor(block.AnchorCellIndex),
+                        theme)))
             {
                 return true;
             }
@@ -806,7 +978,12 @@ public class BoardPresentationController : MonoBehaviour
 
                         return block.GetOuterShape(i2);
                     },
-                    expectNest: false))
+                    expectNest: false,
+                    skipInactivePending: true,
+                    materialAt: i2 => ShapeVisuals3D.BlockMaterial(
+                        block.GetOuterShape(i2),
+                        block.GetOuterColor(i2),
+                        theme)))
             {
                 return true;
             }
@@ -855,7 +1032,11 @@ public class BoardPresentationController : MonoBehaviour
         return false;
     }
 
-    private static bool NeedsPieceViewResync(PieceView3D view, ShapeType shape, bool expectNest)
+    private static bool NeedsPieceViewResync(
+        PieceView3D view,
+        ShapeType shape,
+        bool expectNest,
+        Material expectedMaterial = null)
     {
         if (view == null)
         {
@@ -875,6 +1056,24 @@ public class BoardPresentationController : MonoBehaviour
         if (view.ConfiguredShape != shape || view.ConfiguredAsNest != expectNest)
         {
             return true;
+        }
+
+        // Shape-only checks miss peel survivors (Diamond:Green → Diamond:Red).
+        // Also compare the live outer renderer — ConfiguredSolidMaterial can be stale.
+        if (expectedMaterial != null)
+        {
+            if (view.ConfiguredSolidMaterial != expectedMaterial)
+            {
+                return true;
+            }
+
+            MeshRenderer live = view.OuterMeshRenderer;
+            if (live != null
+                && live.sharedMaterial != null
+                && live.sharedMaterial != expectedMaterial)
+            {
+                return true;
+            }
         }
 
         return false;
@@ -1087,33 +1286,27 @@ public class BoardPresentationController : MonoBehaviour
             bool pendingExtraction = block.IsPendingLayerExtraction(block.AnchorCellIndex);
             ShapeType outer = block.GetOuterShape(block.AnchorCellIndex);
             ShapeColor outerColor = block.GetOuterColor(block.AnchorCellIndex);
-            bool needsVisual = NeedsPieceViewResync(view, outer, expectNest: false)
+            Material outerMat = ShapeVisuals3D.BlockMaterial(outer, outerColor, theme);
+            bool needsVisual = NeedsPieceViewResync(view, outer, expectNest: false, outerMat)
                 || block.WorldView != view;
 
-            // Pending nested extraction: keep pre-promote mesh through outer match VFX.
-            // Broken / unbound / shape-stale views must be repaired even during motion.
-            // Idle pieces also get a full ConfigureVisual refresh.
-            // Mixed hold: residual covers SOURCE — do not un-hide / resync the traveler.
+            // Pending nested extraction: residual covers SOURCE. The traveler still has the
+            // consumed outer mesh (e.g. green) until NotifyNestedLayerPromoted remeshes it.
+            // Never EnsurePresentationVisible here — that re-shows the consumed outer ghost.
             if (pendingExtraction)
             {
-                if (IsExtractionHoldView(view) || HasAnchoredNestedResidualInternal(block, block.AnchorCellIndex))
+                HoldExtractionViewInactive(view);
+                Vector2Int sourceCell = ResolveNestedPromotionSourceCell(block, block.AnchorCellIndex);
+                if (worldSpace != null)
                 {
-                    Vector2Int sourceCell = ResolveNestedPromotionSourceCell(block, block.AnchorCellIndex);
-                    if (worldSpace != null)
-                    {
-                        view.SnapWorldPresentationToGrid(worldSpace, sourceCell);
-                    }
-                }
-                else
-                {
-                    view.EnsurePresentationVisible();
+                    view.SnapWorldPresentationToGrid(worldSpace, sourceCell);
                 }
             }
             else if (needsVisual || (!motionBusy && !motionLocked))
             {
                 view.ConfigureVisual(
                     outer,
-                    ShapeVisuals3D.BlockMaterial(outer, outerColor, theme),
+                    outerMat,
                     asNest: false,
                     footprint: cell * blockFootprintFactor,
                     height: blockHeight);
@@ -1130,9 +1323,18 @@ public class BoardPresentationController : MonoBehaviour
 
             // Avoid SetWorldView while moving when already bound — it SyncWorldViewPositions
             // and would overwrite nest-entry seating (Phase 23) after motion lock ends.
+            // Pending: bind without EnsurePresentationVisible (SetWorldView would un-hide green).
             if (block.WorldView != view)
             {
-                block.SetWorldView(view, worldSpace);
+                if (pendingExtraction)
+                {
+                    view.BindSourceBlock(block);
+                    block.SetWorldView(view, worldSpace, syncPosition: false, ensureVisible: false);
+                }
+                else
+                {
+                    block.SetWorldView(view, worldSpace);
+                }
             }
             else
             {
@@ -1165,32 +1367,97 @@ public class BoardPresentationController : MonoBehaviour
             }
 
             int id = target.GetInstanceID();
+            bool onBoard = IsTargetPresentOnBoard(target);
+            bool liveCells = target.HasLiveNestCells;
+            bool matched = target.IsMatched;
+            bool matchActive = target.IsMatchPresentationActive;
 
             // Match presentation owns the nest until dissolve finishes (Matched → prune).
-            if (target.IsMatchPresentationActive)
+            if (matchActive)
             {
-                if (target.IsMatched)
+                if (matched)
                 {
+                    Phase72CNestLifecycle.LogSyncDecision(
+                        target,
+                        "matched-hide-prune",
+                        onBoard,
+                        liveCells);
                     HideMappedView(worldViewsByTargetId, id);
                     HideExtraViews(extraViewsByTargetId, id);
                     continue;
                 }
 
+                // Phase 72C log: after green consume we kept Nest3D for dissolve, then
+                // MatchEffect.SetMatchPresentation(1,1) remounted the green mesh (disappear→appear).
+                // Consumed shells (!liveCells) are hidden/pruned immediately; glow VFX still runs.
+                if (!liveCells)
+                {
+                    Phase72CNestLifecycle.LogSyncDecision(
+                        target,
+                        "entering-consumed-hide-prune",
+                        onBoard,
+                        liveCells);
+                    HideMappedView(worldViewsByTargetId, id);
+                    HideExtraViews(extraViewsByTargetId, id);
+                    continue;
+                }
+
+                Phase72CNestLifecycle.LogSyncDecision(
+                    target,
+                    "entering-keep-dissolve",
+                    onBoard,
+                    liveCells);
                 keepTargets.Add(id);
+                continue;
+            }
+
+            // Phase 72C: consumed nests must not be treated as renderable by FindObjects sync.
+            // Authoritative consumed signals (existing gameplay/presentation state):
+            //   1) IsMatched after CompleteMatchPresentation
+            //   2) HasLiveNestCells == false after full TryConsumeLayer (cells emptied)
+            //   3) not present on BoardManager occupancy
+            if (matched || !liveCells || !onBoard)
+            {
+                Phase72CNestLifecycle.LogSyncDecision(
+                    target,
+                    matched
+                        ? "skip-matched"
+                        : (!liveCells ? "skip-no-live-cells" : "skip-not-on-board"),
+                    onBoard,
+                    liveCells);
                 continue;
             }
 
             keepTargets.Add(id);
 
+            bool created = false;
             if (!worldViewsByTargetId.TryGetValue(id, out PieceView3D view) || view == null)
             {
+                created = true;
                 view = CreateView($"Nest3D_{target.ShapeType}_{id}", nestsRoot);
                 worldViewsByTargetId[id] = view;
+                Phase72CNestLifecycle.LogNestCreate(
+                    target,
+                    view,
+                    "SyncWorldPieceViews");
+            }
+            else
+            {
+                Phase72CNestLifecycle.LogNestReuse(
+                    target,
+                    view,
+                    "SyncWorldPieceViews");
             }
 
             ShapeType nestOuter = target.GetOuterShapeAtIndex(target.AnchorCellIndex);
             ShapeColor nestOuterColor = target.GetOuterColorAtIndex(target.AnchorCellIndex);
             Material[] nestMaterials = ShapeVisuals3D.NestMaterialSet(nestOuter, nestOuterColor, theme);
+            Phase72CNestLifecycle.LogNestRemesh(
+                target,
+                view,
+                nestOuter,
+                nestOuterColor,
+                created ? "create+ConfigureVisual" : "ConfigureVisual");
             view.ConfigureVisual(
                 nestOuter,
                 nestMaterials[0],
@@ -1563,6 +1830,11 @@ public class BoardPresentationController : MonoBehaviour
             // Phase 71B: pending inners must not inherit a primary still sitting on TARGET.
             if (block.IsPendingLayerExtraction(i) || IsExtractionHoldView(extra) || extra.IsMotionLocked)
             {
+                if (block.IsPendingLayerExtraction(i) || IsExtractionHoldView(extra))
+                {
+                    HoldExtractionViewInactive(extra);
+                }
+
                 Vector2Int sourceCell = ResolveNestedPromotionSourceCell(block, i);
                 extra.SnapWorldPresentationToGrid(space, sourceCell);
                 continue;
@@ -1844,6 +2116,25 @@ public class BoardPresentationController : MonoBehaviour
         return view != null && extractionHoldViewIds.Contains(view.GetInstanceID());
     }
 
+    /// <summary>
+    /// Presentation-only: keep a pending-extraction traveler inactive at SOURCE.
+    /// Sync must call this every frame — EnsurePresentationVisible / SetWorldView can
+    /// otherwise re-show the consumed outer mesh over the residual survivor.
+    /// </summary>
+    private void HoldExtractionViewInactive(PieceView3D view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        extractionHoldViewIds.Add(view.GetInstanceID());
+        if (view.gameObject.activeSelf)
+        {
+            view.gameObject.SetActive(false);
+        }
+    }
+
     private void HoldPendingExtractionViewsAtSourceInternal(Block block)
     {
         if (block == null || block.IsSettled || boardPresenter3D == null)
@@ -1867,7 +2158,6 @@ public class BoardPresentationController : MonoBehaviour
 
             // Do not BeginMotionLock here — subset/chain travel already locks the view.
             // An extra lock leaked forever after EndMatchingSubsetTravel (count stuck at 1).
-            extractionHoldViewIds.Add(view.GetInstanceID());
             TweenAnimationUtility.KillById(view.gameObject, TweenAnimationUtility.TravelerId, false);
             TweenAnimationUtility.KillById(view.gameObject, TweenAnimationUtility.NestedExtractionId, false);
             TweenAnimationUtility.KillTransform(view.transform, complete: false);
@@ -1879,7 +2169,7 @@ public class BoardPresentationController : MonoBehaviour
 
             // Residual already presents the inner at SOURCE. Hide the traveler so the
             // rebuilt inner mesh cannot sit on the TARGET during match VFX.
-            view.gameObject.SetActive(false);
+            HoldExtractionViewInactive(view);
         }
     }
 
@@ -2273,25 +2563,14 @@ public class BoardPresentationController : MonoBehaviour
         }
 
         Transform host = residual.parent;
-        if (Application.isPlaying)
+        // Promote must drop the residual in the same frame — deferred Destroy left the
+        // red inner visible under a still-green traveler (green-over-red ghost).
+        DestroyImmediate(residual.gameObject);
+        if (host != null
+            && host.name != null
+            && host.name.StartsWith("NestedInnerResidual_", System.StringComparison.Ordinal))
         {
-            Destroy(residual.gameObject);
-            if (host != null
-                && host.name != null
-                && host.name.StartsWith("NestedInnerResidual_", System.StringComparison.Ordinal))
-            {
-                Destroy(host.gameObject);
-            }
-        }
-        else
-        {
-            DestroyImmediate(residual.gameObject);
-            if (host != null
-                && host.name != null
-                && host.name.StartsWith("NestedInnerResidual_", System.StringComparison.Ordinal))
-            {
-                DestroyImmediate(host.gameObject);
-            }
+            DestroyImmediate(host.gameObject);
         }
     }
 
@@ -2304,13 +2583,28 @@ public class BoardPresentationController : MonoBehaviour
 
         long key = AnchoredResidualKey(block.GetInstanceID(), cellIndex);
         anchoredNestedSourceCells.Remove(key);
-        if (!anchoredNestedResiduals.TryGetValue(key, out Transform residual))
+        if (anchoredNestedResiduals.TryGetValue(key, out Transform residual))
+        {
+            anchoredNestedResiduals.Remove(key);
+            DestroyAnchoredResidualTransform(residual);
+        }
+
+        // Sweep orphan hosts for this block/cell in case the dict entry was lost.
+        if (boardPresenter3D == null || boardPresenter3D.PiecesRoot == null)
         {
             return;
         }
 
-        anchoredNestedResiduals.Remove(key);
-        DestroyAnchoredResidualTransform(residual);
+        string hostName = $"NestedInnerResidual_{block.GetInstanceID()}_c{cellIndex}";
+        Transform piecesRoot = boardPresenter3D.PiecesRoot;
+        for (int i = piecesRoot.childCount - 1; i >= 0; i--)
+        {
+            Transform child = piecesRoot.GetChild(i);
+            if (child != null && child.name == hostName)
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
     }
 
     private void ClearAllAnchoredNestedResiduals()
@@ -2389,7 +2683,7 @@ public class BoardPresentationController : MonoBehaviour
             return;
         }
 
-        float cell = boardPresenter3D.CellWorldSize;
+        float cellSize = boardPresenter3D.CellWorldSize;
         IGridSpace space = boardPresenter3D.GridSpace;
         int count = block.CellCount;
         int start = cellIndex >= 0 ? cellIndex : 0;
@@ -2397,6 +2691,9 @@ public class BoardPresentationController : MonoBehaviour
         for (int i = start; i < endExclusive; i++)
         {
             PieceView3D view = block.GetWorldViewForCellIndex(i);
+            // Always drop residual first so a red inner cannot sit under a green traveler
+            // for even one frame after release.
+            ClearAnchoredNestedResidualInternal(block, i);
             if (view == null)
             {
                 continue;
@@ -2410,19 +2707,72 @@ public class BoardPresentationController : MonoBehaviour
                 view.SnapWorldPresentationToGrid(space, sourceCell);
             }
 
-            ReleaseExtractionHold(view);
-
             ShapeType outer = block.GetOuterShape(i);
             ShapeColor outerColor = block.GetOuterColor(i);
-            view.ConfigureVisual(
+            ShapeCellData shapeCell = block.GetCell(i);
+            if (shapeCell != null
+                && (shapeCell.innerShapes == null || shapeCell.innerShapes.Count == 0)
+                && shapeCell.outerColor != ShapeColor.Default)
+            {
+                outerColor = shapeCell.outerColor;
+                outer = shapeCell.shapeType;
+            }
+
+            Material survivorMat = ShapeVisuals3D.BlockMaterial(outer, outerColor, theme);
+            // Drop consumed-outer nested child, force a fresh solid survivor mesh.
+            // While still pending, stay inactive until reveal releases. Reconcile (post-pending)
+            // activates immediately.
+            bool stillPending = block.IsPendingLayerExtraction(i);
+            view.ConfigureNestedInner(false, ShapeType.Square, null, NestedInnerRelativeScale(), asNest: false);
+            view.ForceRebuildSolidVisual(
                 outer,
-                ShapeVisuals3D.BlockMaterial(outer, outerColor, theme),
-                asNest: false,
-                footprint: cell * blockFootprintFactor,
-                height: blockHeight);
-            // Residual still covers source until cleared — drop it after the cell view owns SOURCE.
-            ClearAnchoredNestedResidualInternal(block, i);
+                survivorMat,
+                footprint: cellSize * blockFootprintFactor,
+                height: blockHeight,
+                activate: !stillPending);
+            if (stillPending)
+            {
+                HoldExtractionViewInactive(view);
+            }
+            else
+            {
+                ReleaseExtractionHold(view);
+            }
+
             SyncBlockNestedInner(view, block, i);
+        }
+    }
+
+    /// <summary>
+    /// Presentation-only: force every live cell of <paramref name="block"/> onto its current
+    /// logical outer mesh and destroy any leftover nested residuals. Does not change gameplay.
+    /// </summary>
+    public static void ReconcileNestedSurvivorVisuals(Block block)
+    {
+        BoardPresentationController controller = FindController();
+        if (controller != null)
+        {
+            controller.ReconcileNestedSurvivorVisualsInternal(block);
+        }
+    }
+
+    private void ReconcileNestedSurvivorVisualsInternal(Block block)
+    {
+        if (block == null || block.IsSettled || boardPresenter3D == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < block.CellCount; i++)
+        {
+            if (block.IsPendingLayerExtraction(i))
+            {
+                // Still waiting on extraction reveal for this cell — leave mid-VFX state alone.
+                continue;
+            }
+
+            ClearAnchoredNestedResidualInternal(block, i);
+            NotifyNestedLayerPromotedInternal(block, i);
         }
     }
 
@@ -2621,6 +2971,21 @@ public class BoardPresentationController : MonoBehaviour
             }
         }
 
+        // Consumed cells drop out of CellCount, but their PieceView3D stays in the pool.
+        // If we leave them unassigned they remain rendered and fall out of worldViews /
+        // extraViews tracking — exactly one stale full-size ghost on the board.
+        for (int p = 0; p < pool.Count; p++)
+        {
+            PieceView3D orphan = pool[p];
+            if (orphan == null || used.Contains(orphan))
+            {
+                continue;
+            }
+
+            ReleaseExtractionHold(orphan);
+            BeginDissolveView(orphan);
+        }
+
         if (!subsetTraveling
             && TryGetChainTravel(block, out ChainTravelState activeTravel)
             && activeTravel.View != null
@@ -2653,6 +3018,14 @@ public class BoardPresentationController : MonoBehaviour
         if (view == null || dissolvingViews.Contains(view))
         {
             return;
+        }
+
+        // Held extraction travelers are inactive — must re-show so dissolve can finish
+        // cleanup, otherwise an orphaned inactive view can be reactivated later as a ghost.
+        ReleaseExtractionHold(view);
+        if (!view.gameObject.activeSelf)
+        {
+            view.gameObject.SetActive(true);
         }
 
         dissolvingViews.Add(view);
@@ -2771,7 +3144,9 @@ public class BoardPresentationController : MonoBehaviour
         int cellCount,
         int anchorIndex,
         Func<int, ShapeType> shapeAt,
-        bool expectNest)
+        bool expectNest,
+        bool skipInactivePending = false,
+        Func<int, Material> materialAt = null)
     {
         int extraNeeded = Mathf.Max(0, cellCount - 1);
         if (!map.TryGetValue(id, out List<PieceView3D> extras) || extras == null)
@@ -2798,8 +3173,18 @@ public class BoardPresentationController : MonoBehaviour
             }
 
             PieceView3D view = extras[extraSlot++];
+            // Held pending travelers are intentionally inactive — not a resync need.
+            if (skipInactivePending
+                && view != null
+                && !view.gameObject.activeSelf
+                && IsExtractionHoldView(view))
+            {
+                continue;
+            }
+
             ShapeType shape = shapeAt != null ? shapeAt(i) : ShapeType.Square;
-            if (NeedsPieceViewResync(view, shape, expectNest))
+            Material expectedMat = materialAt != null ? materialAt(i) : null;
+            if (NeedsPieceViewResync(view, shape, expectNest, expectedMat))
             {
                 return true;
             }
@@ -2855,6 +3240,8 @@ public class BoardPresentationController : MonoBehaviour
             PieceView3D view = extras[extraSlot++];
             if (block.IsPendingLayerExtraction(i) || IsExtractionHoldView(view))
             {
+                // Same rule as primary: never un-hide a consumed-outer traveler mid-VFX.
+                HoldExtractionViewInactive(view);
                 view.BindSourceBlock(block);
                 Vector2Int sourceCell = ResolveNestedPromotionSourceCell(block, i);
                 if (boardPresenter3D != null && boardPresenter3D.GridSpace != null)
@@ -2867,12 +3254,13 @@ public class BoardPresentationController : MonoBehaviour
 
             ShapeType shape = block.GetOuterShape(i);
             ShapeColor shapeColor = block.GetOuterColor(i);
-            bool needsVisual = NeedsPieceViewResync(view, shape, expectNest: false);
+            Material blockMat = ShapeVisuals3D.BlockMaterial(shape, shapeColor, theme);
+            bool needsVisual = NeedsPieceViewResync(view, shape, expectNest: false, blockMat);
             if (needsVisual || (!motionBusy && !motionLocked))
             {
                 view.ConfigureVisual(
                     shape,
-                    ShapeVisuals3D.BlockMaterial(shape, shapeColor, theme),
+                    blockMat,
                     asNest: false,
                     footprint: cell * blockFootprintFactor,
                     height: blockHeight);
@@ -3105,7 +3493,11 @@ public class BoardPresentationController : MonoBehaviour
         TrimViewList(extras, extraNeeded);
         while (extras.Count < extraNeeded)
         {
-            extras.Add(CreateView($"Nest3D_{target.ShapeType}_{id}_c{extras.Count + 1}", nestsRoot));
+            PieceView3D created = CreateView(
+                $"Nest3D_{target.ShapeType}_{id}_c{extras.Count + 1}",
+                nestsRoot);
+            Phase72CNestLifecycle.LogNestCreate(target, created, "SyncTargetOccupantExtras");
+            extras.Add(created);
         }
 
         int extraSlot = 0;
@@ -3168,6 +3560,7 @@ public class BoardPresentationController : MonoBehaviour
             return;
         }
 
+        Phase72CNestLifecycle.LogNestDestroyed(view, immediate ? "DestroyView.immediate" : "DestroyView");
         nestedInnerTravelers.Remove(view);
         dissolvingViews.Remove(view);
         if (IsChainTravelView(view))
@@ -3335,12 +3728,52 @@ public class BoardPresentationController : MonoBehaviour
                     continue;
                 }
 
+                if (target.IsMatched)
+                {
+                    continue;
+                }
+
+                // Consumed shell: never keep Nest3D (including mid-Entering) — MatchEffect glow only.
+                if (!target.HasLiveNestCells)
+                {
+                    continue;
+                }
+
+                if (!IsTargetPresentOnBoard(target) && !target.IsMatchPresentationActive)
+                {
+                    continue;
+                }
+
                 keepTargets.Add(target.GetInstanceID());
             }
         }
 
         PruneViews(worldViewsByTargetId, keepTargets);
         PruneExtraViews(extraViewsByTargetId, keepTargets);
+    }
+
+    /// <summary>
+    /// True when this Target still occupies at least one board nest cell.
+    /// Presentation-only: UnregisterTarget removes occupancy but the Target GO may linger.
+    /// </summary>
+    private bool IsTargetPresentOnBoard(Target target)
+    {
+        if (target == null || boardManager == null)
+        {
+            return false;
+        }
+
+        int count = target.CellCount;
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int world = target.GridPosition + target.GetLocalCell(i);
+            if (boardManager.GetTargetAt(world) == target)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void DestroyUntrackedPieceViews()
@@ -3596,6 +4029,60 @@ public class BoardPresentationController : MonoBehaviour
 
         SweepUnregisteredNestedInnerTravelersUnder(boardPresenter3D.PiecesRoot, immediate);
         SweepUnregisteredNestedInnerTravelersUnder(boardPresenter3D.NestsRoot, immediate);
+        SweepOrphanNestedResidualsUnder(boardPresenter3D.PiecesRoot, immediate);
+    }
+
+    /// <summary>
+    /// Presentation-only: destroy NestedInnerResidual_* hosts that are no longer tracked.
+    /// Orphan residuals render as small nested ghosts after the logical outer is gone.
+    /// </summary>
+    private void SweepOrphanNestedResidualsUnder(Transform root, bool immediate)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            Transform child = root.GetChild(i);
+            if (child == null
+                || child.name == null
+                || !child.name.StartsWith("NestedInnerResidual_", System.StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            bool tracked = false;
+            foreach (KeyValuePair<long, Transform> pair in anchoredNestedResiduals)
+            {
+                Transform residual = pair.Value;
+                if (residual == null)
+                {
+                    continue;
+                }
+
+                if (residual == child || residual.parent == child)
+                {
+                    tracked = true;
+                    break;
+                }
+            }
+
+            if (tracked)
+            {
+                continue;
+            }
+
+            if (!Application.isPlaying || immediate)
+            {
+                DestroyImmediate(child.gameObject);
+            }
+            else
+            {
+                Destroy(child.gameObject);
+            }
+        }
     }
 
     private void SweepUnregisteredNestedInnerTravelersUnder(Transform root, bool immediate)
@@ -3791,6 +4278,10 @@ public class BoardPresentationController : MonoBehaviour
         // World3D: hide opaque gameplay overlay plate (Image only — keep HUD hierarchy).
         SetGamePlayOverlayBackgroundRendering(active);
 
+        // Phase 72J: Gameplay Area/Board hosts BoardManager — do not SetActive(false) that root.
+        // Hide its Overlay Graphics (blocks/nests/grid chrome) so they cannot cover Board3D.
+        SetLegacyUiBoardOverlayVisible(active);
+
         if (uiBoardVisualRoots != null && uiBoardVisualRoots.Length > 0)
         {
             for (int i = 0; i < uiBoardVisualRoots.Length; i++)
@@ -3812,6 +4303,37 @@ public class BoardPresentationController : MonoBehaviour
         Transform board = boardManager.transform;
         SetChildActive(board, "BoardBackground", active);
         SetChildActive(board, "RuntimeGrid", active);
+    }
+
+    /// <summary>
+    /// Shows or hides the legacy Screen Space Overlay board tree under BoardManager
+    /// (<c>UIController/GameplayCanvas/Parent/Gameplay Area/Board</c>) without disabling
+    /// BoardManager itself. HUD outside this Board root stays visible.
+    /// </summary>
+    private void SetLegacyUiBoardOverlayVisible(bool visible)
+    {
+        if (boardManager == null)
+        {
+            return;
+        }
+
+        if (legacyUiBoardCanvasGroup == null)
+        {
+            legacyUiBoardCanvasGroup = boardManager.GetComponent<CanvasGroup>();
+            if (legacyUiBoardCanvasGroup == null && Application.isPlaying)
+            {
+                legacyUiBoardCanvasGroup = boardManager.gameObject.AddComponent<CanvasGroup>();
+            }
+        }
+
+        if (legacyUiBoardCanvasGroup == null)
+        {
+            return;
+        }
+
+        legacyUiBoardCanvasGroup.alpha = visible ? 1f : 0f;
+        legacyUiBoardCanvasGroup.interactable = visible;
+        legacyUiBoardCanvasGroup.blocksRaycasts = visible;
     }
 
     private void SetGamePlayOverlayBackgroundRendering(bool enabled)

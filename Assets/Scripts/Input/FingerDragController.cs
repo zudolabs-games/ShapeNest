@@ -8,7 +8,7 @@ using UnityEngine;
 public sealed class FingerDragController
 {
     /// <summary>Board-local travel (as a fraction of cell pitch) before the first axis locks.</summary>
-    public const float FirstAxisCellFraction = 0.12f;
+    public const float FirstAxisCellFraction = 0.08f;
 
     /// <summary>Board-local travel before a mid-drag steer to another allowed axis.</summary>
     public const float SteerCellFraction = 0.35f;

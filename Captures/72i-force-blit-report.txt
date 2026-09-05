@@ -1,0 +1,42 @@
+GameViewCount=1
+gvField kClearBlack=RGBA(0.000, 0.000, 0.000, 0.000)
+gvField m_VSyncEnabled=True
+gvField m_TargetClamped=False
+gvField m_ClearInEditMode=True
+gvField m_LowResolutionForAspectRatios=System.Boolean[]
+gvField m_XRRenderMode=0
+gvField m_RenderTexture=GameView RT (UnityEngine.RenderTexture)
+gvProp targetRenderSize=(1080.00, 1920.00)
+gvProp targetInContent=(x:-540.00, y:-960.00, width:1080.00, height:1920.00)
+gvProp targetInView=(x:0.00, y:60.72, width:407.00, height:723.56)
+gvProp deviceFlippedTargetInView=(x:0.00, y:784.28, width:407.00, height:-723.56)
+gvProp targetInParent=(x:1.00, y:107.72, width:407.00, height:723.56)
+gvProp targetDisplay=0
+gvProp targetSize=(1080.00, 1920.00)
+gvProp textureFilterMode=Point
+gvProp textureHideFlags=HideAndDontSave
+gvProp renderIMGUI=True
+gvProp autoRepaintOnSceneChange=True
+gvProp resetPanelRenderingOnAssetChange=True
+hasFocus=True docked=True
+gvMethod get_targetRenderSize(0)
+gvMethod UpdateZoomAreaAndParent(0)
+gvMethod XRTranslateMirrorViewBlitModeToRenderMode(1)
+gvMethod XRTranslateRenderModeToMirrorViewBlitMode(1)
+gvMethod SetXRRenderMode(1)
+gvMethod RenderToHMDOnly(0)
+gvMethod RepaintIfNeeded(0)
+gvMethod RenderView(2)
+gvMethod CheckForWindowRepaint(0)
+gvMethod get_autoRepaintOnSceneChange(0)
+gvMethod set_autoRepaintOnSceneChange(1)
+gvMethod Repaint(0)
+gvMethod RepaintImmediately(0)
+gvMethod get_resetPanelRenderingOnAssetChange(0)
+gvMethod set_resetPanelRenderingOnAssetChange(1)
+pmvMethod RenderView(2)
+pmvMethod get_resetPanelRenderingOnAssetChange(0)
+pmvMethod set_resetPanelRenderingOnAssetChange(1)
+Forced BoardCamera.Render into GameView RT
+afterForcedBlit (1,8) rgb=RGBA(0.949, 0.220, 0.278, 1.000) flip=RGBA(0.200, 0.161, 0.412, 1.000)
+afterForcedBlit greenish=2385

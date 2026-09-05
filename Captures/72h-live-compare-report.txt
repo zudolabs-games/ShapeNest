@@ -1,0 +1,56 @@
+PHASE 72H — LIVE GREEN FRAME: GAME VIEW vs BoardCamera3D.Render()
+=================================================================
+Captured while user still had Scene=red / Game=green (frame≈1155, Play Mode).
+IDs from 72F dump: mr17 rid=-1036150, mr18 rid=-1036188.
+
+1) SAME-FRAME COMPARE (definitive)
+----------------------------------
+BoardCamera3D.Render()  Captures/72h-live-boardcam-both-on.png
+  sample (1,7) = RGBA(0.949, 0.220, 0.278)  RED
+  sample (1,8) = RGBA(0.949, 0.220, 0.278)  RED
+  patch: maxGreenBias negative (no green)
+
+Game view m_TargetTexture  Captures/72h-live-gameview-m_TargetTexture.png
+  (Y-flipped sample) (1,8) = RGBA(0.314, 0.824, 0.549)  GREEN
+  greenishPixelSamples = 1717+
+  Visual: green diamond offset on top of red diamond (double draw / stale composite)
+
+Materials same frame:
+  both MeshRenderers Block3D_Diamond_Red, _BaseColor red, MPB empty
+Near-cell scan: only those two ShapeSolid_Diamond meshes (red). greenDiamondHits=0
+
+VERDICT: Game view framebuffer ≠ BoardCamera.Render() / ≠ live materials.
+         Player-facing Editor Game pixels were green; forced camera render was red.
+
+2) DISABLE / STALE TEST
+-----------------------
+A baseline GV: still green at survivors; BoardCam red
+B disable both Mesh, NO Step:
+  BoardCam (1,7) → empty cell purple (mesh gone)  — camera path updates immediately
+  GameView UNCHANGED still green                 — Game buffer did NOT refresh
+C one EditorApplication.Step() (meshes got re-enabled by play loop):
+  GameView (1,7)/(1,8) → RGBA(0.949, 0.220, 0.282) RED
+  BoardCam → RED
+  greenish count dropped (cyan pieces remain only)
+D mesh on + step: still RED in both
+
+VERDICT: Green in Game view was a STALE Game-view framebuffer from an earlier
+         frame (green+red composite, offset), not a live green MeshRenderer.
+         One play-frame refresh made Game match BoardCamera (red).
+
+3) PIPELINE NOTES (same frame)
+------------------------------
+Main Camera: inactive, wrongly typed Base, stacked under BoardCamera3D — not drawing
+BoardCamera3D: post=False, HDR=True
+No green Diamond materials alive anywhere
+
+4) IMPLICATION
+--------------
+Scene view re-renders live scene every editor tick → shows red.
+BoardCamera.Render() forces fresh draw → shows red.
+Editor Game view can keep showing the last composited play frame → green ghost.
+
+If green persists while UNPAUSED with timer advancing and Game view focused,
+capture again — that would be a live multi-frame bug. This capture proves the
+Scene=red/Game=green split under the dumped red-material state was Game-view
+staleness, not a hidden green MeshRenderer.

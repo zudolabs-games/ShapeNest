@@ -1,0 +1,20 @@
+PHASE 72I DEEP
+playing=True paused=False frame=4908 t=66.722
+greenDiamondMats=0
+nearGreen=0
+GREEN_UI UIController/MainMenuCanvas/MainMenuPanel/ContinueButton col=RGBA(0.200, 0.480, 0.620, 1.000)
+greenUiImages=1
+canvas=GameOverCanvas mode=ScreenSpaceOverlay active=True cam=null sort=21
+canvas=Settings mode=ScreenSpaceOverlay active=True cam=null sort=15
+canvas=MainMenuCanvas mode=ScreenSpaceOverlay active=True cam=null sort=100
+canvas=GameplayCanvas mode=ScreenSpaceOverlay active=True cam=null sort=10
+canvas=LevelCompleteCanvas mode=ScreenSpaceOverlay active=True cam=null sort=20
+GV1 (1,8) flip=RGBA(0.314, 0.824, 0.549, 1.000)
+hash1=61-5F-E9-43-D5-48-42-6B-F5-5B-C9-30-6D-24-15-4E frame=4908
+GV2 (1,8) flip=RGBA(0.314, 0.824, 0.549, 1.000)
+GV2 greenish=3076
+hash2=61-5F-E9-43-D5-48-42-6B-F5-5B-C9-30-6D-24-15-4E frame=4911
+hashChanged=False
+BC_fullres (1,8)=RGBA(0.949, 0.220, 0.278, 1.000)
+BC_fullres greenish=2385
+uacd post=False type=Base stack=1

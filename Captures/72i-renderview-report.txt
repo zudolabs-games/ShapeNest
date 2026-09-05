@@ -1,0 +1,9 @@
+BoardCamera targetTexture=null
+BoardCamera enabled=True active=True
+RenderView=True params=2
+  p0=Vector2 mousePosition
+  p1=Boolean clearTexture
+invoked RenderView(Vector2,bool)
+afterRenderView (1,8) flip=RGBA(0.000, 0.000, 0.000, 1.000)
+afterRenderView greenish=0
+note: prior forced BoardCam blit may have left RT red

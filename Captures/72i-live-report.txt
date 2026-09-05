@@ -1,0 +1,54 @@
+PHASE 72I — DEFINITIVE: GAME VIEW RT STALE vs BoardCamera LIVE
+===============================================================
+User ran: Shape Nest / Phase 72I Capture (+ Step Refresh)
+While Game panel still showed green and Scene showed red.
+
+CAPTURE (paused=False, timeScale=1, frame=4030)
+----------------------------------------------
+Materials: both survivors Block3D_Diamond_Red _BaseColor red, MPB empty
+BoardCamera3D.Render(): (1,7)/(1,8) = RGBA(0.949, 0.220, 0.278) RED
+  file: Captures/72i-bc-now.png  (visual: solid red diamonds only)
+
+Game view m_TargetTexture: (1,8) flip = RGBA(0.314, 0.824, 0.549) GREEN
+  greenishPixelSamples=3076
+  file: Captures/72i-gv-now.png
+  visual: green diamond OFFSET on top of red (double-exposure / old+new)
+
+After two EditorApplication.Step():
+  GV file MD5 IDENTICAL to before (d9350fd6...) — Game RT did not change
+  Still green samples; BoardCam still red
+
+DEEP PROBE (still Play, ~12s later, frame=4908→4911)
+----------------------------------------------------
+greenDiamondMats=0  nearGreen=0  (no live green diamond MeshRenderer)
+green UI diamonds: none (1 unrelated ContinueButton teal)
+GV hash UNCHANGED across 3 Steps (hashChanged=False)
+Same green pixel at (1,8)
+
+BoardCamera full-res Render into new RT: RED at survivors
+  greenish=2385 = cyan pieces only (no lime diamonds)
+
+SMOKING GUN
+-----------
+Forced: BoardCamera.targetTexture = GameView RT; BoardCamera.Render()
+Result: GameView RT survivors become RED; lime ghost gone
+  afterForcedBlit (1,8)=RGBA(0.949, 0.220, 0.278)
+  greenish 3076 → 2385
+  file: Captures/72i-gv-after-forced-boardcam-blit.png
+
+CONCLUSION
+----------
+1. Live scene graph + materials + BoardCamera.Render() are correctly RED.
+2. There is NO hidden green MeshRenderer producing the ghost.
+3. Editor Game view's RenderTexture retained a STALE frame from the peel
+   (green outer still visible, offset over the new red mesh).
+4. UI can still look “alive” (timer) via separate IMGUI/overlay compositing
+   (GameView renderIMGUI=True) while the 3D Game RT stays frozen.
+5. Scene view re-renders live each editor tick → red.
+6. This is a Game-view display/update problem after match presentation,
+   not a wrong survivor material and not a second live green mesh.
+
+NOT a cleanup/Destroy/reconcile bug for NestedInner at this point.
+Next (diagnostic only): why Game view stops refreshing its camera RT after
+CompleteMatchPresentation (camera targetTexture leak? URP? focus? custom RT?).
+Do NOT implement another presentation cleanup until that path is identified.

@@ -1,0 +1,16 @@
+PHASE 73 — RIGID CHAIN-TO-TARGET GROUP MATCH
+frame=2 t=0.020
+T_SOURCE_DRAG_ROUTES_SUBSET=True
+level=Campaign_43_Reference subject=-79102 cells=4 grid=(1, 4) shapes=Triangle@(1, 4),Triangle@(2, 4),Triangle@(1, 5),Triangle@(2, 5)
+try focus=(1, 5) collect=False nestCount=0 indices=[] dests=[]
+try focus=(1, 3) collect=False nestCount=0 indices=[] dests=[]
+try focus=(0, 4) collect=False nestCount=0 indices=[] dests=[]
+try focus=(2, 4) collect=False nestCount=0 indices=[] dests=[]
+T8_INVALID_TRANSLATION_REJECTED=True
+TryBuildNestedSubsetGroup_present=True
+synthetic_subset_0_5=True
+synthetic_targets_ok=True
+chosenFocus=(0, 0) hasChosen=True
+midTaken=True midRigid=True midSameProgress=True consumeOk=True
+T_MATCHFOCUSED_ROUTES_RIGID=True
+RESULT=PASS note=PASS live rigid travel

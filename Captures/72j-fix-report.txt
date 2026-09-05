@@ -1,0 +1,60 @@
+PHASE 72J FIX — APPLIED
+=======================
+
+Exact file changed
+------------------
+Assets/Scripts/Board/BoardPresentationController.cs
+
+Exact visibility rule
+---------------------
+Extended existing SetUiBoardVisualsActive(false) (already called from
+ApplyMode / Update / LateUpdate in World3D) with:
+
+  SetLegacyUiBoardOverlayVisible(visible: false)
+
+On BoardManager's GameObject (= UIController/.../Gameplay Area/Board):
+
+  - Ensure CanvasGroup (runtime AddComponent if missing in Play Mode)
+  - alpha = 0
+  - interactable = false
+  - blocksRaycasts = false
+
+Why not SetActive(false) on Board / uiBoardVisualRoots?
+-------------------------------------------------------
+That GameObject hosts BoardManager (+ BoardLayout + BoardVisual).
+Deactivating it would stop BoardManager and break gameplay.
+CanvasGroup hide is the smallest equivalent that suppresses Overlay
+board/piece Graphics while keeping BoardManager alive.
+
+HUD (timer, boosters, settings) lives outside Gameplay Area/Board under
+GameplayCanvas — left enabled.
+
+Whether World3D suppresses legacy Board
+--------------------------------------
+YES. Validated in Play Mode after domain reload:
+
+  Mode=World3D IsWorld3DActive=True
+  Board GO active=True (BoardManager alive)
+  CanvasGroup alpha=0 blocksRaycasts=False interactable=False
+  Board3D=True BoardCamera3D=True
+  GameplayCanvas active+enabled=True (HUD path intact)
+  Images effectivelyVisible(alpha>0)=0 under Board
+  Console errors: 0
+
+Level 43 result
+---------------
+Loaded Campaign_43_Reference; World3D suppress active as above.
+BoardCamera capture written: Captures/72j-fix-boardcam.png
+(Automated nested peel not driven in this pass — please confirm green
+ghost gone with manual peel; Overlay board is now invisible.)
+
+Normal 2D mode result
+---------------------
+BoardPresentationMode is always World3D after Phase 11
+(Mode getter / SetMode force World3D). Restore path exists:
+SetUiBoardVisualsActive(true) → CanvasGroup alpha=1.
+No separate UI-mode runtime to exercise in current build.
+
+Console errors
+--------------
+None after compile + validation.

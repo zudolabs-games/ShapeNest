@@ -1,0 +1,90 @@
+PHASE 73 — RIGID CHAIN-TO-TARGET GROUP MATCH
+============================================
+
+Pre-change analysis
+-------------------
+1. Orchestration
+   - Auto-match: LevelManager.ResolveAlreadyAlignedMatchQueue
+     → CollectAlignedMovementGroups → PlayResolvedMovementGroup
+     → PlayMatchingSubsetAlignedMatch (already rigid when Actions.Count >= 2)
+   - Player drag: EnterMatchingTargetBody → EnterChainPartialMatch
+     → MatchFocusedChainCell → (was) one-cell PlayChainCellNestEntry
+
+2. Why members traveled sequentially
+   - CollectChainFocusedMatch called KeepOnlyNearestMatch for non-nested
+     multi-cell blocks, collapsing N matches to 1 traveler.
+   - Nested blocks already used KeepNestedSameTranslationMatches + subset
+     play (Phase 71B); plain chains did not.
+
+3. Existing data identifying members / targets
+   - nestCellIndices / nestTargets / nestTargetWorlds
+   - AlignedMatchAction (Subject, CellIndex, CellWorld, NestTo)
+   - AlignedMovementGroup (Subject, Translation, Actions)
+   - ShapeMatch.AreMatchingLayers for correspondence
+
+4. Common rigid translation
+   - translation = NestTo - CellWorld for focus-nearest match
+   - KeepSameTranslationMatches retains every cell with that translation
+   - CanTranslateMatchingSubset + axis/fixed-direction gate before travel
+   - AnimateMatchingSubsetNestEntry: shared progress, position[i] = start[i] + delta
+
+Implementation (presentation only — matching not rewritten)
+----------------------------------------------------------
+5. Files changed
+   - Assets/Scripts/Blocks/BlockMover.cs
+   - Assets/Scripts/Debug/Phase73RigidChainProbe.cs (new)
+   - Assets/Editor/Phase73RigidChainMenu.cs (new)
+   - Captures/phase73-rigid-chain-report.txt (new)
+
+6. Methods changed (BlockMover.cs)
+   - MatchFocusedChainCell — route 2+ same-translation cells through
+     PlayMatchingSubsetAlignedMatch (nested and non-nested)
+   - CollectChainFocusedMatch — KeepSameTranslationMatches for all
+     non-occupyingOnly multi-cell; infer one axis-aligned translation
+     from focus then collect full footprint under that translation
+   - KeepSameTranslationMatches — renamed/generalized from
+     KeepNestedSameTranslationMatches (alias retained)
+   - TryBuildNestedSubsetGroup — reject diagonal / fixed-direction-illegal
+     rigid hops
+
+7. Matching logic not rewritten
+   - HasNestMatch / CollectNestMatches / ShapeMatch unchanged
+   - TryMoveBlock / occupancy / nestTo / finger drag unchanged
+   - Auto-match CollectAlignedMatchActions / BuildAlignedMovementGroups unchanged
+   - ConsumeAndRebuild / VFX / nested extraction reuse existing subset path
+
+8. Mixed shapes
+   - Collection uses per-cell GetActiveIdentity + AreMatchingLayers
+   - No assumption of identical shapes
+
+9. Arbitrary chain length
+   - No hardcoded N; Actions.Count / CellCount drive the subset
+
+Play Mode validation (Campaign_43_Reference)
+--------------------------------------------
+Source: Captures/phase73-rigid-chain-report.txt
+
+  T_SOURCE_DRAG_ROUTES_SUBSET=True
+  T_MATCHFOCUSED_ROUTES_RIGID=True
+  T8_INVALID_TRANSLATION_REJECTED=True
+  synthetic 2-cell travel translation=(0,5) → (1,9),(2,9)
+  midTaken=True midRigid=True midSameProgress=True
+  consumeOk=True
+  RESULT=PASS live rigid travel
+
+  Console [70B] confirmed:
+    SUBSET_MATCH actions=2 translation=(0,5)
+    cells=[0,1] destinations=[(1,9),(2,9)]
+    UNMATCHED_SIBLINGS_STAY
+
+10. Console errors/warnings
+    No new compile errors. Probe PASS with mid-rigid sample.
+
+Test mapping
+------------
+T1/T2/T5  — covered by rigid subset path (N cells, shared translation)
+T3 mixed  — identity-aware collection (same path)
+T4 L-shape — footprint locals + one translation (same path)
+T6 nested — existing TryPlayNestedSubsetMatch retained / extended
+T7 fixed-direction — axis unit checked via IsDirectionAllowed
+T8 invalid arrangement — CanTranslateMatchingSubset rejects bad translation

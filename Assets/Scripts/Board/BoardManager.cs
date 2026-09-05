@@ -631,6 +631,8 @@ public class BoardManager : MonoBehaviour
             targets[target.GridPosition + target.GetLocalCell(i)] = target;
         }
 
+        // UnregisterTarget cleared the flag — restore after successful occupancy write.
+        target.NotifyBoardRegistered();
         return true;
     }
 
@@ -663,15 +665,16 @@ public class BoardManager : MonoBehaviour
             keysToRemove.Add(entry.Key);
         }
 
-        if (keysToRemove == null)
+        if (keysToRemove != null)
         {
-            return;
+            for (int i = 0; i < keysToRemove.Count; i++)
+            {
+                targets.Remove(keysToRemove[i]);
+            }
         }
 
-        for (int i = 0; i < keysToRemove.Count; i++)
-        {
-            targets.Remove(keysToRemove[i]);
-        }
+        target.NotifyBoardUnregistered();
+        Phase72CNestLifecycle.LogTargetState(target, "UnregisterTarget");
     }
 
     /// <summary>

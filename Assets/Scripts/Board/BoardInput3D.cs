@@ -22,6 +22,11 @@ public class BoardInput3D : MonoBehaviour
     [SerializeField]
     private bool debugPicks;
 
+    /// <summary>
+    /// Extra pick radius beyond half a cell pitch (board-plane). Softens edge/near-miss taps.
+    /// </summary>
+    private const float PickupMarginCellFraction = 0.28f;
+
     private readonly RaycastHit[] hitBuffer = new RaycastHit[16];
 
     public bool IsActive
@@ -40,7 +45,8 @@ public class BoardInput3D : MonoBehaviour
     }
 
     /// <summary>
-    /// Resolves a gameplay block under the screen pointer via physics raycast.
+    /// Resolves a gameplay block under the screen pointer via physics raycast,
+    /// then a small board-plane proximity fallback for near-miss taps.
     /// Returns null for nests, board geometry, empty space, or when World3D input is inactive.
     /// </summary>
     public Block TryFindBlock(Vector2 screenPosition)
@@ -63,9 +69,13 @@ public class BoardInput3D : MonoBehaviour
         {
             presentationController.EnsureWorldViewsBound();
             found = RaycastFindBlock(screenPosition);
+            if (found != null)
+            {
+                return found;
+            }
         }
 
-        return found;
+        return FindNearestBlockWithinPickupMargin(screenPosition);
     }
 
     private Block RaycastFindBlock(Vector2 screenPosition)
@@ -125,6 +135,74 @@ public class BoardInput3D : MonoBehaviour
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Near-miss pickup: closest movable piece within half-cell + small grid-scaled margin.
+    /// Direct raycast hits still win; this only runs after a miss.
+    /// </summary>
+    private Block FindNearestBlockWithinPickupMargin(Vector2 screenPosition)
+    {
+        Camera camera = boardCamera3D != null ? boardCamera3D.Camera : null;
+        BoardPresenter3D boardPresenter = FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        if (camera == null || boardPresenter == null || boardPresenter.GridSpace3D == null)
+        {
+            return null;
+        }
+
+        if (!FingerDragController.TryScreenToBoardWorld(camera, boardPresenter, screenPosition, out Vector3 boardHit))
+        {
+            return null;
+        }
+
+        float pitch = Mathf.Max(0.01f, boardPresenter.GridSpace3D.CellPitch);
+        float maxDistance = (pitch * 0.5f) + (pitch * PickupMarginCellFraction);
+        float maxDistanceSq = maxDistance * maxDistance;
+
+        Block best = null;
+        float bestDistSq = float.MaxValue;
+        PieceView3D[] views = FindObjectsByType<PieceView3D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < views.Length; i++)
+        {
+            PieceView3D view = views[i];
+            if (view == null || !view.IsSelectable)
+            {
+                continue;
+            }
+
+            Block block = view.SourceBlock;
+            if (block == null || block.IsSettled || block.IsFrozen)
+            {
+                continue;
+            }
+
+            BlockMover mover = block.GetComponent<BlockMover>();
+            if (mover == null || mover.IsMoving || mover.IsDragging)
+            {
+                continue;
+            }
+
+            Vector3 center = view.PickWorldCenter;
+            float dx = center.x - boardHit.x;
+            float dz = center.z - boardHit.z;
+            float distSq = (dx * dx) + (dz * dz);
+            if (distSq > maxDistanceSq || distSq >= bestDistSq)
+            {
+                continue;
+            }
+
+            bestDistSq = distSq;
+            best = block;
+        }
+
+        if (best != null && debugPicks)
+        {
+            Debug.Log(
+                $"BoardInput3D: proximity pick → Block {best.name} @ {best.GridPosition} dist={Mathf.Sqrt(bestDistSq):F3}",
+                best);
+        }
+
+        return best;
     }
 
     /// <summary>Camera used for World3D pointer picking (BoardCamera3D).</summary>

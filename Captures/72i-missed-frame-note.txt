@@ -1,0 +1,19 @@
+PHASE 72I — USER FRAME @ 17:28 (Play ended before MCP attach)
+=============================================================
+User screenshot: Captures/72i-user-game-green.png
+72F dump (frame=1814): both survivors Diamond:Red, Block3D_Diamond_Red, mpb=none
+
+Pixel measure of editor screenshot:
+  Scene (mid panel): green=0, strong red diamonds
+  Game (right panel): green cluster ~RGB(75–82, 203–210, 133–140) at x~826–834
+  Same OS image → Game framebuffer has lime pixels; Scene does not.
+
+MCP: Application.isPlaying=False when capture ran → missed live RTT pair.
+
+Added menu (no gameplay changes):
+  Shape Nest / Phase 72I Capture Game vs BoardCam NOW
+  Shape Nest / Phase 72I Capture + Step Refresh
+
+When Game shows green again: leave Play running, run 72I Capture NOW
+(optionally then Capture + Step Refresh). Writes Captures/72i-gv-*.png,
+72i-bc-*.png, 72i-live-report.txt

@@ -1,0 +1,26 @@
+playing paused=True mr17=True mr18=True
+--- NEAR SURVIVOR DIAMOND RENDERERS ---
+NEAR rid=-1036196 go=ContactShadow3D en=True active=True mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime col=RGBA(0.032, 0.018, 0.085, 0.340) pos=(-0.83, 0.19, 4.72) path=Board3D/Pieces3D/Block3D_Diamond_-1034856_c1/ContactShadow3D
+NEAR rid=-1036188 go=Mesh en=True active=True mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Red (Instance) col=RGBA(0.950, 0.220, 0.280, 1.000) pos=(-0.83, 0.33, 4.72) path=Board3D/Pieces3D/Block3D_Diamond_-1034856_c1/Mesh
+NEAR rid=-1037286 go=Highlight_1 en=False active=True mesh=BoardHighlightTile mat=BoardCellDestinationHighlight3D_Fill col=RGBA(0.604, 0.851, 1.000, 0.300) pos=(-0.83, 0.26, 4.76) path=Board3D/CellDestinationHighlight3D/Highlight_1
+NEAR rid=-1036150 go=Mesh en=True active=True mesh=ShapeSolid_Diamond mat=Block3D_Diamond_Red (Instance) col=RGBA(0.950, 0.220, 0.280, 1.000) pos=(-0.83, 0.33, 4.17) path=Board3D/Pieces3D/Block3D_Diamond_-1034856/Mesh
+NEAR rid=-1035454 go=Cell_1_7 en=True active=True mesh=BoardRoundedBox mat=BoardCell col=RGBA(0.200, 0.160, 0.410, 1.000) pos=(-0.83, 0.15, 4.21) path=Board3D/Cells/Cell_1_7
+NEAR rid=-1036162 go=ContactShadow3D en=True active=True mesh=SoftContactShadowDisc_v2 mat=PieceContactShadow3D_Runtime col=RGBA(0.032, 0.018, 0.085, 0.340) pos=(-0.83, 0.19, 4.17) path=Board3D/Pieces3D/Block3D_Diamond_-1034856/ContactShadow3D
+NEAR rid=-1035406 go=Cell_1_6 en=True active=True mesh=BoardRoundedBox mat=BoardCell col=RGBA(0.200, 0.160, 0.410, 1.000) pos=(-0.83, 0.15, 3.66) path=Board3D/Cells/Cell_1_6
+NEAR rid=-1035502 go=Cell_1_8 en=True active=True mesh=BoardRoundedBox mat=BoardCell col=RGBA(0.200, 0.160, 0.410, 1.000) pos=(-0.83, 0.15, 4.76) path=Board3D/Cells/Cell_1_8
+NEAR rid=-1037272 go=Highlight_0 en=False active=True mesh=BoardHighlightTile mat=BoardCellDestinationHighlight3D_Fill col=RGBA(0.604, 0.851, 1.000, 0.300) pos=(-0.83, 0.26, 4.21) path=Board3D/CellDestinationHighlight3D/Highlight_0
+NEAR rid=-1036216 go=ChainLink_-1034856_0 en=True active=True mesh=Capsule mat=ChainLink3D col=RGBA(0.450, 0.400, 0.750, 1.000) pos=(-0.83, 0.29, 4.49) path=Board3D/Pieces3D/ChainLink_-1034856_0
+nearCount=10
+greenDiamondHits=0
+A-baseline en17=True en18=True (1,7)=RGBA(0.529, 0.388, 0.722, 1.000) (1,8)=RGBA(0.314, 0.824, 0.549, 1.000) greenish=3076
+wrote /Users/yudiz/Documents/GitHub/ShapeNest/Captures/72h-live-gv-A-baseline.png
+boardcam A-baseline (1,7)=RGBA(0.949, 0.220, 0.278, 1.000)
+B-mesh-off-no-step en17=False en18=False (1,7)=RGBA(0.529, 0.388, 0.722, 1.000) (1,8)=RGBA(0.314, 0.824, 0.549, 1.000) greenish=3076
+wrote /Users/yudiz/Documents/GitHub/ShapeNest/Captures/72h-live-gv-B-mesh-off-no-step.png
+boardcam B-mesh-off-no-step (1,7)=RGBA(0.169, 0.133, 0.349, 1.000)
+C-mesh-off-after-step en17=True en18=True (1,7)=RGBA(0.949, 0.220, 0.282, 1.000) (1,8)=RGBA(0.949, 0.220, 0.282, 1.000) greenish=2451
+wrote /Users/yudiz/Documents/GitHub/ShapeNest/Captures/72h-live-gv-C-mesh-off-after-step.png
+boardcam C-mesh-off-after-step (1,7)=RGBA(0.949, 0.220, 0.278, 1.000)
+D-mesh-on-after-step en17=True en18=True (1,7)=RGBA(0.949, 0.220, 0.282, 1.000) (1,8)=RGBA(0.949, 0.220, 0.282, 1.000) greenish=2451
+wrote /Users/yudiz/Documents/GitHub/ShapeNest/Captures/72h-live-gv-D-mesh-on-after-step.png
+boardcam D-mesh-on-after-step (1,7)=RGBA(0.949, 0.220, 0.278, 1.000)

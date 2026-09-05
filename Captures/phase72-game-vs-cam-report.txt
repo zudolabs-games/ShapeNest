@@ -1,0 +1,28 @@
+playing=True paused=False
+cams=2
+CAM Main Camera goActive=False hier=False camEn=True depth=-1 tag=MainCamera clear=SolidColor hdr=True target=Screen
+  type=Base post=False aa=None
+  stack=0
+CAM BoardCamera3D goActive=True hier=True camEn=True depth=0 tag=Untagged clear=SolidColor hdr=True target=Screen
+  type=Base post=False aa=None
+  stack=1
+   +Main Camera
+volumes=0
+BLOCK id=-1001528 grid=(1, 7)
+  c0 cell=(1, 7) outer=Diamond:Red color=Red inner=False
+  MESH rid=-1002502 en=True hier=True
+   shared=Block3D_Diamond_Red
+   shared._BaseColor=RGBA(0.950, 0.220, 0.280, 1.000)
+   live=Block3D_Diamond_Red (Instance)
+   live._BaseColor=RGBA(0.950, 0.220, 0.280, 1.000)
+   live._Color=RGBA(1.000, 1.000, 1.000, 1.000)
+   mpbEmpty=True
+  c1 cell=(1, 8) outer=Diamond:Red color=Red inner=False
+  MESH rid=-1002540 en=True hier=True
+   shared=Block3D_Diamond_Red
+   shared._BaseColor=RGBA(0.950, 0.220, 0.280, 1.000)
+   live=Block3D_Diamond_Red (Instance)
+   live._BaseColor=RGBA(0.950, 0.220, 0.280, 1.000)
+   live._Color=RGBA(1.000, 1.000, 1.000, 1.000)
+   mpbEmpty=True
+RID_A=-1002502 RID_B=-1002540
