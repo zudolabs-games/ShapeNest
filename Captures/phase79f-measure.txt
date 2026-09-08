@@ -1,0 +1,9 @@
+phase79f FINAL pitch=0.5133 peakWorld=0.0385 awayWorld=0.0062
+renderer=Nest3D_Triangle_-909700/Mesh
+LEFT awayDisp=0.0062 peakDisp=0.0385 peakDelta=(-0.0385,0.0000) awayOpposite=True restore=0.00000 rootMove=0.00000 dir=OK
+RIGHT awayDisp=0.0062 peakDisp=0.0385 peakDelta=(0.0385,0.0000) awayOpposite=True restore=0.00000 rootMove=0.00000 dir=OK
+UP awayDisp=0.0062 peakDisp=0.0385 peakDelta=(0.0000,0.0385) awayOpposite=True restore=0.00000 rootMove=0.00000 dir=OK
+DOWN awayDisp=0.0062 peakDisp=0.0385 peakDelta=(0.0000,-0.0385) awayOpposite=True restore=0.00000 rootMove=0.00000 dir=OK
+scale view before=(0.41, 0.09, 0.41) during=(0.41, 0.09, 0.41) after=(0.41, 0.09, 0.41)
+scale target before=(1.00, 1.00, 1.00) during=(1.00, 1.00, 1.00) after=(1.00, 1.00, 1.00)
+has075=True has012=True hasOutCubic=True worldApi=True

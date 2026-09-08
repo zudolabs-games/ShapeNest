@@ -1,0 +1,16 @@
+[79E] visible renderer=Board3D/Nests3D/Nest3D_Diamond_-821614/Mesh
+WV localScale=(0.41, 0.09, 0.41) lossy=(0.41, 0.09, 0.41)
+[79E] START world=(0.28, 0.22, 4.21) local=(0.00, 0.00, 0.00)
+[79E] PEAK world=(0.38, 0.22, 4.21) local=(0.25, 0.00, 0.00) displacement=0.1027 expected=0.1027
+rootTargetMoved=(599.68, 1181.60, 0.00)
+pixelChanged>30=301 strong>80=301 total=518400
+[79E] END world=(0.28, 0.22, 4.21) restoreError=0.00000
+
+ANIM maxWorldDisp=0 elapsed=0.5009346 state=Calling
+[79E] visible renderer=Board3D/Nests3D/Nest3D_Diamond_-821614/Mesh
+WV localScale=(0.41, 0.09, 0.41) lossy=(0.41, 0.09, 0.41)
+[79E] START world=(0.28, 0.22, 4.21) local=(0.00, 0.00, 0.00)
+[79E] PEAK world=(0.38, 0.22, 4.21) local=(0.25, 0.00, 0.00) displacement=0.1027 expected=0.1027
+rootTargetMoved=(599.68, 1181.60, 0.00)
+pixelChanged>30=301 strong>80=301 total=518400
+[79E] END world=(0.28, 0.22, 4.21) restoreError=0.00000

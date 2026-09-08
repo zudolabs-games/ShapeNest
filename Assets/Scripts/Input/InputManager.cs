@@ -421,6 +421,7 @@ public class InputManager : MonoBehaviour
         EndActiveDragAndClear();
         pressScreenPosition = screenPosition;
         latestScreenPosition = screenPosition;
+      
 
         if (IsPointerOverBlockingUI(screenPosition, out string uiName))
         {
@@ -529,7 +530,8 @@ public class InputManager : MonoBehaviour
 
         fingerDrag.Begin(pressWorld, blockStartWorld, pressGridPosition);
 
-        if (!pressedMover.TryBeginFingerDrag())
+        bool began = pressedMover.TryBeginFingerDrag();
+        if (!began)
         {
             fingerDrag.Clear();
             LastPointerRejectReason = "begin-rejected";

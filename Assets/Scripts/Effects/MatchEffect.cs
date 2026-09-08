@@ -47,13 +47,13 @@ public class MatchEffect : MonoBehaviour
 
     [SerializeField]
     [Min(0.01f)]
-    [Tooltip("Duration of the contact click pulse.")]
-    private float impactDuration = 0.10f;
+    [Tooltip("Duration of the contact click pulse. Phase 78C: soft impact.")]
+    private float impactDuration = 0.055f;
 
     [SerializeField]
     [Min(0.01f)]
-    [Tooltip("Full glow lifetime: appear, expand slightly, fade out.")]
-    private float glowDuration = 0.22f;
+    [Tooltip("Full glow lifetime: appear, expand slightly, fade out. Overlaps dissolve (Phase 78/78B/78C).")]
+    private float glowDuration = 0.14f;
 
     [SerializeField]
     [Min(0.5f)]
@@ -67,8 +67,8 @@ public class MatchEffect : MonoBehaviour
 
     [SerializeField]
     [Min(0.01f)]
-    [Tooltip("Block and target shrink/fade after the contact pulse.")]
-    private float dissolveDuration = 0.1f;
+    [Tooltip("Block and target shrink/fade after the contact pulse. Phase 78C: readable dissolve overlapping glow.")]
+    private float dissolveDuration = 0.075f;
 
     private Sequence playSequence;
     private Block presentedBlock;
@@ -180,7 +180,10 @@ public class MatchEffect : MonoBehaviour
         }
 
         KillSequenceOnly();
-        float contactDuration = Mathf.Max(impactDuration, glowDuration);
+        // Phase 78/78B: do not hold gameplay on full glow lifetime — start dissolve after the
+        // short contact pulse. Glow continues/fades during dissolve so VFX still reads.
+        float contactDuration = Mathf.Max(0.01f, impactDuration);
+        float glowSpan = Mathf.Max(contactDuration + dissolveDuration, glowDuration, 0.01f);
         playSequence = DOTween.Sequence().SetLink(gameObject);
 
         // Short contact flash at impact start — existing PlayNestMatch still fires on finalize.
@@ -195,14 +198,13 @@ public class MatchEffect : MonoBehaviour
         {
             float elapsed = t * contactDuration;
             ApplyImpact(block, target, elapsed);
-            EvaluateGlow(elapsed / glowDuration, out float glowSize, out float glowAlpha);
+            EvaluateGlow(elapsed / glowSpan, out float glowSize, out float glowAlpha);
             SetGlow(glowSize, glowAlpha);
         }));
 
         playSequence.AppendCallback(() =>
         {
             ApplyImpact(block, target, impactDuration);
-            SetGlow(glowScale, 0f);
         });
 
         playSequence.Append(TweenAnimationUtility.Progress(dissolveDuration, t =>
@@ -219,6 +221,10 @@ public class MatchEffect : MonoBehaviour
             {
                 target.SetMatchPresentation(pieceScale, pieceAlpha);
             }
+
+            float glowElapsed = contactDuration + (t * dissolveDuration);
+            EvaluateGlow(glowElapsed / glowSpan, out float glowSize, out float glowAlpha);
+            SetGlow(glowSize, glowAlpha);
         }));
 
         playSequence.OnComplete(() =>

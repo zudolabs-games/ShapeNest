@@ -1,5 +1,5 @@
 PHASE 73 — REQUIREMENT VALIDATION SUITE
-frame=211 t=33.939
+frame=126 t=1.418
 ROUTING_MARKERS=True
 LOAD_DB Campaign_43_Reference index=0
 CANDIDATE cells=4 pick=2 t=(0, 4) shapes=Triangle@(1, 5),Triangle@(2, 5) dests=[(1, 9),(2, 9)]
@@ -22,7 +22,7 @@ CANDIDATE cells=3 pick=3 t=(0, -4) shapes=Triangle@(6, 7),Triangle@(7, 7),Triang
 collect focus=(6, 3) ok=True nestCount=3
 TRAVEL PASS n=3 t=(0, -4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
 LOAD_DB Campaign_43_Reference index=0
-T6_STRUCT structural nestedId=-344034 cells=3 subsetMethod=True nestedPrefer=True
+T6_STRUCT structural nestedId=-35692 cells=3 subsetMethod=True nestedPrefer=True
 LOAD_ASSET Debug_FixedDirection path=Assets/Levels/Debug_FixedDirection.asset
 T7_DETAIL=dir=Up allow((0, 1))=True deny((1, 0))=True buildRejectsIllegal=True
 LOAD_DB Campaign_43_Reference index=0
@@ -40,7 +40,7 @@ T4 PASS — 5+ cell chain → corresponding targets
 T5 PASS — L-shaped chain → same L targets
     DIAGNOSTIC_Phase73_RigidChain | n=3 t=(0, -4) midTaken=True midRigid=True midSameProgress=True midNoLag=True consumeOk=True collectNest=3
 T6 PASS — nested chain behavior preserved
-    structural nestedId=-344034 cells=3 subsetMethod=True nestedPrefer=True
+    structural nestedId=-35692 cells=3 subsetMethod=True nestedPrefer=True
 T7 PASS — fixed-direction restriction enforced
     dir=Up allow((0, 1))=True deny((1, 0))=True buildRejectsIllegal=True
 T8 PASS — invalid/non-same-translation NOT forced

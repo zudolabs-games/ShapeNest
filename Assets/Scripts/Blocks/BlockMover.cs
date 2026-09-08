@@ -44,38 +44,38 @@ public class BlockMover : MonoBehaviour
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Hold on the pre-target cell so the stop is readable before nest-entry.")]
-    private float matchingTargetPause = 0.22f;
+    [Tooltip("Hold on the pre-target cell before nest-entry. Phase 78C: shorter to remove hesitation.")]
+    private float matchingTargetPause = 0.045f;
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Anticipation lift duration after the pause, before the nest arc.")]
-    private float matchingTargetAnticipateDuration = 0.08f;
+    [Tooltip("Anticipation lift duration after the pause, before the nest arc. Phase 78C: subtle wind-up.")]
+    private float matchingTargetAnticipateDuration = 0.035f;
 
     [SerializeField]
     [Range(0.02f, 0.12f)]
     [Tooltip("Anticipation lift as a fraction of one board cell.")]
-    private float matchingTargetAnticipateLiftPercent = 0.06f;
+    private float matchingTargetAnticipateLiftPercent = 0.04f;
 
     [SerializeField]
     [Range(1f, 1.15f)]
     [Tooltip("Anticipation scale. 1 means no scale change.")]
-    private float matchingTargetAnticipateScale = 1.06f;
+    private float matchingTargetAnticipateScale = 1.03f;
 
     [SerializeField]
     [Range(0.05f, 0.25f)]
     [Tooltip("Arc peak height as a fraction of one board cell.")]
-    private float matchingTargetLiftPercent = 0.12f;
+    private float matchingTargetLiftPercent = 0.08f;
 
     [SerializeField]
     [Min(0.01f)]
-    [Tooltip("Duration of the curved hop into the matching nest.")]
-    private float matchingTargetArcDuration = 0.14f;
+    [Tooltip("Duration of the curved hop into the matching nest. Phase 78C: quick soft insertion.")]
+    private float matchingTargetArcDuration = 0.075f;
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Tiny sit into the nest after the arc, before Settle.")]
-    private float matchingTargetSitDuration = 0.05f;
+    [Tooltip("Tiny sit into the nest after the arc, before Settle. Phase 78C: short settle.")]
+    private float matchingTargetSitDuration = 0.020f;
 
     [SerializeField]
     [Range(0.9f, 1f)]
@@ -84,8 +84,8 @@ public class BlockMover : MonoBehaviour
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Duration of the nest scale pulse after the block lands.")]
-    private float matchingTargetPulseDuration = 0.12f;
+    [Tooltip("Duration of the nest scale pulse after the block lands. Phase 78C: keep confirmation pulse.")]
+    private float matchingTargetPulseDuration = 0.08f;
 
     [SerializeField]
     [Range(1f, 1.2f)]
@@ -125,6 +125,13 @@ public class BlockMover : MonoBehaviour
     private Vector3 fingerVisualTarget;
     private Vector3 fingerVisualVelocity;
     private bool fingerVisualHasTarget;
+    /// <summary>Presentation-only: short SmoothDamp onto logical seat after release.</summary>
+    private bool fingerVisualSettling;
+
+    // Phase 77: single LateUpdate smoothing layer (~22ms attach, ~28ms release settle).
+    private const float FingerVisualSmoothTime = 0.022f;
+    private const float FingerVisualSettleSmoothTime = 0.028f;
+    private const float FingerVisualSnapEpsilon = 0.00085f;
     private Coroutine dragRoutine;
     private Vector2Int dragSessionStart;
     private bool dragSessionMatchEntered;
@@ -132,6 +139,9 @@ public class BlockMover : MonoBehaviour
     private readonly List<int> nestCellIndices = new List<int>();
     private readonly List<Target> nestTargets = new List<Target>();
     private readonly List<Vector2Int> nestTargetWorlds = new List<Vector2Int>();
+    private readonly List<int> callCellIndices = new List<int>();
+    private readonly List<Target> callTargets = new List<Target>();
+    private readonly List<Target> activeCallTargets = new List<Target>();
     private readonly List<Vector2Int> splitWorlds = new List<Vector2Int>();
     private readonly List<ShapeCellData> splitCells = new List<ShapeCellData>();
     private readonly List<Vector2Int> splitAnchors = new List<Vector2Int>();
@@ -141,6 +151,8 @@ public class BlockMover : MonoBehaviour
     private bool hasLastMatch;
     private Vector2Int lastMatchOrigin;
     private Vector2Int lastMatchTargetCell;
+
+
 
     public static bool LastConsumeSucceeded { get; set; }
 
@@ -403,6 +415,7 @@ public class BlockMover : MonoBehaviour
 
     private void OnDisable()
     {
+        ClearTargetCallPresentation();
         dragActive = false;
         dragReleased = false;
         isMoving = false;
@@ -416,6 +429,7 @@ public class BlockMover : MonoBehaviour
         fingerDrivenDrag = false;
         fingerVisualHasTarget = false;
         fingerVisualVelocity = Vector3.zero;
+        fingerVisualSettling = false;
         if (activeMatchEffect != null)
         {
             Destroy(activeMatchEffect.gameObject);
@@ -537,6 +551,7 @@ public class BlockMover : MonoBehaviour
         }
 
         cachedBoard = board;
+        ClearTargetCallPresentation();
         dragActive = true;
         dragReleased = false;
         dragOrigin = block.GridPosition;
@@ -552,6 +567,7 @@ public class BlockMover : MonoBehaviour
         fingerVisualActive = false;
         fingerVisualHasTarget = false;
         fingerVisualVelocity = Vector3.zero;
+        fingerVisualSettling = false;
         isMoving = true;
         dragRoutine = StartCoroutine(DragRoutine(board));
         BoardUndoHistory undoHistory = BoardUndoHistory.Resolve();
@@ -653,7 +669,18 @@ public class BlockMover : MonoBehaviour
             return;
         }
 
-        FinishFingerVisualAndSnapToLogical();
+        // Finger path: keep the current sub-cell pose; DragRoutine catches up logical
+        // cells without AnimateHop, then settles the visual onto the final seat.
+        // Non-finger / Magnet: seat immediately (existing hop presentation owns travel).
+        if (!fingerDrivenDrag)
+        {
+            FinishFingerVisualAndSnapToLogical();
+        }
+        else if (fingerVisualHasTarget)
+        {
+            fingerVisualSettling = false;
+        }
+
         dragReleased = true;
         if (debugDrag)
         {
@@ -681,20 +708,41 @@ public class BlockMover : MonoBehaviour
         }
 
         Vector3 constrained = ConstrainFingerDragWorld(board, space, desiredBoardWorld);
+        bool firstFrame = !fingerVisualHasTarget;
         fingerVisualTarget = constrained;
         fingerVisualHasTarget = true;
         fingerVisualActive = true;
-        ApplySmoothedFingerVisual(forceSnap: false);
+        fingerVisualSettling = false;
+        // Immediate grab on first sample only. Ongoing follow is LateUpdate-only so
+        // smoothing is not applied twice per frame (input + LateUpdate).
+        if (firstFrame)
+        {
+            ApplySmoothedFingerVisual(forceSnap: true, FingerVisualSmoothTime);
+        }
     }
 
     private void LateUpdate()
     {
-        if (!fingerVisualActive || !fingerVisualHasTarget || !IsDragAiming || !fingerDrivenDrag)
+        if (fingerDrivenDrag && fingerVisualHasTarget)
         {
-            return;
+            if (fingerVisualSettling)
+            {
+                ApplySmoothedFingerVisual(forceSnap: false, FingerVisualSettleSmoothTime);
+                TryCompleteFingerVisualSettle();
+            }
+            else if (fingerVisualActive && IsDragAiming)
+            {
+                ApplySmoothedFingerVisual(forceSnap: false, FingerVisualSmoothTime);
+            }
         }
 
-        ApplySmoothedFingerVisual(forceSnap: false);
+        // Phase 79C: evaluate one-cell-away beckon every frame during finger aiming so
+        // continuous drag cannot skip the presentation latch between DragRoutine yields.
+        if (dragActive && fingerDrivenDrag && !magnetPresenting)
+        {
+            BoardManager board = cachedBoard != null ? cachedBoard : GetBoard();
+            UpdateTargetCallPresentation(board);
+        }
     }
 
     private Vector3 ConstrainFingerDragWorld(BoardManager board, IGridSpace space, Vector3 desiredBoardWorld)
@@ -778,7 +826,7 @@ public class BlockMover : MonoBehaviour
     /// Smooth toward the already-constrained target. Never eases past the target
     /// (no overshoot into blocked cells). Gameplay cells are untouched.
     /// </summary>
-    private void ApplySmoothedFingerVisual(bool forceSnap)
+    private void ApplySmoothedFingerVisual(bool forceSnap, float smoothTime)
     {
         if (block == null || block.WorldView == null || !fingerVisualHasTarget)
         {
@@ -804,15 +852,21 @@ public class BlockMover : MonoBehaviour
             return;
         }
 
-        // Low-latency attach feel (~30ms). Constraint already applied to target.
-        const float smoothTime = 0.03f;
+        float dt = Time.deltaTime;
+        if (dt < 0.00001f)
+        {
+            dt = 0.016666f;
+        }
+
+        // Frame-rate independent attach (~22ms) / settle (~28ms). Constraint already on target.
+        float tau = Mathf.Max(0.008f, smoothTime);
         Vector3 next = Vector3.SmoothDamp(
             current,
             fingerVisualTarget,
             ref fingerVisualVelocity,
-            smoothTime,
+            tau,
             Mathf.Infinity,
-            Time.deltaTime);
+            dt);
 
         // Hard clamp: never travel past the constrained target on XZ.
         Vector3 toTarget = fingerVisualTarget - current;
@@ -849,15 +903,72 @@ public class BlockMover : MonoBehaviour
         fingerVisualActive = true;
     }
 
+    private void BeginFingerVisualSettleToLogical()
+    {
+        if (!fingerDrivenDrag || block == null || block.WorldView == null)
+        {
+            FinishFingerVisualAndSnapToLogical();
+            return;
+        }
+
+        BoardManager board = cachedBoard != null ? cachedBoard : GetBoard();
+        IGridSpace space = MotionGridSpace(board);
+        if (space == null)
+        {
+            FinishFingerVisualAndSnapToLogical();
+            return;
+        }
+
+        Vector3 seated = SeatedCellWorld(space, logicalCell);
+        if (!PieceMotionMath.IsFinite(seated))
+        {
+            FinishFingerVisualAndSnapToLogical();
+            return;
+        }
+
+        fingerVisualTarget = seated;
+        fingerVisualHasTarget = true;
+        fingerVisualActive = true;
+        fingerVisualSettling = true;
+
+        Vector3 current = block.WorldView.transform.position;
+        float dx = current.x - seated.x;
+        float dz = current.z - seated.z;
+        if ((dx * dx) + (dz * dz) <= FingerVisualSnapEpsilon * FingerVisualSnapEpsilon)
+        {
+            FinishFingerVisualAndSnapToLogical();
+        }
+    }
+
+    private void TryCompleteFingerVisualSettle()
+    {
+        if (!fingerVisualSettling || block == null || block.WorldView == null)
+        {
+            return;
+        }
+
+        Vector3 current = block.WorldView.transform.position;
+        float dx = current.x - fingerVisualTarget.x;
+        float dy = current.y - fingerVisualTarget.y;
+        float dz = current.z - fingerVisualTarget.z;
+        float err = (dx * dx) + (dy * dy) + (dz * dz);
+        if (err <= FingerVisualSnapEpsilon * FingerVisualSnapEpsilon
+            || (fingerVisualVelocity.sqrMagnitude < 0.00001f && err <= FingerVisualSnapEpsilon * 4f))
+        {
+            FinishFingerVisualAndSnapToLogical();
+        }
+    }
+
     private void FinishFingerVisualAndSnapToLogical()
     {
-        if (!fingerVisualActive && !fingerVisualHasTarget)
+        if (!fingerVisualActive && !fingerVisualHasTarget && !fingerVisualSettling)
         {
             return;
         }
 
         fingerVisualActive = false;
         fingerVisualHasTarget = false;
+        fingerVisualSettling = false;
         fingerVisualVelocity = Vector3.zero;
         BoardManager board = cachedBoard != null ? cachedBoard : GetBoard();
         IGridSpace space = MotionGridSpace(board);
@@ -890,6 +1001,7 @@ public class BlockMover : MonoBehaviour
                     Vector2Int focus = dragDirection != Vector2Int.zero
                         ? committed + dragDirection
                         : committed;
+                    FinishFingerVisualAndSnapToLogical();
                     yield return EnterMatchingTarget(board, rect, committed, focus);
                     break;
                 }
@@ -900,18 +1012,35 @@ public class BlockMover : MonoBehaviour
                     {
                         if (TryGetAdjacentMatchingTarget(board, committed, out Vector2Int releaseNestCell))
                         {
+                            FinishFingerVisualAndSnapToLogical();
                             yield return EnterMatchingTarget(board, rect, committed, releaseNestCell);
                             break;
                         }
 
+                        ClearTargetCallPresentation();
+                        BeginFingerVisualSettleToLogical();
                         if (finalSettleDelay > 0f)
                         {
                             yield return Pause(finalSettleDelay);
                         }
 
+                        // Ensure exact logical seat even if settle was interrupted mid-frame.
+                        if (fingerVisualSettling || fingerVisualHasTarget)
+                        {
+                            float settleGuard = Time.realtimeSinceStartup + 0.12f;
+                            while (fingerVisualSettling && Time.realtimeSinceStartup < settleGuard)
+                            {
+                                yield return null;
+                            }
+
+                            FinishFingerVisualAndSnapToLogical();
+                        }
+
                         break;
                     }
 
+                    // Phase 79: aiming while seated — evaluate one-cell-away call.
+                    UpdateTargetCallPresentation(board);
                     yield return null;
                     continue;
                 }
@@ -919,14 +1048,15 @@ public class BlockMover : MonoBehaviour
                 if (dragReleased
                     && TryGetAdjacentMatchingTarget(board, committed, out Vector2Int startNestCell))
                 {
+                    FinishFingerVisualAndSnapToLogical();
                     yield return EnterMatchingTarget(board, rect, committed, startNestCell);
                     break;
                 }
 
-                // Finger aiming: commit occupancy toward desiredCell without AnimateHop so
-                // presentation can follow the finger continuously between cells.
+                // Finger aiming + post-release catch-up: commit occupancy toward desiredCell
+                // without AnimateHop so presentation stays continuous between cells.
                 // Magnet / non-finger drags keep the existing hop animation path.
-                if (fingerDrivenDrag && !dragReleased)
+                if (fingerDrivenDrag)
                 {
                     bool committedAny = false;
                     while (true)
@@ -955,13 +1085,34 @@ public class BlockMover : MonoBehaviour
                             break;
                         }
 
+                        Vector2Int hopFrom = committed;
                         logicalCell = fingerNext;
                         hopBlockedCuePlayed = false;
                         hopAnticipatePending = false;
                         committedAny = true;
                         PlayHopSound();
                         block.SetGridPosition(fingerNext, preserveWorldPresentation: true);
+
+                        // After release, keep settle target on the advancing logical seat.
+                        if (dragReleased && fingerVisualHasTarget)
+                        {
+                            IGridSpace space = MotionGridSpace(board);
+                            if (space != null)
+                            {
+                                Vector3 seated = SeatedCellWorld(space, logicalCell);
+                                if (PieceMotionMath.IsFinite(seated))
+                                {
+                                    fingerVisualTarget = seated;
+                                    fingerVisualSettling = true;
+                                }
+                            }
+                        }
                     }
+
+                    // Phase 79H: evaluate one-cell-away call AFTER logical hops commit so the
+                    // presentation sees the post-hop seat in the same DragRoutine slice
+                    // (continuous finger catch-up can land on one-away mid-frame).
+                    UpdateTargetCallPresentation(board);
 
                     if (!committedAny && remainingSteps > 0)
                     {
@@ -974,6 +1125,9 @@ public class BlockMover : MonoBehaviour
 
                     continue;
                 }
+
+                // Phase 79: presentation-only while traveling (non-finger hop path).
+                UpdateTargetCallPresentation(board);
 
                 Vector2Int next = committed + dragDirection;
                 if (dragReleased && IsMatchingTargetCell(board, next))
@@ -1028,8 +1182,11 @@ public class BlockMover : MonoBehaviour
         }
         finally
         {
+            ClearTargetCallPresentation();
+            FinishFingerVisualAndSnapToLogical();
             fingerVisualActive = false;
             fingerVisualHasTarget = false;
+            fingerVisualSettling = false;
             fingerVisualVelocity = Vector3.zero;
             fingerDrivenDrag = false;
             FinalizeDragUndoSession(board);
@@ -1171,12 +1328,252 @@ public class BlockMover : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Phase 79 presentation-only: when the dragged block is exactly one cell from a
+    /// destination that existing <see cref="BoardManager.HasNestMatch"/> already accepts
+    /// along the active drag direction, play the nest call anticipation.
+    /// Does not move the block, change occupancy, or alter match detection.
+    /// </summary>
+
+    private void UpdateTargetCallPresentation(BoardManager board)
+    {
+        if (board == null
+            || block == null
+            || !dragActive
+            || magnetPresenting)
+        {
+            ClearTargetCallPresentation("inactive");
+            return;
+        }
+
+        // Phase 79: Target attraction is based ONLY on actual one-cell adjacency.
+        // The player's current drag direction is intentionally ignored.
+        // var allBlocks = new List<Block>();
+        // board.CollectUniqueBlocks(allBlocks);
+
+        var validTargets = new List<Target>();
+        var validMatchCells = new List<Vector2Int>();
+        var validSourceCells = new List<Vector2Int>();
+        var validSourceBlocks = new List<Block>();
+        var validDirections = new List<Vector2Int>();
+        var validCellIndices = new List<int>();
+
+        Vector2Int[] cardinalDirections =
+        {
+        Vector2Int.up,
+        Vector2Int.right,
+        Vector2Int.down,
+        Vector2Int.left
+    };
+
+        BlockMover draggedMover = block.GetComponent<BlockMover>();
+
+        if (draggedMover != null)
+        {
+            // Only the block currently being dragged can produce attraction VFX.
+            //
+            // We intentionally check ALL four directions so the VFX does not depend
+            // on the direction of the player's finger.
+            //
+            // This also supports multi-cell blocks: each individual cell can find
+            // its own adjacent matching target.
+            for (int d = 0; d < cardinalDirections.Length; d++)
+            {
+                EvaluateTargetCallDirection(
+                    board,
+                    block,
+                    draggedMover,
+                    cardinalDirections[d],
+                    validTargets,
+                    validMatchCells,
+                    validSourceCells,
+                    validSourceBlocks,
+                    validDirections,
+                    validCellIndices);
+            }
+        }
+
+        // Stop effects that were visible for targets that are no longer eligible.
+        for (int i = activeCallTargets.Count - 1; i >= 0; i--)
+        {
+            Target previous = activeCallTargets[i];
+
+            if (previous == null || !validTargets.Contains(previous))
+            {
+                if (previous != null)
+                {
+                    TargetCallEffect.Ensure(previous)?.ResetCall("switch");
+                }
+
+                activeCallTargets.RemoveAt(i);
+            }
+        }
+
+        var updatedTargets = new System.Collections.Generic.HashSet<Target>();
+
+        for (int i = 0; i < validTargets.Count; i++)
+        {
+            Target nest = validTargets[i];
+
+            if (nest != null && updatedTargets.Add(nest))
+            {
+                TargetCallEffect.Ensure(nest)?.BeginPairPresentationUpdate();
+            }
+        }
+
+        // Show/refresh every valid source-cell -> target-cell pair.
+        for (int i = 0; i < validTargets.Count; i++)
+        {
+            Target nest = validTargets[i];
+
+            TargetCallEffect effect = TargetCallEffect.Ensure(nest);
+
+            if (effect == null)
+            {
+                continue;
+            }
+
+            if (!activeCallTargets.Contains(nest))
+            {
+                activeCallTargets.Add(nest);
+            }
+
+            Vector2Int matchWorldCell = validMatchCells[i];
+            Vector2Int sourceWorldCell = validSourceCells[i];
+
+            // Direction from target toward the source block.
+            Vector2Int towardBlock = -validDirections[i];
+
+            Block sourceBlock = validSourceBlocks[i] != null
+                ? validSourceBlocks[i]
+                : block;
+
+            // Pair-specific VFX.
+            // This allows two cells belonging to the SAME multi-cell target
+            // to have two independent attraction animations.
+            effect.TryPlay(
+                towardBlock,
+                sourceBlock,
+                matchWorldCell,
+                sourceWorldCell,
+                block);
+        }
+
+        for (int i = 0; i < validTargets.Count; i++)
+        {
+            Target nest = validTargets[i];
+
+            if (nest != null)
+            {
+                TargetCallEffect.Ensure(nest)?.EndPairPresentationUpdate();
+            }
+        }
+
+        if (validTargets.Count == 0)
+        {
+            ClearTargetCallPresentation("no-one-hop-match");
+        }
+    }
+
+    private void EvaluateTargetCallDirection(
+     BoardManager board,
+     Block candidateBlock,
+     BlockMover candidateMover,
+     Vector2Int direction,
+     List<Target> validTargets,
+     List<Vector2Int> validMatchCells,
+     List<Vector2Int> validSourceCells,
+     List<Block> validSourceBlocks,
+     List<Vector2Int> validDirections,
+     List<int> validCellIndices)
+    {
+        if (board == null
+            || candidateBlock == null
+            || candidateMover == null
+            || direction == Vector2Int.zero)
+        {
+            return;
+        }
+
+        Vector2Int candidateAnchor = candidateMover.LogicalCell;
+        Vector2Int proposedAnchor = candidateAnchor + direction;
+
+        // Use the same authoritative per-cell matching query as gameplay. This is
+        // read-only presentation logic; no movement or occupancy is changed here.
+        var candidateCellIndices = new List<int>();
+        var candidateTargets = new List<Target>();
+        board.CollectNestMatches(candidateBlock, proposedAnchor, candidateCellIndices, candidateTargets);
+
+        for (int i = 0; i < candidateTargets.Count; i++)
+        {
+            Target nest = candidateTargets[i];
+            int cellIndex = candidateCellIndices[i];
+            if (nest == null || nest.IsMatched || !nest.HasLiveNestCells)
+            {
+                continue;
+            }
+
+            Vector2Int sourceWorldCell = candidateAnchor + candidateBlock.GetLocalCell(cellIndex);
+            Vector2Int matchWorldCell = proposedAnchor + candidateBlock.GetLocalCell(cellIndex);
+
+            // Exact one-cardinal-hop requirement. This guarantees the VFX is on the
+            // side of the target facing the matching source cell.
+            if (matchWorldCell - sourceWorldCell != direction)
+            {
+                continue;
+            }
+
+            bool duplicatePair = false;
+
+            for (int existing = 0; existing < validTargets.Count; existing++)
+            {
+                if (validTargets[existing] == nest
+                    && validSourceCells[existing] == sourceWorldCell
+                    && validMatchCells[existing] == matchWorldCell)
+                {
+                    duplicatePair = true;
+                    break;
+                }
+            }
+
+            if (duplicatePair)
+            {
+                continue;
+            }
+
+            validTargets.Add(nest);
+            validMatchCells.Add(matchWorldCell);
+            validSourceCells.Add(sourceWorldCell);
+            validSourceBlocks.Add(candidateBlock);
+            validDirections.Add(direction);
+            validCellIndices.Add(cellIndex);
+        }
+    }
+
+    private void ClearTargetCallPresentation(string reason = "clear")
+    {
+        for (int i = 0; i < activeCallTargets.Count; i++)
+        {
+            Target nest = activeCallTargets[i];
+            if (nest != null)
+            {
+                TargetCallEffect.Ensure(nest)?.ResetCall(reason);
+            }
+        }
+
+        activeCallTargets.Clear();
+        callCellIndices.Clear();
+        callTargets.Clear();
+    }
+
     private IEnumerator EnterMatchingTarget(
         BoardManager board,
         RectTransform rect,
         Vector2Int from,
         Vector2Int to)
     {
+        // Phase 79: stop call anticipation immediately; Phase 78C owns match entry.
+        //ClearTargetCallPresentation();
         dragSessionMatchEntered = true;
         BoardUndoHistory.Resolve()?.DiscardPending();
 
@@ -1325,7 +1722,7 @@ public class BlockMover : MonoBehaviour
 
         matchSequenceIndex++;
         int matchId = matchSequenceIndex;
-       // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} START");
+        // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} START");
 
         RectTransform rect = subject.RectTransform;
         Vector2Int occupancy = subject.GridPosition;
@@ -1436,7 +1833,7 @@ public class BlockMover : MonoBehaviour
         nestTargets.Add(focusedTarget);
         nestTargetWorlds.Add(targetWorld);
 
-       // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} CONSUME");
+        // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} CONSUME");
         bool fullyConsumed = ConsumeAndRebuild(
             board,
             subject,
@@ -1566,26 +1963,13 @@ public class BlockMover : MonoBehaviour
                 view.SnapWorldPresentationToGrid(space, sourceCell);
             }
 
-            Phase69AForensic.LogRevealSeating(
-                subject,
-                cellIndex,
-                view,
-                sourceCell,
-                lockedBefore,
-                view.IsMotionLocked,
-                viewWorldBeforeSeat,
-                view.transform.position);
-
             // Promote mesh now that outer match VFX is done — full-size standalone at SOURCE.
             // Clears residual + remeshes traveler to the logical survivor (no consumed-outer ghost).
-            Phase68CForensic.LogCell("REVEAL_BEFORE_PROMOTE", subject, cellIndex);
             BoardPresentationController.NotifyNestedLayerPromoted(subject, cellIndex);
             subject.ClearPendingLayerExtraction(cellIndex);
             subject.SetCellVisualVisible(cellIndex, true);
             // Promote remeshed while held inactive — release now so the reveal tween shows RED.
             BoardPresentationController.ReleasePromotedExtractionView(view);
-            Phase68CForensic.LogCell("REVEAL_AFTER_PROMOTE", subject, cellIndex);
-            Phase68CForensic.DumpDuplicates(subject, cellIndex);
 
             const float startMul = 0.82f;
             const float peakMul = 1.04f;
@@ -1633,7 +2017,7 @@ public class BlockMover : MonoBehaviour
     {
         if (subject == null || subject.IsSettled)
         {
-           // Debug.Log($"[CHAIN MATCH {phase}]\n(none)");
+            // Debug.Log($"[CHAIN MATCH {phase}]\n(none)");
             return;
         }
 
@@ -1981,14 +2365,11 @@ public class BlockMover : MonoBehaviour
 
         if (subject.HasInnerLayerAt(cellIndex))
         {
-            Phase68CForensic.LogCell("FOCUSED_PRE_DETACH", subject, cellIndex);
             BoardPresentationController.DetachAndAnchorNestedInner(subject, cellIndex);
-            Phase68CForensic.LogCell("FOCUSED_POST_DETACH", subject, cellIndex);
         }
 
         BoardPresentationController.BeginChainCellTravel(subject, travelView, cellIndex);
         subject.SetCellVisualVisible(cellIndex, false);
-        Phase68CForensic.LogCell("FOCUSED_TRAVEL_START", subject, cellIndex, $"target={targetWorld}");
 
         if (!TryGetWorldMotion(subject, out WorldPieceMotion worldMotion))
         {
@@ -2287,7 +2668,7 @@ public class BlockMover : MonoBehaviour
 
         return travelerRect;
     }
-    
+
     private IEnumerator EnterNestedInnerThenOuter(
         BoardManager board,
         RectTransform rect,
@@ -2358,8 +2739,8 @@ public class BlockMover : MonoBehaviour
 
         matchSequenceIndex++;
         int matchId = matchSequenceIndex;
-       // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} LAND");
-    // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} CONSUME");
+        // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} LAND");
+        // Debug.Log($"[MATCH SEQUENCE] MATCH {matchId} CONSUME");
 
         bool fullyConsumed = ConsumeAndRebuild(
             board,
@@ -2717,7 +3098,6 @@ public class BlockMover : MonoBehaviour
         }
 
         EnsureSubjectOccupancy(board, block);
-        Phase69AForensic.LogResolvedGroup(group);
 
         if (group.Actions.Count == 1)
         {
@@ -3262,14 +3642,6 @@ public class BlockMover : MonoBehaviour
         // If validation collapsed to a single cell, use the focused traveler path.
         if (nestCellIndices.Count == 1)
         {
-            Phase69AForensic.LogWholeBlockGate(
-                "FALLBACK_CollapsedToOneCell",
-                subject,
-                subject.GridPosition,
-                nestTargetWorlds[0],
-                group.Translation,
-                group.Actions.Count,
-                false);
             Vector2Int nestTo = nestTargetWorlds[0];
             bool occupying = IsWorldCellOccupyingAlignedMatch(board, subject, nestTo);
             yield return MatchFocusedChainCell(board, subject, subject.GridPosition, nestTo, occupying);
@@ -3283,14 +3655,6 @@ public class BlockMover : MonoBehaviour
             bool canTranslate = board.CanTranslateBlock(subject, to);
             if (!canTranslate)
             {
-                Phase69AForensic.LogWholeBlockGate(
-                    "FALLBACK_CanTranslateBlock",
-                    subject,
-                    from,
-                    to,
-                    group.Translation,
-                    group.Actions.Count,
-                    false);
                 // Invalid rigid move — fall back to best single focused match.
                 Vector2Int nestTo = nestTargetWorlds[0];
                 bool occupying = IsWorldCellOccupyingAlignedMatch(board, subject, nestTo);
@@ -3300,14 +3664,7 @@ public class BlockMover : MonoBehaviour
 
             if (!board.TryMoveBlock(subject, from, to))
             {
-                Phase69AForensic.LogWholeBlockGate(
-                    "FALLBACK_TryMoveBlock",
-                    subject,
-                    from,
-                    to,
-                    group.Translation,
-                    group.Actions.Count,
-                    true);
+
                 Vector2Int nestTo = nestTargetWorlds[0];
                 bool occupying = IsWorldCellOccupyingAlignedMatch(board, subject, nestTo);
                 yield return MatchFocusedChainCell(board, subject, from, nestTo, occupying);
@@ -3325,11 +3682,6 @@ public class BlockMover : MonoBehaviour
         }
 
         // Phase 68B: whole footprint may travel; leave every nested residual at its source cell.
-        Phase68CForensic.Log(
-            "WHOLE_BLOCK_START",
-            $"block={subject.GetInstanceID()} from={from} to={to} translation={group.Translation} " +
-            $"actions={group.Actions.Count} cells={subject.CellCount}");
-        Phase68CForensic.LogMovementGroup(group);
         for (int i = 0; i < subject.CellCount; i++)
         {
             if (subject.HasInnerLayerAt(i))
@@ -3337,8 +3689,6 @@ public class BlockMover : MonoBehaviour
                 BoardPresentationController.DetachAndAnchorNestedInner(subject, i);
             }
         }
-
-        Phase68CForensic.LogCell("PRE_OUTER_MOTION", subject, nestCellIndices[0]);
 
         for (int i = 0; i < nestTargets.Count; i++)
         {
@@ -3371,14 +3721,7 @@ public class BlockMover : MonoBehaviour
         yield return AnimateAnticipation(board, subject, restPosition, restScale);
         yield return AnimateNestEntry(board, subject, from, to, restScale);
         subject.SetGridPosition(to, preserveWorldPresentation: true);
-        Phase69AForensic.LogWholeBlockGate(
-            "OCCUPANCY_SET_TO_TARGET",
-            subject,
-            from,
-            subject.GridPosition,
-            group.Translation,
-            group.Actions.Count,
-            true);
+
         if (subject == block)
         {
             logicalCell = to;
@@ -3640,8 +3983,8 @@ public class BlockMover : MonoBehaviour
         if (unique.Count == 0)
         {
             //Debug.Log(
-                // "[AUTO CHAIN SEQUENCE]\nRemaining Block: NONE\n" +
-                // "(board empty — next scan should end the queue)");
+            // "[AUTO CHAIN SEQUENCE]\nRemaining Block: NONE\n" +
+            // "(board empty — next scan should end the queue)");
             return;
         }
 
@@ -3661,15 +4004,15 @@ public class BlockMover : MonoBehaviour
                 string reject = ExplainAlignedCellRejection(board, b, c, world, null);
                 bool candidate = reject == null;
                 //Debug.Log(
-                    // "[AUTO CHAIN SEQUENCE]\n" +
-                    // $"Remaining Block: {b.GetInstanceID()}\n" +
-                    // $"Remaining cell: {c}\n" +
-                    // $"Remaining shape: {b.GetActiveShape(c)}\n" +
-                    // $"Remaining world: {world}\n" +
-                    // $"Target at remaining world: {(target != null ? target.RequiredShape.ToString() : "NULL")}\n" +
-                    // $"Occupying owner OK: {board.GetBlockAt(world) == b}\n" +
-                    // $"Triangle candidate = {candidate}\n" +
-                    // $"Reject: {(reject ?? "none")}");
+                // "[AUTO CHAIN SEQUENCE]\n" +
+                // $"Remaining Block: {b.GetInstanceID()}\n" +
+                // $"Remaining cell: {c}\n" +
+                // $"Remaining shape: {b.GetActiveShape(c)}\n" +
+                // $"Remaining world: {world}\n" +
+                // $"Target at remaining world: {(target != null ? target.RequiredShape.ToString() : "NULL")}\n" +
+                // $"Occupying owner OK: {board.GetBlockAt(world) == b}\n" +
+                // $"Triangle candidate = {candidate}\n" +
+                // $"Reject: {(reject ?? "none")}");
             }
         }
     }
@@ -3735,11 +4078,11 @@ public class BlockMover : MonoBehaviour
             Target target = board.GetTargetAt(here);
             Block occupant = board.GetBlockAt(here);
             //Debug.Log(
-                // $"REJECT PlaySimpleAlignedNestEntry Block={subject.GetInstanceID()} here={here} nestTo={nestTo}:\n" +
-                // $"- CollectNestMatches empty (shape={subject.GetActiveShape(0)} " +
-                // $"target={(target != null ? target.RequiredShape.ToString() : "NULL")} " +
-                // $"occupant={(occupant != null ? occupant.GetInstanceID().ToString() : "NULL")} " +
-                // $"GetBlockAt(nestTo)={(board.GetBlockAt(nestTo) != null ? board.GetBlockAt(nestTo).GetInstanceID().ToString() : "NULL")})");
+            // $"REJECT PlaySimpleAlignedNestEntry Block={subject.GetInstanceID()} here={here} nestTo={nestTo}:\n" +
+            // $"- CollectNestMatches empty (shape={subject.GetActiveShape(0)} " +
+            // $"target={(target != null ? target.RequiredShape.ToString() : "NULL")} " +
+            // $"occupant={(occupant != null ? occupant.GetInstanceID().ToString() : "NULL")} " +
+            // $"GetBlockAt(nestTo)={(board.GetBlockAt(nestTo) != null ? board.GetBlockAt(nestTo).GetInstanceID().ToString() : "NULL")})");
             yield break;
         }
 
@@ -3797,10 +4140,10 @@ public class BlockMover : MonoBehaviour
                 subject.GetActiveIdentity(cellIndex)))
         {
             //Debug.Log(
-                // $"REJECT PlaySimpleAlignedNestEntry post-animation Block={subject.GetInstanceID()} here={here}:\n" +
-                // $"- locked match invalid (cellIndex={cellIndex} " +
-                // $"target={(nestTarget != null ? nestTarget.RequiredShape.ToString() : "NULL")} " +
-                // $"active={(cellIndex >= 0 && cellIndex < subject.CellCount ? subject.GetActiveShape(cellIndex).ToString() : "n/a")})");
+            // $"REJECT PlaySimpleAlignedNestEntry post-animation Block={subject.GetInstanceID()} here={here}:\n" +
+            // $"- locked match invalid (cellIndex={cellIndex} " +
+            // $"target={(nestTarget != null ? nestTarget.RequiredShape.ToString() : "NULL")} " +
+            // $"active={(cellIndex >= 0 && cellIndex < subject.CellCount ? subject.GetActiveShape(cellIndex).ToString() : "n/a")})");
             yield break;
         }
 
@@ -4250,7 +4593,7 @@ public class BlockMover : MonoBehaviour
         }
         else
         {
-           // Debug.Log("[AUTO MATCH SCAN] SELECTED none");
+            // Debug.Log("[AUTO MATCH SCAN] SELECTED none");
             LogSelectedNoneDump(board, scratch, skipIds);
         }
 
@@ -4480,7 +4823,7 @@ public class BlockMover : MonoBehaviour
 
         for (int g = 0; g < groupsOut.Count; g++)
         {
-            Phase68CForensic.LogMovementGroup(groupsOut[g]);
+            // Phase68CForensic.LogMovementGroup(groupsOut[g]);
         }
 
         return groupsOut.Count;
@@ -4964,16 +5307,16 @@ public class BlockMover : MonoBehaviour
         bool valid = IsWorldCellOccupyingAlignedMatch(board, survivor, world);
         string reject = ExplainAlignedCellRejection(board, survivor, 0, world, null);
         //Debug.Log(
-            // "POST-FIRST-MATCH STATE\n" +
-            // $"Block {survivor.GetInstanceID()}\n" +
-            // $"Cell 0\n" +
-            // $"World {world}\n" +
-            // $"Shape {survivor.GetActiveShape(0)}\n" +
-            // $"TargetAtCell {(target != null ? target.GetInstanceID().ToString() : "NULL")}\n" +
-            // $"RequiredShape {(target != null ? target.RequiredShape.ToString() : "n/a")}\n" +
-            // $"OccupancyOwner {(occ != null ? occ.GetInstanceID().ToString() : "NULL")}\n" +
-            // $"ValidOccupyingMatch {valid}\n" +
-            // $"Reject {(reject ?? "none")}");
+        // "POST-FIRST-MATCH STATE\n" +
+        // $"Block {survivor.GetInstanceID()}\n" +
+        // $"Cell 0\n" +
+        // $"World {world}\n" +
+        // $"Shape {survivor.GetActiveShape(0)}\n" +
+        // $"TargetAtCell {(target != null ? target.GetInstanceID().ToString() : "NULL")}\n" +
+        // $"RequiredShape {(target != null ? target.RequiredShape.ToString() : "n/a")}\n" +
+        // $"OccupancyOwner {(occ != null ? occ.GetInstanceID().ToString() : "NULL")}\n" +
+        // $"ValidOccupyingMatch {valid}\n" +
+        // $"Reject {(reject ?? "none")}");
     }
 
     public static void LogPostConsumeAutoMatchTrace(
@@ -4984,8 +5327,8 @@ public class BlockMover : MonoBehaviour
         bool fullyConsumed)
     {
         //Debug.Log(
-            // $"[AUTO MATCH POST-CONSUME] consumedWorld={consumedWorld} targetWorld={consumedTargetWorld} " +
-            // $"fullyConsumed={fullyConsumed} LastConsumeSucceeded={LastConsumeSucceeded}");
+        // $"[AUTO MATCH POST-CONSUME] consumedWorld={consumedWorld} targetWorld={consumedTargetWorld} " +
+        // $"fullyConsumed={fullyConsumed} LastConsumeSucceeded={LastConsumeSucceeded}");
 
         if (subject == null || subject.IsSettled)
         {
@@ -4997,9 +5340,9 @@ public class BlockMover : MonoBehaviour
         int id = subject.GetInstanceID();
         int count = Mathf.Max(1, subject.CellCount);
         //Debug.Log(
-            // $"[AUTO MATCH POST-CONSUME] survivor exists=YES id={id} GridPosition={subject.GridPosition} " +
-            // $"CellCount={subject.CellCount} ShapeType={subject.ShapeType} ActiveShape0={subject.GetActiveShape(0)} " +
-            // $"Settled={subject.IsSettled} Active={subject.isActiveAndEnabled}");
+        // $"[AUTO MATCH POST-CONSUME] survivor exists=YES id={id} GridPosition={subject.GridPosition} " +
+        // $"CellCount={subject.CellCount} ShapeType={subject.ShapeType} ActiveShape0={subject.GetActiveShape(0)} " +
+        // $"Settled={subject.IsSettled} Active={subject.isActiveAndEnabled}");
 
         bool inUnique = false;
         if (board != null)
@@ -5025,19 +5368,19 @@ public class BlockMover : MonoBehaviour
             Block occupant = board != null ? board.GetBlockAt(world) : null;
             Target target = board != null ? board.GetTargetAt(world) : null;
             //      Debug.Log(
-                //  $"[AUTO MATCH POST-CONSUME] cell[{i}] local={local} world={world} " +
-                // $"activeShape={subject.GetActiveShape(i)} " +
-                // $"GetBlockAt={(occupant != null ? occupant.GetInstanceID().ToString() : "NULL")} " +
-                // $"sameAsSurvivor={occupant == subject} " +
-                // $"Target={(target != null ? target.GetInstanceID().ToString() : "NULL")} " +
-                // $"Required={(target != null ? target.RequiredShape.ToString() : "n/a")}");
+            //  $"[AUTO MATCH POST-CONSUME] cell[{i}] local={local} world={world} " +
+            // $"activeShape={subject.GetActiveShape(i)} " +
+            // $"GetBlockAt={(occupant != null ? occupant.GetInstanceID().ToString() : "NULL")} " +
+            // $"sameAsSurvivor={occupant == subject} " +
+            // $"Target={(target != null ? target.GetInstanceID().ToString() : "NULL")} " +
+            // $"Required={(target != null ? target.RequiredShape.ToString() : "n/a")}");
 
             if (target != null)
             {
                 //Debug.Log(
-                    // $"[AUTO MATCH POST-CONSUME] coord compare cell[{i}]: " +
-                    // $"blockWorld={world} targetWorld={target.GridPosition} " +
-                    // $"equal={world == target.GridPosition}");
+                // $"[AUTO MATCH POST-CONSUME] coord compare cell[{i}]: " +
+                // $"blockWorld={world} targetWorld={target.GridPosition} " +
+                // $"equal={world == target.GridPosition}");
             }
         }
 
@@ -5084,9 +5427,9 @@ public class BlockMover : MonoBehaviour
                 }
 
                 // Debug.Log(
-                    // $"[AUTO MATCH TARGETS] Target {target.GetInstanceID()} → world {cell} " +
-                    // $"(GridPosition={target.GridPosition}) RequiredShape={target.RequiredShape} " +
-                    // $"Active={target.isActiveAndEnabled}");
+                // $"[AUTO MATCH TARGETS] Target {target.GetInstanceID()} → world {cell} " +
+                // $"(GridPosition={target.GridPosition}) RequiredShape={target.RequiredShape} " +
+                // $"Active={target.isActiveAndEnabled}");
             }
         }
     }
@@ -5256,14 +5599,14 @@ public class BlockMover : MonoBehaviour
             return false;
         }
 
-        Phase68CForensic.Log(
-            "CONSUME_BEGIN",
-            $"block={subject.GetInstanceID()} nestCount={nestCellIndices.Count} " +
-            $"grid={subject.GridPosition} cellCount={subject.CellCount}");
-        for (int ci = 0; ci < nestCellIndices.Count; ci++)
-        {
-            Phase68CForensic.LogCell("CONSUME_CELL_BEFORE", subject, nestCellIndices[ci]);
-        }
+        // Phase68CForensic.Log(
+        //     "CONSUME_BEGIN",
+        //     $"block={subject.GetInstanceID()} nestCount={nestCellIndices.Count} " +
+        //     $"grid={subject.GridPosition} cellCount={subject.CellCount}");
+        // for (int ci = 0; ci < nestCellIndices.Count; ci++)
+        // {
+        //     Phase68CForensic.LogCell("CONSUME_CELL_BEFORE", subject, nestCellIndices[ci]);
+        // }
 
         var consumedIndices = new HashSet<int>();
         var promotedIndices = new List<int>();
@@ -5368,12 +5711,9 @@ public class BlockMover : MonoBehaviour
                 BoardPresentationController.HoldPendingExtractionViewsAtSource(subject);
             }
 
-            Phase68CForensic.Log(
-                "CONSUME_PROMOTE",
-                $"block={subject.GetInstanceID()} promoted={promotedIndices.Count}");
             for (int i = 0; i < promotedIndices.Count; i++)
             {
-                Phase68CForensic.LogCell("CONSUME_AFTER_PROMOTE", subject, promotedIndices[i]);
+                // Phase68CForensic.LogCell("CONSUME_AFTER_PROMOTE", subject, promotedIndices[i]);
             }
 
             return false;
@@ -5944,6 +6284,11 @@ public class BlockMover : MonoBehaviour
         }).SetId(TweenAnimationUtility.TravelerId).SetLink(rect.gameObject);
         yield return TweenAnimationUtility.Wait(tween);
         rect.localScale = to;
+    }
+
+    private static int Manhattan(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
     }
 
     private static IEnumerator Pause(float duration)

@@ -1,0 +1,8 @@
+phase79d measure pitch=0.5133 target=Target(Clone)
+LEFT maxDisp=0.0180 frac=0.035 peak=(-0.0180,0.0000) rootMove=0.00000 scaleDelta=0.00000 restoreErr=0.00000 elapsed=0.145 dir=OK
+RIGHT maxDisp=0.0180 frac=0.035 peak=(0.0180,0.0000) rootMove=0.00000 scaleDelta=0.00000 restoreErr=0.00000 elapsed=0.158 dir=OK
+UP maxDisp=0.0180 frac=0.035 peak=(0.0000,0.0180) rootMove=0.00000 scaleDelta=0.00000 restoreErr=0.00000 elapsed=0.177 dir=OK
+DOWN maxDisp=0.0179 frac=0.035 peak=(0.0000,-0.0179) rootMove=0.00000 scaleDelta=0.00000 restoreErr=0.00000 elapsed=0.151 dir=OK
+captured phase79d-reach-right.png
+vfxBeckonKids=0
+DONE

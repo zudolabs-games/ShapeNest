@@ -1,0 +1,8 @@
+phase79e FINAL pitch=0.5133 peakWorld=0.0180
+renderer=Nest3D_Square_-835548/Mesh localScale=(0.41, 0.09, 0.41)
+LEFT worldDisp=0.0180 delta=(-0.0180,0.0000) restore=0.00000 rootMove=0.00000 dir=OK
+RIGHT worldDisp=0.0180 delta=(0.0180,0.0000) restore=0.00000 rootMove=0.00000 dir=OK
+UP worldDisp=0.0180 delta=(0.0000,0.0180) restore=0.00000 rootMove=0.00000 dir=OK
+DOWN worldDisp=0.0180 delta=(0.0000,-0.0180) restore=0.00000 rootMove=0.00000 dir=OK
+leftoverPhase79EObjects=0
+viewScale=(0.41, 0.09, 0.41) targetScale=(1.00, 1.00, 1.00)

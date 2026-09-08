@@ -1,0 +1,26 @@
+PHASE 79E — TARGET CALL VISUAL PROOF
+
+ROOT CAUSE:
+  SetCallBeckonOffset applied WORLD-intended meters as visualRoot LOCAL units.
+  PieceView3D root localScale ≈ (0.41, 0.09, 0.41) footprint.
+  Intended 0.035 cellPitch world → actual world ≈ 0.014 cellPitch (invisible).
+
+VISIBLE RENDERER:
+  Board3D/Nests3D/Nest3D_<Shape>_<id>/Mesh  (MeshRenderer on visualRoot)
+  ContactShadow3D follows centering; designerVisual=null for nests in this build.
+
+DIAGNOSTIC (0.20 cellPitch):
+  worldDisp=0.1027 expected=0.1027
+  lime marker centroid shiftX=46.57 px (512 closeup)
+  PASS_VISIBLE=True
+  Captures: phase79e-closeup-rest.png, phase79e-closeup-peak-right.png,
+            phase79e-marker-proof.txt
+
+FINAL (0.035 cellPitch):
+  worldDisp=0.0180 all four directions OK
+  restoreError=0 rootMove=0 targetScale=(1,1,1)
+  DiagnosticExaggeratedMotion=false
+  Captures: phase79e-final-measure.txt
+
+PHASE 73: OVERALL=PASS 8/8
+CONSOLE ERRORS: 0

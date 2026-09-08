@@ -674,7 +674,6 @@ public class BoardManager : MonoBehaviour
         }
 
         target.NotifyBoardUnregistered();
-        Phase72CNestLifecycle.LogTargetState(target, "UnregisterTarget");
     }
 
     /// <summary>

@@ -1,0 +1,62 @@
+PHASE 79J BECKON PUCK PROOF
+InputPath: InputManager.SimulatePointer* via play-mode coroutine
+Block: Triangle start=(1,4) holdLogical=(2, 4) grid=(2, 4) dir=Right
+Target: Triangle@(4,4)
+rendererObject=BeckonPuck3D mat=Nest3D_Triangle_White
+puckRest=(0.83, 0.24, 2.55)
+puckPeak=(0.76, 0.27, 2.55)
+puckEnd=(0.83, 0.24, 2.55)
+worldDisplacement=0.06673 lift=0.03593
+maxOuter=0.00000 maxRoot=0.00000
+peakShot=True sawCall=True
+restoreDelta=0.00000
+
+[79J] BEGIN grid=(1, 4) press=(369.85, 910.46) delta=(516.13, 0.00)
+[79J] CALL target=Target(Clone) grid=(4, 4) directionGrid=(-1, 0) directionWorld=(-1.000,0.000,0.000) puckRest=(0.8316,0.2374,2.5468) peakMeters=0.0667 rendererObject=BeckonPuck3D
+[79J] PEAK puckPeak=(0.8354,0.2335,2.5468) worldDisplacement=0.00382 lift=-0.00390
+[79J] PEAK puckPeak=(0.8089,0.2484,2.5468) worldDisplacement=0.02269 lift=0.01107
+[79J] PEAK puckPeak=(0.7858,0.2615,2.5468) worldDisplacement=0.04580 lift=0.02412
+[79J] SHOT phase79j-peak.png disp=0.0458
+[79J] PEAK puckPeak=(0.7660,0.2727,2.5468) worldDisplacement=0.06560 lift=0.03529
+[79J] PEAK puckPeak=(0.7649,0.2733,2.5468) worldDisplacement=0.06673 lift=0.03593
+[79J] COMPLETE puckRestore=(0.8316,0.2374,2.5468) deltaFromRest=0.00000 peakDisplacement=0.06673
+[79J] HOLD_END logical=(2, 4) desired=(2, 4) grid=(2, 4) guard=91 sawCall=True
+[79J] CALL target=Target(Clone) grid=(0, 4) directionGrid=(-1, 0) directionWorld=(-1.000,0.000,0.000) puckRest=(-1.3860,0.2374,2.5468) peakMeters=0.0667 rendererObject=BeckonPuck3D
+[79J] PEAK puckPeak=(-1.3917,0.2389,2.5468) worldDisplacement=0.00571 lift=0.00149
+[79J] PEAK puckPeak=(-1.4110,0.2497,2.5468) worldDisplacement=0.02499 lift=0.01237
+[79J] PEAK puckPeak=(-1.4302,0.2606,2.5468) worldDisplacement=0.04419 lift=0.02321
+[79J] PEAK puckPeak=(-1.4439,0.2683,2.5468) worldDisplacement=0.05785 lift=0.03092
+[79J] PEAK puckPeak=(-1.4503,0.2719,2.5468) worldDisplacement=0.06430 lift=0.03456
+[79J] PEAK puckPeak=(-1.4527,0.2733,2.5468) worldDisplacement=0.06664 lift=0.03588
+[79J] COMPLETE puckRestore=(-1.3860,0.2374,2.5468) deltaFromRest=0.00000 peakDisplacement=0.06673
+[79J] CALL target=Target(Clone) grid=(0, 4) directionGrid=(1, 0) directionWorld=(1.000,0.000,0.000) puckRest=(-1.3860,0.2374,2.5468) peakMeters=0.0667 rendererObject=BeckonPuck3D
+[79J] PEAK puckPeak=(-1.3988,0.2284,2.5468) worldDisplacement=0.01273 lift=-0.00893
+[79J] PEAK puckPeak=(-1.3617,0.2494,2.5468) worldDisplacement=0.02438 lift=0.01202
+[79J] PEAK puckPeak=(-1.3379,0.2628,2.5468) worldDisplacement=0.04818 lift=0.02546
+[79J] PEAK puckPeak=(-1.3243,0.2705,2.5468) worldDisplacement=0.06171 lift=0.03310
+[79J] PEAK puckPeak=(-1.3199,0.2729,2.5468) worldDisplacement=0.06610 lift=0.03557
+[79J] PEAK puckPeak=(-1.3193,0.2733,2.5468) worldDisplacement=0.06673 lift=0.03593
+[79J] COMPLETE puckRestore=(-1.3860,0.2374,2.5468) deltaFromRest=0.00000 peakDisplacement=0.06673
+[79J] CALL target=Target(Clone) grid=(0, 4) directionGrid=(0, 1) directionWorld=(0.000,0.000,1.000) puckRest=(-1.3860,0.2374,2.5468) peakMeters=0.0667 rendererObject=BeckonPuck3D
+[79J] PEAK puckPeak=(-1.3860,0.2496,2.5715) worldDisplacement=0.02477 lift=0.01224
+[79J] PEAK puckPeak=(-1.3860,0.2635,2.5962) worldDisplacement=0.04940 lift=0.02615
+[79J] PEAK puckPeak=(-1.3860,0.2697,2.6071) worldDisplacement=0.06030 lift=0.03230
+[79J] PEAK puckPeak=(-1.3860,0.2729,2.6127) worldDisplacement=0.06597 lift=0.03550
+[79J] PEAK puckPeak=(-1.3860,0.2733,2.6135) worldDisplacement=0.06673 lift=0.03593
+[79J] COMPLETE puckRestore=(-1.3860,0.2374,2.5468) deltaFromRest=0.00000 peakDisplacement=0.06673
+[79J] CALL target=Target(Clone) grid=(0, 4) directionGrid=(0, -1) directionWorld=(0.000,0.000,-1.000) puckRest=(-1.3860,0.2374,2.5468) peakMeters=0.0667 rendererObject=BeckonPuck3D
+[79J] PEAK puckPeak=(-1.3860,0.2398,2.5394) worldDisplacement=0.00737 lift=0.00242
+[79J] PEAK puckPeak=(-1.3860,0.2560,2.5107) worldDisplacement=0.03606 lift=0.01862
+[79J] PEAK puckPeak=(-1.3860,0.2667,2.4918) worldDisplacement=0.05498 lift=0.02930
+[79J] PEAK puckPeak=(-1.3860,0.2712,2.4838) worldDisplacement=0.06302 lift=0.03383
+[79J] PEAK puckPeak=(-1.3860,0.2732,2.4803) worldDisplacement=0.06651 lift=0.03581
+[79J] COMPLETE puckRestore=(-1.3860,0.2374,2.5468) deltaFromRest=0.00000 peakDisplacement=0.06673
+
+
+FOUR_DIRECTION (presentation TryPlay toward-block on Circle@(0,4)):
+Left toward=(-1, 0) peakXZ=0.0667 peak=(-1.45, 0.27, 2.55) outerD=0.00000 rootD=0.00000 restoreD=0.00000 PASS
+Right toward=(1, 0) peakXZ=0.0667 peak=(-1.32, 0.27, 2.55) outerD=0.00000 rootD=0.00000 restoreD=0.00000 PASS
+Up toward=(0, 1) peakXZ=0.0667 peak=(-1.39, 0.27, 2.61) outerD=0.00000 rootD=0.00000 restoreD=0.00000 PASS
+Down toward=(0, -1) peakXZ=0.0667 peak=(-1.39, 0.27, 2.48) outerD=0.00000 rootD=0.00000 restoreD=0.00000 PASS
+
+Result: PASS

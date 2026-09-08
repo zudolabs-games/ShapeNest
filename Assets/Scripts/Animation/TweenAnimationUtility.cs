@@ -13,6 +13,7 @@ public static class TweenAnimationUtility
     public const string InteractionId = "ShapeNest.Interaction";
     public const string NestSocketId = "ShapeNest.NestSocket";
     public const string ReadyPulseId = "ShapeNest.ReadyPulse";
+    public const string CallAttractId = "ShapeNest.CallAttract";
     public const string UiPressId = "ShapeNest.UiPress";
     public const string HudId = "ShapeNest.Hud";
     public const string MatchEffectId = "ShapeNest.MatchEffect";

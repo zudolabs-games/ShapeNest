@@ -44,6 +44,77 @@ public static class ShapeMeshFactory3D
         return mesh;
     }
 
+    /// <summary>Outer rim only (nest submesh 0). Presentation split for Phase 79G socket beckon.</summary>
+    public static Mesh GetNestRimMesh(ShapeType shape)
+    {
+        string key = "nest_rim_v9_" + shape;
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        Mesh mesh = ExtractSubmesh(GetNestMesh(shape), 0);
+        mesh.name = "ShapeNestRim_" + shape;
+        Cache[key] = mesh;
+        return mesh;
+    }
+
+    /// <summary>Inner cavity walls/floor only (nest submesh 1). Presentation-only socket beckon target.</summary>
+    public static Mesh GetNestCavityMesh(ShapeType shape)
+    {
+        string key = "nest_cavity_v9_" + shape;
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        Mesh mesh = ExtractSubmesh(GetNestMesh(shape), 1);
+        mesh.name = "ShapeNestCavity_" + shape;
+        Cache[key] = mesh;
+        return mesh;
+    }
+
+    private static Mesh ExtractSubmesh(Mesh source, int submeshIndex)
+    {
+        if (source == null || submeshIndex < 0 || submeshIndex >= source.subMeshCount)
+        {
+            return new Mesh { name = "EmptySubmesh" };
+        }
+
+        int[] srcTris = source.GetTriangles(submeshIndex);
+        Vector3[] srcVerts = source.vertices;
+        Vector3[] srcNormals = source.normals;
+        Vector2[] srcUv = source.uv;
+        var map = new Dictionary<int, int>(srcTris.Length);
+        var verts = new List<Vector3>(srcTris.Length);
+        var normals = new List<Vector3>(srcTris.Length);
+        var uvs = new List<Vector2>(srcTris.Length);
+        var tris = new List<int>(srcTris.Length);
+
+        for (int i = 0; i < srcTris.Length; i++)
+        {
+            int old = srcTris[i];
+            if (!map.TryGetValue(old, out int neu))
+            {
+                neu = verts.Count;
+                map[old] = neu;
+                verts.Add(srcVerts[old]);
+                normals.Add(srcNormals != null && old < srcNormals.Length ? srcNormals[old] : Vector3.up);
+                uvs.Add(srcUv != null && old < srcUv.Length ? srcUv[old] : Vector2.zero);
+            }
+
+            tris.Add(neu);
+        }
+
+        var mesh = new Mesh();
+        mesh.SetVertices(verts);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
     private static Mesh BuildSolid(ShapeType shape)
     {
         Vector2[] outline = GetOutline(shape, 0.5f);

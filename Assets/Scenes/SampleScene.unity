@@ -6773,15 +6773,15 @@ MonoBehaviour:
   finalSettleDelay: 0.03
   hopTravelScale: 0.985
   hopLiftPercent: 0.045
-  matchingTargetPause: 0.22
-  matchingTargetAnticipateDuration: 0.08
-  matchingTargetAnticipateLiftPercent: 0.06
-  matchingTargetAnticipateScale: 1.06
-  matchingTargetLiftPercent: 0.12
-  matchingTargetArcDuration: 0.14
-  matchingTargetSitDuration: 0.05
+  matchingTargetPause: 0.045
+  matchingTargetAnticipateDuration: 0.035
+  matchingTargetAnticipateLiftPercent: 0.04
+  matchingTargetAnticipateScale: 1.03
+  matchingTargetLiftPercent: 0.08
+  matchingTargetArcDuration: 0.075
+  matchingTargetSitDuration: 0.02
   matchingTargetHopScale: 0.97
-  matchingTargetPulseDuration: 0.12
+  matchingTargetPulseDuration: 0.08
   matchingTargetPulseScale: 1.08
   debugDrag: 0
   matchEffectPrefab: {fileID: 3918274650192837465, guid: e15f3a8c6d2b7e0c3a7b5d4e2f9c6815, type: 3}

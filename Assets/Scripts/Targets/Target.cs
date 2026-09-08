@@ -228,7 +228,6 @@ public class Target : MonoBehaviour
             // EffectiveCount(empty) returns 1 for legacy 1x1 — do NOT use it here.
             // Consumed nests must report CellCount=0 so presentation never remounts them.
             cachedCellCount = 0;
-            Phase72CNestLifecycle.LogTargetConsumed(this);
             return true;
         }
 
@@ -422,13 +421,11 @@ public class Target : MonoBehaviour
 
     private void OnEnable()
     {
-        Phase72CNestLifecycle.LogTargetEnable(this);
         RefreshVisual();
     }
 
     private void OnDisable()
     {
-        Phase72CNestLifecycle.LogTargetDisable(this);
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         // Preserve Matched so a disable/destroy cannot resurrect a finished nest as Normal.
@@ -532,6 +529,7 @@ public class Target : MonoBehaviour
 
     public void Initialize(BoardManager board, Vector2Int startPosition)
     {
+        GetComponent<TargetCallEffect>()?.ResetCall();
         StopReadyRoutine();
         ResetMatchPresentation();
         isReadyFeedbackActive = false;
@@ -738,6 +736,9 @@ public class Target : MonoBehaviour
             return;
         }
 
+        // Phase 79: nest-entry ready pulse replaces any one-cell-away call pose.
+        GetComponent<TargetCallEffect>()?.StopForMatch();
+
         CacheImage();
         CaptureRestPose();
 
@@ -793,10 +794,10 @@ public class Target : MonoBehaviour
 
     public void BeginMatchPresentation()
     {
+        GetComponent<TargetCallEffect>()?.StopForMatch();
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         visualState = VisualState.Entering;
-        Phase72CNestLifecycle.LogTargetState(this, "BeginMatchPresentation");
         CacheImage();
         ApplyRestVisuals();
 
@@ -837,7 +838,6 @@ public class Target : MonoBehaviour
     public void CompleteMatchPresentation()
     {
         visualState = VisualState.Matched;
-        Phase72CNestLifecycle.LogTargetState(this, "CompleteMatchPresentation");
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         PieceView.LocalScale = Vector3.zero;
@@ -858,7 +858,6 @@ public class Target : MonoBehaviour
     public void ResetMatchPresentation()
     {
         visualState = VisualState.Normal;
-        Phase72CNestLifecycle.LogTargetState(this, "ResetMatchPresentation");
         StopReadyRoutine();
         isReadyFeedbackActive = false;
         if (restScale.sqrMagnitude < 0.0001f)

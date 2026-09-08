@@ -1,0 +1,104 @@
+PHASE 79I REAL PLAYER INPUT FORENSIC
+====================================
+
+OUTCOME: A_REAL_TRIGGER_AND_VISIBLE
+
+Input path used (NOT synthetic BlockMover/TargetCallEffect calls):
+  InputManager.SimulatePointerPressed / SimulatePointerMoved / SimulatePointerReleased
+    → ProcessPointerFrame
+    → OnPointerPressed / OnPointerDragged / OnPointerReleased
+    → BoardInput3D.TryFindBlock (raycast)
+    → TryBeginFingerwiseSession → BlockMover.TryBeginFingerDrag
+    → SetDragDirection / SetDragRequest / SetFingerDragWorld
+    → DragRoutine logical hop commit
+    → UpdateTargetCallPresentation
+    → HasNestMatch → TargetCallEffect.TryPlay
+    → PieceView3D.SocketCavity3D world motion
+    → BoardCamera3D (viewport inView=True)
+
+NOTE: SimulatePointer* is the same ProcessPointerFrame session path as hardware
+mouse/touch (InputManager explicitly documents this). The harness did NOT call
+TryBeginFingerDrag / SetDragDirection / UpdateTargetCallPresentation / TryPlay
+directly.
+
+------------------------------------
+SELECTED BLOCK
+------------------------------------
+Block: Block (Clone) id=-220530
+Shape/layer: Triangle:White
+Start cell: (1, 4)
+One-away cell (after hop): (2, 4)
+Drag direction: Right (+X)  locked via finger travel
+Desired cell (clamped): (2, 4)
+Candidate = logical + dir: (3, 4)
+HasNestMatch(block, candidate): True
+Matching targets: 2 (same Target listed per overlapping cell)
+Matched target: Target(Clone) @ (4, 4) Triangle
+
+------------------------------------
+TARGETCALLEFFECT
+------------------------------------
+stateBefore: Inactive
+stateAfter:  Calling
+then:        Completed (after restore)
+PieceView3D: Nest3D_Triangle_-219622
+SocketCavity3D: SocketCavity3D instance -222568
+BoardCamera3D: inView=True viewport~(0.66, 0.47) z=6.63
+
+------------------------------------
+WORLD POSITIONS (actual transforms)
+------------------------------------
+SocketCavity3D rest:    (0.8316, 0.2207, 2.5468)
+SocketCavity3D peak:    (0.8034, 0.2207, 2.5468)
+SocketCavity3D restore: (0.8316, 0.2207, 2.5468)
+socketPeak != socketRest: YES  horizontalDelta=0.02823
+
+Outer rim rest/peak:    (0.8316, 0.2207, 2.5468) / (0.8316, 0.2207, 2.5468)
+outerPeak == outerRest: YES  delta=0.00000
+
+Target root rest/peak:  (719.0400, 823.5200, 0.0000) / same
+  (Target gameplay root is canvas/UI space; World3D nest is PieceView3D)
+rootPeak == rootRest:   YES  delta=0.00000
+
+PieceView3D root: stationary with outer (world)
+
+------------------------------------
+DIAGNOSTIC MARKER
+------------------------------------
+Magenta URP Unlit sphere spawned at SocketCavity3D during Calling,
+removed on restore. Confirms trigger addresses the BoardCamera3D World3D object.
+
+------------------------------------
+SCREENSHOT
+------------------------------------
+Captures/phase79i-boardcam-call.png  (BoardCamera3D)
+Note: capture after hold/release; animation is ~0.18s so still frame may miss peak.
+Proof of motion is the rest/peak/restore world samples above + MOTION_VERDICT.
+
+------------------------------------
+LIVE TRACE (change-gated)
+------------------------------------
+[79I] FORENSIC_START path=InputManager.SimulatePointer* → ProcessPointerFrame → OnPointerPressed/Dragged
+[79I] PRESS_SCREEN=(369.85, 910.46) startGrid=(1, 4) shape=Triangle id=-220530
+[79I] INPUT POINTER_DOWN screen=(369.8,910.5) simulated=True
+[79I] INPUT RAYCAST block=Block (Clone) id=-220530 grid=(1, 4) shape=Triangle
+[79I] INPUT TRY_BEGIN_FINGER_DRAG result=True block=Block (Clone) logical=(1, 4) mover=Block (Clone)
+[79I] INPUT POINTER_DRAG logical=(1, 4) desired=(1, 4) dir=(0, 0) locked=False requested=(1, 4)
+[79I] INPUT POINTER_DRAG logical=(1, 4) desired=(2, 4) dir=(1, 0) locked=True requested=(4, 4)
+[79I] LOGICAL from=(1, 4) to=(2, 4) desired=(2, 4) dir=Right block=Block (Clone) id=-220530 shape=Triangle layer0=Triangle:White
+[79I] ONE_AWAY_CHECK logical=(2, 4) dir=Right candidate=(3, 4) HasNestMatch=True targets=2 matchTarget=Target(Clone)@(4, 4) shape=Triangle
+[79I] REAL_CALL_TRIGGER ... stateBefore=Inactive stateAfter=Calling pieceView=Nest3D_Triangle_* socket=SocketCavity3D
+[79I] SOCKET_REST / MARKER / SOCKET_PEAK (max delta=0.02823) / SOCKET_RESTORE
+[79I] MOTION_VERDICT socketMoved=True outerStill=True rootStill=True
+[79I] RESULT=A_REAL_TRIGGER_AND_VISIBLE
+[79I] INPUT POINTER_UP logical=(2, 4) desired=(2, 4)
+
+------------------------------------
+GAMEPLAY / ANIMATION CHANGES
+------------------------------------
+Gameplay logic changed: NO
+HasNestMatch / TryMoveBlock / DragRoutine hop rules / Phase 78C timing: NOT modified
+79G socket amplitude/timing/easing/mesh: NOT modified
+Only forensic logging + temporary magenta marker (Enabled default false)
+
+Phase79ITrace.Enabled shipping default = false

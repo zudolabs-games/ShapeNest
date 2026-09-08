@@ -1,0 +1,10 @@
+[79G] hierarchy Target=Target(Clone) WV=Nest3D_Square_-31980
+  HasSocketCavity=True
+  child=Mesh path parent=Nest3D_Square_-31980 mr=True enabled=True
+  child=SocketCavity3D path parent=Mesh mr=True enabled=True
+  child=ContactShadow3D path parent=Nest3D_Square_-31980 mr=True enabled=True
+LEFT cavDisp=0.0282 outerMove=0.00000 rootMove=0.00000 restore=0.00000 dir=OK
+RIGHT cavDisp=0.0282 outerMove=0.00000 rootMove=0.00000 restore=0.00000 dir=OK
+UP cavDisp=0.0282 outerMove=0.00000 rootMove=0.00000 restore=0.00000 dir=OK
+DOWN cavDisp=0.0282 outerMove=0.00000 rootMove=0.00000 restore=0.00000 dir=OK
+pitch=0.5133 peakWorld=0.0282 targetScale=(1.00, 1.00, 1.00)

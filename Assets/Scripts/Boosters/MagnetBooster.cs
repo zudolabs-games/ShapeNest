@@ -55,6 +55,9 @@ public class MagnetBooster : MonoBehaviour, IBooster
     private readonly List<PieceView3D> selectionViews = new List<PieceView3D>();
     private Sequence selectionPulse;
     private bool overlayHideImmediate;
+    /// <summary>Guards one successful activation against double charge consume.</summary>
+    private bool chargeConsumedThisExecution;
+    private bool finishMagnetExecutionDone;
 
     private const float SelectionPulsePeak = 1.03f;
     private const float SelectionPulseCycle = 0.65f;
@@ -155,6 +158,8 @@ public class MagnetBooster : MonoBehaviour, IBooster
 
         StopChainPullRoutines();
         activeMagnetCohort.Clear();
+        chargeConsumedThisExecution = false;
+        finishMagnetExecutionDone = false;
         ClearMagnetPresentation();
         ClearAllMagnetSelectionPresentation();
         ClearHighlight();
@@ -321,6 +326,8 @@ public class MagnetBooster : MonoBehaviour, IBooster
         ClearHighlight();
         highlightedBlock = block;
         block.ShowDragSelection();
+        chargeConsumedThisExecution = false;
+        finishMagnetExecutionDone = false;
         SetPhase(MagnetPhase.Executing);
         PlaySelectionConfirm(block);
         pullRoutine = resolveChain
@@ -895,7 +902,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
             yield return ExecuteMagnetPullCore(block, matched, aborted, false);
             if (matched[0])
             {
-                SetCharges(magnetCharges - 1);
+                ConsumeMagnetChargeOnce();
                 Log($"Magnet journey complete (match). Charges left={magnetCharges}");
             }
             else
@@ -962,7 +969,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
                 List<Block> pieces = CollectChainDescendants(foreignIds);
                 if (pieces.Count == 0)
                 {
-                    SetCharges(magnetCharges - 1);
+                    ConsumeMagnetChargeOnce();
                     Log($"Magnet chain resolved. Charges left={magnetCharges}");
                     yield break;
                 }
@@ -1043,6 +1050,13 @@ public class MagnetBooster : MonoBehaviour, IBooster
                     requireOwnPieceConsume))
                 {
                     planned = false;
+                    break;
+                }
+
+                // Level ended during journey — do not keep retrying input-gated plans.
+                if (levelManager != null
+                    && levelManager.Session != LevelManager.SessionState.Playing)
+                {
                     break;
                 }
 
@@ -1145,6 +1159,14 @@ public class MagnetBooster : MonoBehaviour, IBooster
 
     private void FinishMagnetExecution(Block block, bool returnToSelecting)
     {
+        if (finishMagnetExecutionDone)
+        {
+            pullRoutine = null;
+            return;
+        }
+
+        finishMagnetExecutionDone = true;
+
         BoardManager board = boardManager != null
             ? boardManager
             : (block != null ? block.Board : null);
@@ -1155,8 +1177,44 @@ public class MagnetBooster : MonoBehaviour, IBooster
 
         ClearHighlight();
         pullRoutine = null;
-        bool canReselect = returnToSelecting && magnetCharges > 0 && HasAnyMagnetEligibleBlock();
+        bool sessionPlaying = levelManager == null
+            || levelManager.Session == LevelManager.SessionState.Playing;
+        bool canReselect = returnToSelecting
+            && sessionPlaying
+            && magnetCharges > 0
+            && HasAnyMagnetEligibleBlock();
         SetPhase(canReselect ? MagnetPhase.Selecting : MagnetPhase.Idle);
+    }
+
+    /// <summary>
+    /// True while Magnet should wait for match sequences / auto-match to settle.
+    /// Once the session leaves Playing (Completed / expired), piece input never
+    /// reopens — waiting on IsPieceInputAllowed would stall Executing.
+    /// </summary>
+    private bool IsMagnetGameplayHoldActive()
+    {
+        if (levelManager == null)
+        {
+            return false;
+        }
+
+        if (levelManager.Session != LevelManager.SessionState.Playing)
+        {
+            return false;
+        }
+
+        return levelManager.IsAlignedMatchRunning || !levelManager.IsPieceInputAllowed;
+    }
+
+    private void ConsumeMagnetChargeOnce()
+    {
+        if (chargeConsumedThisExecution)
+        {
+            return;
+        }
+
+        chargeConsumedThisExecution = true;
+        SetCharges(magnetCharges - 1);
     }
 
     private IEnumerator WaitForMagnetGameplayIdle()
@@ -1164,9 +1222,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
         float deadline = Time.realtimeSinceStartup + 8f;
         while (levelManager != null && Time.realtimeSinceStartup < deadline)
         {
-            bool alignedBusy = levelManager.IsAlignedMatchRunning;
-            bool pieceBusy = !levelManager.IsPieceInputAllowed;
-            if (!alignedBusy && !pieceBusy)
+            if (!IsMagnetGameplayHoldActive())
             {
                 yield break;
             }
@@ -1414,8 +1470,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
             }
         }
 
-        return levelManager != null
-            && (levelManager.IsAlignedMatchRunning || !levelManager.IsPieceInputAllowed);
+        return levelManager != null && IsMagnetGameplayHoldActive();
     }
 
     private static bool ShouldRetryMagnetPlan(string failReason)
@@ -2220,6 +2275,13 @@ public class MagnetBooster : MonoBehaviour, IBooster
                     yield break;
                 }
 
+                // Level already finished — do not start another hop or spin on input gates.
+                if (levelManager != null
+                    && levelManager.Session != LevelManager.SessionState.Playing)
+                {
+                    yield break;
+                }
+
                 began = mover.TryBeginDrag(plan.direction);
                 if (began)
                 {
@@ -2272,9 +2334,16 @@ public class MagnetBooster : MonoBehaviour, IBooster
             deadline = Time.realtimeSinceStartup + timeout;
             while (levelManager != null && Time.realtimeSinceStartup < deadline)
             {
-                bool alignedBusy = levelManager.IsAlignedMatchRunning;
+                bool alignedBusy = levelManager.IsAlignedMatchRunning
+                    && levelManager.Session == LevelManager.SessionState.Playing;
                 bool moverBusy = mover != null && (mover.IsMoving || mover.IsDragging);
                 if (!alignedBusy && !moverBusy)
+                {
+                    break;
+                }
+
+                // Session left Playing (Completed): stop holding for auto-match/input.
+                if (levelManager.Session != LevelManager.SessionState.Playing)
                 {
                     break;
                 }
@@ -2283,9 +2352,7 @@ public class MagnetBooster : MonoBehaviour, IBooster
             }
 
             deadline = Time.realtimeSinceStartup + timeout;
-            while (levelManager != null
-                   && !levelManager.IsPieceInputAllowed
-                   && Time.realtimeSinceStartup < deadline)
+            while (IsMagnetGameplayHoldActive() && Time.realtimeSinceStartup < deadline)
             {
                 yield return null;
             }

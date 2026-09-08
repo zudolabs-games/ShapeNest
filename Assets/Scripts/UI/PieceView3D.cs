@@ -56,6 +56,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private static Material sharedContactShadowMaterial;
     private const string DesignerVisualName = "DesignerVisual";
     private const string DesignerInnerName = "DesignerInner";
+    private const string SocketCavityName = "SocketCavity3D";
     private const float InteractionScalePeak = 1.04f;
     private const float InteractionLiftLocal = 0.045f;
     private const float TapPunchUpDuration = 0.05f;
@@ -67,6 +68,12 @@ public class PieceView3D : MonoBehaviour, IPieceView
     private MeshRenderer designerVisualRenderer;
     private GameObject designerInnerInstance;
     private GameObject designerInnerPrefab;
+    private Transform socketCavityRoot;
+    private MeshFilter socketCavityFilter;
+    private MeshRenderer socketCavityRenderer;
+    private Vector3 socketCavityRestLocal = Vector3.zero;
+    private Vector3 socketCavityBeckonLocal = Vector3.zero;
+    private bool hasSocketCavity;
 
     public float PieceHeight => pieceHeight;
     public float SurfaceLift => surfaceLift;
@@ -74,6 +81,14 @@ public class PieceView3D : MonoBehaviour, IPieceView
     public Material ConfiguredSolidMaterial => configuredSolidMaterial;
     public bool ConfiguredAsNest => configuredAsNest;
     public bool HasNestedInner => hasNestedInner && nestedInnerRoot != null && nestedInnerRoot.gameObject.activeSelf;
+    /// <summary>Phase 79G: presentation-only recessed cavity child under Mesh.</summary>
+    public bool HasSocketCavity => hasSocketCavity && socketCavityRoot != null && socketCavityRoot.gameObject.activeSelf;
+
+    /// <summary>Phase 79I forensic: SocketCavity3D transform (null when absent).</summary>
+    public Transform SocketCavityTransform => HasSocketCavity ? socketCavityRoot : null;
+
+    /// <summary>Phase 79I forensic: outer rim Mesh / visualRoot (stationary during call).</summary>
+    public Transform OuterRimTransform => visualRoot;
     public ShapeType ConfiguredInnerShape => configuredInnerShape;
     public Vector3 ConfiguredFootprintScale => configuredFootprintScale;
     public bool IsMotionLocked => motionLockCount > 0;
@@ -964,6 +979,99 @@ public class PieceView3D : MonoBehaviour, IPieceView
     }
 
     /// <summary>
+    /// Phase 79G: world-space XZ beckon on SocketCavity3D only. Outer Mesh rim stays locked.
+    /// Converts with parent InverseTransformVector (footprint scale safe).
+    /// </summary>
+    public void SetSocketCavityBeckonOffset(Vector3 worldOffsetXZ)
+    {
+        if (!isActiveAndEnabled || !HasSocketCavity)
+        {
+            return;
+        }
+
+        Vector3 world = new Vector3(worldOffsetXZ.x, 0f, worldOffsetXZ.z);
+        if (!PieceMotionMath.IsFinite(world))
+        {
+            world = Vector3.zero;
+        }
+
+        Transform parent = socketCavityRoot.parent != null ? socketCavityRoot.parent : transform;
+        Vector3 local = parent.InverseTransformVector(world);
+        if (!PieceMotionMath.IsFinite(local))
+        {
+            local = Vector3.zero;
+        }
+
+        socketCavityBeckonLocal = new Vector3(local.x, 0f, local.z);
+        ApplySocketCavityLocalPosition();
+    }
+
+    /// <summary>Restores SocketCavity3D to captured rest local position.</summary>
+    public void ClearSocketCavityBeckonOffset()
+    {
+        if (socketCavityBeckonLocal.sqrMagnitude < 0.0000001f)
+        {
+            if (HasSocketCavity)
+            {
+                ApplySocketCavityLocalPosition();
+            }
+
+            return;
+        }
+
+        socketCavityBeckonLocal = Vector3.zero;
+        ApplySocketCavityLocalPosition();
+    }
+
+    /// <summary>Obsolete whole-mesh path — redirects to socket cavity (Phase 79G).</summary>
+    public void SetCallBeckonOffset(Vector3 worldOffsetXZ) => SetSocketCavityBeckonOffset(worldOffsetXZ);
+
+    /// <summary>Obsolete whole-mesh path — redirects to socket cavity clear.</summary>
+    public void ClearCallBeckonOffset() => ClearSocketCavityBeckonOffset();
+
+    public Vector3 GetSocketCavityWorldPosition()
+    {
+        return HasSocketCavity ? socketCavityRoot.position : GetVisualRootWorldPosition();
+    }
+
+    public Vector3 GetOuterFrameWorldPosition()
+    {
+        return visualRoot != null ? visualRoot.position : transform.position;
+    }
+
+    /// <summary>Primary nest mesh renderer under visualRoot (procedural Mesh or designer).</summary>
+    public Renderer GetPrimaryVisualRenderer()
+    {
+        if (designerVisualRenderer != null && designerVisualRenderer.enabled)
+        {
+            return designerVisualRenderer;
+        }
+
+        if (meshRenderer != null)
+        {
+            return meshRenderer;
+        }
+
+        if (visualRoot != null)
+        {
+            return visualRoot.GetComponent<Renderer>();
+        }
+
+        return null;
+    }
+
+    /// <summary>World position of the presentation mesh root (what BoardCamera3D sees).</summary>
+    public Vector3 GetVisualRootWorldPosition()
+    {
+        return visualRoot != null ? visualRoot.position : transform.position;
+    }
+
+    public Vector3 GetVisualRootLocalPosition()
+    {
+        return visualRoot != null ? visualRoot.localPosition : Vector3.zero;
+    }
+
+    /// <summary>
     /// Cosmetic landing pulse. Fire-and-forget — does not hold BlockMover.
     /// </summary>
     public void PlayCosmeticLandingPulse()
@@ -1093,13 +1201,57 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
         {
+            ClearSocketCavity();
             ApplyDesignerVisual(prefab);
             ApplyMaterialToActiveVisual(material, asNest, nestMaterials);
         }
+        else if (asNest)
+        {
+            // Phase 79G: split procedural nest into locked rim (Mesh) + movable SocketCavity3D.
+            ClearDesignerVisual();
+            Mesh rim = ShapeMeshFactory3D.GetNestRimMesh(shape);
+            Mesh cavity = ShapeMeshFactory3D.GetNestCavityMesh(shape);
+            if (meshFilter != null)
+            {
+                meshFilter.sharedMesh = rim;
+            }
+
+            if (visualRoot != null)
+            {
+                visualRoot.localRotation = Quaternion.identity;
+            }
+
+            Material rimMat = null;
+            Material cavityMat = null;
+            if (nestMaterials != null && nestMaterials.Length > 0)
+            {
+                rimMat = nestMaterials[0];
+                cavityMat = nestMaterials.Length > 1 ? nestMaterials[1] : nestMaterials[0];
+            }
+            else if (material != null)
+            {
+                rimMat = material;
+                cavityMat = material;
+            }
+            else
+            {
+                Material[] set = ShapeVisuals3D.NestMaterialSet(shape);
+                rimMat = set[0];
+                cavityMat = set.Length > 1 ? set[1] : set[0];
+            }
+
+            if (meshRenderer != null && rimMat != null)
+            {
+                meshRenderer.sharedMaterials = new[] { rimMat };
+            }
+
+            EnsureSocketCavity(cavity, cavityMat);
+        }
         else
         {
+            ClearSocketCavity();
             ClearDesignerVisual();
-            Mesh mesh = asNest ? ShapeMeshFactory3D.GetNestMesh(shape) : ShapeMeshFactory3D.GetSolidMesh(shape);
+            Mesh mesh = ShapeMeshFactory3D.GetSolidMesh(shape);
             if (meshFilter != null)
             {
                 meshFilter.sharedMesh = mesh;
@@ -1110,7 +1262,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
                 visualRoot.localRotation = Quaternion.identity;
             }
 
-            ApplyProceduralMaterials(material, asNest, shape, nestMaterials);
+            ApplyProceduralMaterials(material, asNest: false, shape, nestMaterials: null);
         }
 
         // Blocks sit proudly on the cell; nests sit slightly recessed as destinations.
@@ -1497,8 +1649,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
             {
                 var innerObject = new GameObject("NestedInner3D");
                 innerObject.transform.SetParent(transform, false);
-                nestedInnerRoot = innerObject.transform;
-                Phase69AForensic.LogNestedCreated(this, innerObject);
+                nestedInnerRoot = innerObject.transform;;
             }
         }
 
@@ -1633,6 +1784,124 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
     }
 
+    private void EnsureSocketCavity(Mesh cavityMesh, Material cavityMaterial)
+    {
+        EnsureMeshComponents();
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        if (socketCavityRoot == null)
+        {
+            Transform existing = visualRoot.Find(SocketCavityName);
+            if (existing != null)
+            {
+                socketCavityRoot = existing;
+            }
+            else
+            {
+                var go = new GameObject(SocketCavityName);
+                go.transform.SetParent(visualRoot, false);
+                socketCavityRoot = go.transform;
+            }
+
+            socketCavityRestLocal = Vector3.zero;
+            socketCavityRoot.localRotation = Quaternion.identity;
+            socketCavityRoot.localScale = Vector3.one;
+        }
+
+        if (socketCavityFilter == null)
+        {
+            socketCavityFilter = socketCavityRoot.GetComponent<MeshFilter>();
+            if (socketCavityFilter == null)
+            {
+                socketCavityFilter = socketCavityRoot.gameObject.AddComponent<MeshFilter>();
+            }
+        }
+
+        if (socketCavityRenderer == null)
+        {
+            socketCavityRenderer = socketCavityRoot.GetComponent<MeshRenderer>();
+            if (socketCavityRenderer == null)
+            {
+                socketCavityRenderer = socketCavityRoot.gameObject.AddComponent<MeshRenderer>();
+            }
+        }
+
+        // Presentation-only: never participate in picking/collision.
+        Collider[] colliders = socketCavityRoot.GetComponents<Collider>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            if (colliders[i] != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(colliders[i]);
+                }
+                else
+                {
+                    DestroyImmediate(colliders[i]);
+                }
+            }
+        }
+
+        socketCavityFilter.sharedMesh = cavityMesh;
+        if (cavityMaterial != null)
+        {
+            socketCavityRenderer.sharedMaterial = cavityMaterial;
+        }
+
+        socketCavityRenderer.enabled = true;
+        socketCavityRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        socketCavityRenderer.receiveShadows = true;
+        socketCavityRoot.gameObject.SetActive(true);
+        hasSocketCavity = true;
+        ApplySocketCavityLocalPosition();
+    }
+
+    private void ClearSocketCavity()
+    {
+        socketCavityBeckonLocal = Vector3.zero;
+        hasSocketCavity = false;
+        if (socketCavityRoot == null)
+        {
+            if (visualRoot != null)
+            {
+                Transform stray = visualRoot.Find(SocketCavityName);
+                if (stray != null)
+                {
+                    DestroyVisualObject(stray.gameObject);
+                }
+            }
+
+            socketCavityFilter = null;
+            socketCavityRenderer = null;
+            return;
+        }
+
+        DestroyVisualObject(socketCavityRoot.gameObject);
+        socketCavityRoot = null;
+        socketCavityFilter = null;
+        socketCavityRenderer = null;
+    }
+
+    private void ApplySocketCavityLocalPosition()
+    {
+        if (socketCavityRoot == null)
+        {
+            return;
+        }
+
+        Vector3 local = socketCavityRestLocal + socketCavityBeckonLocal;
+        if (!PieceMotionMath.IsFinite(local))
+        {
+            local = socketCavityRestLocal;
+        }
+
+        socketCavityRoot.localPosition = local;
+    }
+
     private void SetProceduralMeshVisible(bool visible)
     {
         if (meshRenderer == null)
@@ -1645,6 +1914,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
         {
             meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             meshRenderer.receiveShadows = true;
+        }
+
+        if (socketCavityRenderer != null)
+        {
+            socketCavityRenderer.enabled = visible && hasSocketCavity;
         }
     }
 

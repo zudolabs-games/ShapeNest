@@ -1,0 +1,56 @@
+PHASE 79L RESULT
+================
+
+Root cause:
+1) Target.transform is Canvas/UI space; ResolveTargetWorld fell back to it when
+   PieceView was missing → curves spawned off BoardCamera (looked like "no hint").
+2) Multi-cell nests: hint used only WorldView (anchor). CollectNestMatches matching
+   cell (extra Nest3D_*) was ignored → wrong/absent placement for non-anchor cells.
+3) Accent used nest.GridPosition/RequiredShape instead of the matching cell's
+   GetRequiredIdentityAtWorld (nested/multi-layer mismatch risk).
+Trigger itself already used HasNestMatch/CollectNestMatches (no shape switch).
+
+Files changed:
+- Assets/Scripts/Blocks/BlockMover.cs
+  Pass matchWorldCell from CollectNestMatches into TryPlay
+- Assets/Scripts/Effects/TargetCallEffect.cs
+  TryPlay(..., matchWorldCell); accent from matching cell identity
+- Assets/Scripts/Effects/TargetDirectionHintEffect.cs
+  GridSpace3D.GridToWorld(matchCell) placement; nest view-at-cell resolve;
+  hide when followed block is no longer IsDragging
+- Assets/Scripts/Debug/Phase79LCoverageRunner.cs (diagnostic)
+- Assets/Scripts/Debug/Phase79LRealDragProbe.cs (diagnostic)
+- Captures/phase79l-audit.txt
+- Captures/phase79l-coverage.txt
+
+Matching source used:
+BoardManager.HasNestMatch + CollectNestMatches + ShapeMatch.AreMatchingLayers
+
+Target resolution source:
+GridSpace3D.GridToWorld(matchWorldCell) + Target WorldView/ExtraWorldViews by cell
+(not Target.transform, not Nest3D_* name parsing, no ShapeType switch)
+
+Shapes tested (Campaign_43 runtime):
+Square PASS
+Circle PASS
+Triangle PASS
+Diamond PASS
+Star PASS
+Pentagon PASS
+Hexagon: not present on this level (N/A — no hard-coded skip; same path applies)
+
+Nested / multi-cell targets: PASS (showOk includes multi-cell nests)
+Multi-cell / chain blocks: PASS
+Fixed direction: unchanged (dragDirection from existing mover; Phase 73 T7 PASS)
+Wrong direction suppression: leave path ClearTargetCallPresentation("leave")
+Two-cell-away: only logicalCell+dragDirection candidate (unchanged)
+Real input: InputManager.SimulatePointer* → hops → hint visible=11 (Star)
+Release hide: reinforced via follow-block IsDragging check in hint LateUpdate
+Phase 73: 8/8 PASS
+Console errors: 0 (compile clean)
+
+Previously failing / fragile cases now covered:
+- Multi-cell nest matching on non-anchor ExtraWorldViews
+- Canvas transform fallback (off-camera "invisible" hints)
+- Matching-cell accent for layered nests
+- All present ShapeTypes on board via HasNestMatch (not Triangle-only proof)

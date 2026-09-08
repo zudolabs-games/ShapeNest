@@ -59,8 +59,8 @@ MonoBehaviour:
   outlineImage: {fileID: 0}
   glowColor: {r: 1, g: 0.95, b: 0.7, a: 1}
   impactScale: 1.08
-  impactDuration: 0.12
-  glowDuration: 0.22
+  impactDuration: 0.055
+  glowDuration: 0.14
   glowScale: 1
   glowPeakAlpha: 0.85
-  dissolveDuration: 0.1
+  dissolveDuration: 0.075

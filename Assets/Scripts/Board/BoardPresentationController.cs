@@ -1203,7 +1203,6 @@ public class BoardPresentationController : MonoBehaviour
             show ? ShapeVisuals3D.BlockMaterial(inner, innerColor, theme) : null,
             NestedInnerRelativeScale(),
             asNest: false);
-        Phase68CForensic.LogConfigureNested("SyncBlockNestedInner", view, block, cellIndex, show);
     }
 
     private void SyncTargetNestedInner(PieceView3D view, Target target, int cellIndex)
@@ -1377,11 +1376,6 @@ public class BoardPresentationController : MonoBehaviour
             {
                 if (matched)
                 {
-                    Phase72CNestLifecycle.LogSyncDecision(
-                        target,
-                        "matched-hide-prune",
-                        onBoard,
-                        liveCells);
                     HideMappedView(worldViewsByTargetId, id);
                     HideExtraViews(extraViewsByTargetId, id);
                     continue;
@@ -1392,21 +1386,11 @@ public class BoardPresentationController : MonoBehaviour
                 // Consumed shells (!liveCells) are hidden/pruned immediately; glow VFX still runs.
                 if (!liveCells)
                 {
-                    Phase72CNestLifecycle.LogSyncDecision(
-                        target,
-                        "entering-consumed-hide-prune",
-                        onBoard,
-                        liveCells);
                     HideMappedView(worldViewsByTargetId, id);
                     HideExtraViews(extraViewsByTargetId, id);
                     continue;
                 }
 
-                Phase72CNestLifecycle.LogSyncDecision(
-                    target,
-                    "entering-keep-dissolve",
-                    onBoard,
-                    liveCells);
                 keepTargets.Add(id);
                 continue;
             }
@@ -1418,13 +1402,7 @@ public class BoardPresentationController : MonoBehaviour
             //   3) not present on BoardManager occupancy
             if (matched || !liveCells || !onBoard)
             {
-                Phase72CNestLifecycle.LogSyncDecision(
-                    target,
-                    matched
-                        ? "skip-matched"
-                        : (!liveCells ? "skip-no-live-cells" : "skip-not-on-board"),
-                    onBoard,
-                    liveCells);
+
                 continue;
             }
 
@@ -1436,28 +1414,16 @@ public class BoardPresentationController : MonoBehaviour
                 created = true;
                 view = CreateView($"Nest3D_{target.ShapeType}_{id}", nestsRoot);
                 worldViewsByTargetId[id] = view;
-                Phase72CNestLifecycle.LogNestCreate(
-                    target,
-                    view,
-                    "SyncWorldPieceViews");
             }
             else
             {
-                Phase72CNestLifecycle.LogNestReuse(
-                    target,
-                    view,
-                    "SyncWorldPieceViews");
+              
             }
 
             ShapeType nestOuter = target.GetOuterShapeAtIndex(target.AnchorCellIndex);
             ShapeColor nestOuterColor = target.GetOuterColorAtIndex(target.AnchorCellIndex);
             Material[] nestMaterials = ShapeVisuals3D.NestMaterialSet(nestOuter, nestOuterColor, theme);
-            Phase72CNestLifecycle.LogNestRemesh(
-                target,
-                view,
-                nestOuter,
-                nestOuterColor,
-                created ? "create+ConfigureVisual" : "ConfigureVisual");
+          
             view.ConfigureVisual(
                 nestOuter,
                 nestMaterials[0],
@@ -2357,18 +2323,12 @@ public class BoardPresentationController : MonoBehaviour
             || cellIndex >= block.CellCount
             || !block.HasInnerLayerAt(cellIndex))
         {
-            Phase68CForensic.Log(
-                "DETACH_SKIP",
-                $"block={block?.GetInstanceID()} cell={cellIndex} reason=precheck");
             return null;
         }
 
         long key = AnchoredResidualKey(block.GetInstanceID(), cellIndex);
         if (anchoredNestedResiduals.TryGetValue(key, out Transform existing) && existing != null)
         {
-            Phase68CForensic.Log(
-                "DETACH_REUSE",
-                $"block={block.GetInstanceID()} cell={cellIndex} residual={existing.GetInstanceID()}");
             return existing;
         }
 
@@ -2383,10 +2343,6 @@ public class BoardPresentationController : MonoBehaviour
 
             if (cellView == null || !cellView.HasDetachedNestedInnerCandidate)
             {
-                Phase68CForensic.Log(
-                    "DETACH_SKIP",
-                    $"block={block.GetInstanceID()} cell={cellIndex} reason=no-nested-candidate " +
-                    $"view={(cellView != null ? cellView.GetInstanceID().ToString() : "null")}");
                 return null;
             }
         }
@@ -2397,9 +2353,7 @@ public class BoardPresentationController : MonoBehaviour
             return null;
         }
 
-        Phase68CForensic.LogCell("BEFORE_DETACH", block, cellIndex);
         Transform nestedBefore = cellView.transform.Find("NestedInner3D");
-        Phase69AForensic.RememberSource(block, cellIndex, cellView, nestedBefore);
         int nestedBeforeId = nestedBefore != null ? nestedBefore.GetInstanceID() : 0;
         Vector3 nestedBeforeWorld = nestedBefore != null ? nestedBefore.position : Vector3.zero;
 
@@ -2421,7 +2375,6 @@ public class BoardPresentationController : MonoBehaviour
                 DestroyImmediate(host);
             }
 
-            Phase68CForensic.LogDetach("FAIL", block, cellIndex, cellView, nestedBefore, null);
             return null;
         }
 
@@ -2429,15 +2382,6 @@ public class BoardPresentationController : MonoBehaviour
         anchoredNestedResiduals[key] = detached;
         anchoredNestedSourceCells[key] = sourceCell;
         PinResidualTransformToSource(detached, sourceCell);
-        Phase68CForensic.Log(
-            "DETACH_OK",
-            $"block={block.GetInstanceID()} cell={cellIndex} sourceCell={sourceCell} " +
-            $"sameObject={detached.GetInstanceID() == nestedBeforeId} " +
-            $"beforeId={nestedBeforeId} afterId={detached.GetInstanceID()} " +
-            $"beforeWorld={nestedBeforeWorld} afterWorld={detached.position} " +
-            $"afterParent={(detached.parent != null ? detached.parent.name : "null")}");
-        Phase68CForensic.LogCell("AFTER_DETACH", block, cellIndex);
-        Phase68CForensic.DumpDuplicates(block, cellIndex);
         return detached;
     }
 
@@ -3496,7 +3440,6 @@ public class BoardPresentationController : MonoBehaviour
             PieceView3D created = CreateView(
                 $"Nest3D_{target.ShapeType}_{id}_c{extras.Count + 1}",
                 nestsRoot);
-            Phase72CNestLifecycle.LogNestCreate(target, created, "SyncTargetOccupantExtras");
             extras.Add(created);
         }
 
@@ -3560,7 +3503,6 @@ public class BoardPresentationController : MonoBehaviour
             return;
         }
 
-        Phase72CNestLifecycle.LogNestDestroyed(view, immediate ? "DestroyView.immediate" : "DestroyView");
         nestedInnerTravelers.Remove(view);
         dissolvingViews.Remove(view);
         if (IsChainTravelView(view))
