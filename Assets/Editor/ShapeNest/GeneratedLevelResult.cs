@@ -38,9 +38,20 @@ internal enum ExistingAssetPolicy
     NextAvailable
 }
 
+internal enum GenerationStyle
+{
+    Mixed,
+    Dense,
+    Corridor,
+    Asymmetric,
+    MultiCell,
+    Chain
+}
+
 internal sealed class GeneratedLevelResult
 {
     public string LevelName;
+    public int LevelNumber;
     public GenerationOutcome Outcome;
     public string Message;
     public int BlockCount;
@@ -51,8 +62,28 @@ internal sealed class GeneratedLevelResult
     public SolverMove[] Solution = new SolverMove[0];
     public List<LevelBlockData> Blocks = new List<LevelBlockData>();
     public List<LevelTargetData> Targets = new List<LevelTargetData>();
+    public List<Vector2Int> BlockedCells = new List<Vector2Int>();
     public LevelData Asset;
     public bool ReplayVerified;
+    public int QualityScore;
+    public float PlayableRatio;
+    public float OccupancyRatio;
+    public int MultiCellCount;
+    public int ShapeDiversity;
+    public int ColorDiversity;
+    public int GridWidth;
+    public int GridHeight;
+    public int IntendedSolutionLength;
+    public int IntendedDependencyDepth;
+    public int MeasuredDependencyDepth;
+    public int DependencyDepth;
+    public int InitialBranching;
+    public int BranchingPreferred;
+    public int BranchingHardLimit;
+    public int BranchingScore;
+    public int BranchingPenalty;
+    public int BranchingBudget;
+    public bool BranchingRejected;
 
     public string OutcomeLabel
     {

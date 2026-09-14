@@ -12,35 +12,115 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccf86cd2cd85f4f279c61d3bc5c82f5c, type: 3}
   m_Name: Level3
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  gridWidth: 4
+  gridHeight: 5
   blocks:
-  - shapeType: 0
+  - shapeType: 3
+    moveDirection: 0
+    gridPosition: {x: 3, y: 4}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 3
+      outerColor: 4
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+    hasIce: 0
+    iceDurability: 1
+  - shapeType: 1
     moveDirection: 0
     gridPosition: {x: 2, y: 4}
-  - shapeType: 0
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 1
+      outerColor: 2
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+    hasIce: 0
+    iceDurability: 1
+  - shapeType: 5
     moveDirection: 0
-    gridPosition: {x: 4, y: 0}
-  - shapeType: 1
-    moveDirection: 0
-    gridPosition: {x: 4, y: 4}
-  - shapeType: 1
-    moveDirection: 0
-    gridPosition: {x: 0, y: 4}
-  - shapeType: 1
-    moveDirection: 0
-    gridPosition: {x: 1, y: 2}
-  - shapeType: 2
-    moveDirection: 0
-    gridPosition: {x: 4, y: 2}
-  targets:
-  - shapeType: 2
-    gridPosition: {x: 4, y: 3}
-  - shapeType: 0
-    gridPosition: {x: 0, y: 0}
-  - shapeType: 0
     gridPosition: {x: 1, y: 4}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 5
+      outerColor: 3
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+    hasIce: 0
+    iceDurability: 1
+  - shapeType: 6
+    moveDirection: 0
+    gridPosition: {x: 3, y: 3}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 6
+      outerColor: 1
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+    hasIce: 0
+    iceDurability: 1
+  targets:
+  - shapeType: 3
+    gridPosition: {x: 0, y: 4}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 3
+      outerColor: 4
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
   - shapeType: 1
+    gridPosition: {x: 2, y: 0}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 1
+      outerColor: 2
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+  - shapeType: 5
     gridPosition: {x: 1, y: 0}
-  - shapeType: 1
-    gridPosition: {x: 3, y: 4}
-  - shapeType: 1
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 5
+      outerColor: 3
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+  - shapeType: 6
     gridPosition: {x: 0, y: 3}
+    cells:
+    - localPosition: {x: 0, y: 0}
+      shapeType: 6
+      outerColor: 1
+      innerShapes: 
+      innerShapeColors: 
+    composition: 0
+    outerShape: 0
+    orientationSteps: 0
+  shutters: []
+  blockedCells:
+  - {x: 0, y: 0}
+  - {x: 3, y: 0}
+  - {x: 0, y: 1}
+  - {x: 3, y: 1}
+  - {x: 0, y: 2}
+  - {x: 3, y: 2}

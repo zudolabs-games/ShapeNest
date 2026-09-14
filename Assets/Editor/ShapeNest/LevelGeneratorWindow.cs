@@ -12,7 +12,7 @@ public class LevelGeneratorWindow : EditorWindow
     private int boardHeight = 5;
     private int minBlocks = 3;
     private int maxBlocks = 5;
-    private int startingLevelNumber = 2;
+    private int startingLevelNumber = 1;
     private int maxAttemptsPerLevel = 1000;
     private int minSolutionMoves = 1;
     private int maxSolutionMoves = 100;
@@ -23,6 +23,8 @@ public class LevelGeneratorWindow : EditorWindow
     private MechanicMode collisions = MechanicMode.Progressive;
     private MechanicMode targetStopping = MechanicMode.Progressive;
     private ExistingAssetPolicy existingPolicy = ExistingAssetPolicy.Skip;
+    private GenerationStyle style = GenerationStyle.Mixed;
+    private bool varyBoardSize = true;
 
     private bool isGenerating;
     private bool cancelRequested;
@@ -67,7 +69,8 @@ public class LevelGeneratorWindow : EditorWindow
             FixedDirections = MechanicMode.Progressive,
             Collisions = MechanicMode.Off,
             TargetStopping = MechanicMode.Progressive,
-            ExistingPolicy = ExistingAssetPolicy.NextAvailable
+            ExistingPolicy = ExistingAssetPolicy.NextAvailable,
+            VaryBoardSize = true
         };
 
         var rng = new System.Random(settings.Seed);
@@ -81,7 +84,7 @@ public class LevelGeneratorWindow : EditorWindow
             if (result.Outcome == GenerationOutcome.Accepted)
             {
                 LevelEditorValidationResult safety = LevelEditorValidation.Validate(
-                    name, result.Blocks, result.Targets, settings.BoardWidth, settings.BoardHeight);
+                    name, result.Blocks, result.Targets, result.GridWidth, result.GridHeight);
                 if (safety.IsValid)
                 {
                     result.Asset = LevelAssetUtility.SaveLevelData(
@@ -89,8 +92,9 @@ public class LevelGeneratorWindow : EditorWindow
                         result.Blocks,
                         result.Targets,
                         false,
-                        settings.BoardWidth,
-                        settings.BoardHeight);
+                        result.GridWidth,
+                        result.GridHeight,
+                        result.BlockedCells);
                     accepted++;
                     Debug.Log($"Generate 3 Test Levels: ACCEPTED {result.Asset.name} moves={result.MoveCount} difficulty={result.EstimatedDifficulty} replay={result.ReplayVerified}");
                 }
@@ -159,6 +163,8 @@ public class LevelGeneratorWindow : EditorWindow
         minBlocks = Mathf.Max(1, EditorGUILayout.IntField("Minimum Blocks", minBlocks));
         maxBlocks = Mathf.Max(minBlocks, EditorGUILayout.IntField("Maximum Blocks", maxBlocks));
         difficulty = (DifficultyTier)EditorGUILayout.EnumPopup("Difficulty", difficulty);
+        style = (GenerationStyle)EditorGUILayout.EnumPopup("Generation Style", style);
+        varyBoardSize = EditorGUILayout.Toggle("Vary Board Size", varyBoardSize);
         startingLevelNumber = Mathf.Max(1, EditorGUILayout.IntField("Starting Level Number", startingLevelNumber));
         existingPolicy = (ExistingAssetPolicy)EditorGUILayout.EnumPopup("If Asset Exists", existingPolicy);
 
@@ -217,9 +223,12 @@ public class LevelGeneratorWindow : EditorWindow
         boardWidth = 5;
         boardHeight = 5;
         minBlocks = 3;
-        maxBlocks = 5;
+        maxBlocks = 9;
+        minBlocks = 5;
+        boardHeight = 7;
         difficulty = DifficultyTier.Progressive;
-        startingLevelNumber = 2;
+        style = GenerationStyle.Mixed;
+        startingLevelNumber = 1;
         fixedDirections = MechanicMode.Progressive;
         collisions = MechanicMode.Progressive;
         targetStopping = MechanicMode.Progressive;
@@ -263,6 +272,7 @@ public class LevelGeneratorWindow : EditorWindow
             MinBlocks = minBlocks,
             MaxBlocks = maxBlocks,
             StartingLevelNumber = startingLevelNumber,
+            LevelNumber = startingLevelNumber,
             MaxAttemptsPerLevel = maxAttemptsPerLevel,
             MinSolutionMoves = minSolutionMoves,
             MaxSolutionMoves = maxSolutionMoves,
@@ -272,7 +282,9 @@ public class LevelGeneratorWindow : EditorWindow
             FixedDirections = fixedDirections,
             Collisions = collisions,
             TargetStopping = targetStopping,
-            ExistingPolicy = existingPolicy
+            ExistingPolicy = existingPolicy,
+            Style = style,
+            VaryBoardSize = varyBoardSize
         };
     }
 
@@ -331,12 +343,19 @@ public class LevelGeneratorWindow : EditorWindow
         for (int i = 0; i < attemptsPerTick && attemptsThisLevel < maxAttemptsPerLevel; i++)
         {
             attemptsThisLevel++;
-            GeneratedLevelResult candidate = LevelGenerator.TryCandidate(rng, settings, tier, progress, levelName);
+            GeneratedLevelResult candidate = LevelGenerator.TryCandidate(rng, settings, tier, progress, levelName, currentNumber);
             lastReject = candidate;
             if (candidate.Outcome == GenerationOutcome.Accepted)
             {
-                accepted = candidate;
-                break;
+                if (ValidateCandidate(candidate, levelName, currentNumber))
+                {
+                    accepted = candidate;
+                    break;
+                }
+                else
+                {
+                    lastReject = candidate;
+                }
             }
         }
 
@@ -357,6 +376,7 @@ public class LevelGeneratorWindow : EditorWindow
                     LevelName = levelName,
                     Outcome = GenerationOutcome.FailedAttempts,
                     TargetTier = tier,
+                    LevelNumber = currentNumber,
                     Message = "No candidates were produced."
                 };
             }
@@ -374,39 +394,123 @@ public class LevelGeneratorWindow : EditorWindow
         Repaint();
     }
 
-    private void CompleteLevel(GeneratedLevelResult result, string levelName)
+    private bool ValidateCandidate(GeneratedLevelResult candidate, string levelName, int levelNumber)
     {
         LevelEditorValidationResult safety = LevelEditorValidation.Validate(
             levelName,
-            result.Blocks,
-            result.Targets,
-            boardWidth,
-            boardHeight);
+            candidate.Blocks,
+            candidate.Targets,
+            candidate.GridWidth,
+            candidate.GridHeight);
         if (!safety.IsValid)
         {
-            result.Outcome = GenerationOutcome.RejectedInvalid;
-            result.Message = "Post-generation validator rejected the candidate: " +
+            candidate.Outcome = GenerationOutcome.RejectedInvalid;
+            candidate.Message = "Post-generation validator rejected the candidate: " +
                 (safety.Errors.Count > 0 ? safety.Errors[0] : "invalid");
+            return false;
+        }
+
+        bool isTutorial = levelNumber <= 5;
+        if (isTutorial)
+        {
+            // Enforce single-cell blocks and targets, no ice, MoveDirection.Any, no overlap
+            foreach (var block in candidate.Blocks)
+            {
+                if (ShapeLayout.EffectiveCount(block.cells) != 1)
+                {
+                    candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                    candidate.Message = "Tutorial level constraint: block must be single-cell.";
+                    return false;
+                }
+                if (block.hasIce)
+                {
+                    candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                    candidate.Message = "Tutorial level constraint: block must not have ice.";
+                    return false;
+                }
+                if (block.moveDirection != MoveDirection.Any)
+                {
+                    candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                    candidate.Message = "Tutorial level constraint: block must have MoveDirection.Any.";
+                    return false;
+                }
+            }
+            foreach (var target in candidate.Targets)
+            {
+                if (ShapeLayout.EffectiveCount(target.cells) != 1)
+                {
+                    candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                    candidate.Message = "Tutorial level constraint: target must be single-cell.";
+                    return false;
+                }
+            }
+            // Check for block-target footprint overlap (all footprint cells)
+            var blockPositions = new HashSet<Vector2Int>();
+            foreach (var block in candidate.Blocks)
+            {
+                int count = block.cells == null ? 0 : block.cells.Count;
+                if (count == 0)
+                {
+                    blockPositions.Add(block.gridPosition);
+                }
+                else
+                {
+                    for (int c = 0; c < count; c++)
+                    {
+                        blockPositions.Add(block.gridPosition + ShapeLayout.EffectiveLocal(block.cells, c));
+                    }
+                }
+            }
+            foreach (var target in candidate.Targets)
+            {
+                int count = target.cells == null ? 0 : target.cells.Count;
+                if (count == 0)
+                {
+                    if (blockPositions.Contains(target.gridPosition))
+                    {
+                        candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                        candidate.Message = "Tutorial level constraint: block and target cannot occupy same cell.";
+                        return false;
+                    }
+                }
+                else
+                {
+                    for (int c = 0; c < count; c++)
+                    {
+                        var targetPos = target.gridPosition + ShapeLayout.EffectiveLocal(target.cells, c);
+                        if (blockPositions.Contains(targetPos))
+                        {
+                            candidate.Outcome = GenerationOutcome.RejectedInvalid;
+                            candidate.Message = "Tutorial level constraint: block and target cannot occupy same cell.";
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void CompleteLevel(GeneratedLevelResult result, string levelName)
+    {
+        bool overwrite = existingPolicy == ExistingAssetPolicy.Overwrite;
+        result.Asset = LevelAssetUtility.SaveLevelData(
+            levelName,
+            result.Blocks,
+            result.Targets,
+            overwrite,
+            result.GridWidth,
+            result.GridHeight,
+            result.BlockedCells);
+        if (result.Asset == null)
+        {
+            result.Outcome = GenerationOutcome.RejectedExists;
+            result.Message = "Did not overwrite existing asset.";
         }
         else
         {
-            bool overwrite = existingPolicy == ExistingAssetPolicy.Overwrite;
-            result.Asset = LevelAssetUtility.SaveLevelData(
-                levelName,
-                result.Blocks,
-                result.Targets,
-                overwrite,
-                boardWidth,
-                boardHeight);
-            if (result.Asset == null)
-            {
-                result.Outcome = GenerationOutcome.RejectedExists;
-                result.Message = "Did not overwrite existing asset.";
-            }
-            else
-            {
-                result.LevelName = result.Asset.name;
-            }
+            result.LevelName = result.Asset.name;
         }
 
         results.Add(result);
@@ -439,6 +543,7 @@ public class LevelGeneratorWindow : EditorWindow
         int unsolvable = Count(GenerationOutcome.RejectedUnsolvable);
         int tooEasy = Count(GenerationOutcome.RejectedTooEasy);
         int tooHard = Count(GenerationOutcome.RejectedTooHard);
+        int qualityRejected = Count(GenerationOutcome.RejectedTooEasy) + Count(GenerationOutcome.RejectedTooHard);
         int rejected = results.Count - accepted;
 
         EditorGUILayout.LabelField("Generated", results.Count.ToString());
@@ -447,19 +552,37 @@ public class LevelGeneratorWindow : EditorWindow
         EditorGUILayout.LabelField("Unsolvable", unsolvable.ToString());
         EditorGUILayout.LabelField("Too Easy", tooEasy.ToString());
         EditorGUILayout.LabelField("Too Hard", tooHard.ToString());
+        EditorGUILayout.LabelField("Quality Rejected", qualityRejected.ToString());
+        if (accepted > 0)
+        {
+            int totalMoves = 0;
+            int totalPieces = 0;
+            float totalDensity = 0f;
+            int totalAttempts = 0;
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].Outcome != GenerationOutcome.Accepted) continue;
+                totalMoves += results[i].MoveCount;
+                totalPieces += results[i].BlockCount;
+                totalDensity += results[i].OccupancyRatio;
+            }
+            EditorGUILayout.LabelField("Average Solution Length", (totalMoves / (float)accepted).ToString("0.0"));
+            EditorGUILayout.LabelField("Average Pieces", (totalPieces / (float)accepted).ToString("0.0"));
+            EditorGUILayout.LabelField("Average Density", (totalDensity / accepted).ToString("0%"));
+        }
         if (!string.IsNullOrEmpty(lastSeedMessage))
         {
             EditorGUILayout.HelpBox(lastSeedMessage, MessageType.Info);
         }
 
-        EditorGUILayout.LabelField("Level | Result | Solution | Difficulty | States | Blocks");
+        EditorGUILayout.LabelField("Level | Result | Solution | Difficulty | Quality | States | Blocks");
         resultScroll = EditorGUILayout.BeginScrollView(resultScroll, GUILayout.Height(160f));
         for (int i = 0; i < results.Count; i++)
         {
             GeneratedLevelResult result = results[i];
             string solution = result.Outcome == GenerationOutcome.Accepted ? result.MoveCount + " moves" : "-";
             string line =
-                $"{result.LevelName} | {result.OutcomeLabel} | {solution} | {result.EstimatedDifficulty} | {result.ExploredStates} | {result.BlockCount}";
+                $"{result.LevelName} | {result.OutcomeLabel} | {solution} | {result.EstimatedDifficulty} | {result.QualityScore} | {result.ExploredStates} | {result.BlockCount}";
             if (GUILayout.Toggle(selectedResult == i, line, EditorStyles.label))
             {
                 selectedResult = i;
@@ -505,6 +628,12 @@ public class LevelGeneratorWindow : EditorWindow
         EditorGUILayout.LabelField("Shortest solution", selected.MoveCount + " moves");
         EditorGUILayout.LabelField("Explored states", selected.ExploredStates.ToString());
         EditorGUILayout.LabelField("Estimated difficulty", selected.EstimatedDifficulty.ToString());
+        EditorGUILayout.LabelField("Quality score", selected.QualityScore.ToString());
+        EditorGUILayout.LabelField("Playable ratio", selected.PlayableRatio.ToString("P0"));
+        EditorGUILayout.LabelField("Board size", selected.GridWidth + " x " + selected.GridHeight);
+        EditorGUILayout.LabelField("Piece density", selected.OccupancyRatio.ToString("P0"));
+        EditorGUILayout.LabelField("Multi-cell pieces", selected.MultiCellCount.ToString());
+        EditorGUILayout.LabelField("Shape / color diversity", selected.ShapeDiversity + " / " + selected.ColorDiversity);
         EditorGUILayout.LabelField("Replay verified", selected.ReplayVerified ? "Yes" : "No");
         if (selected.Solution != null)
         {

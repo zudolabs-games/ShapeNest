@@ -18,7 +18,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetSolidMesh(ShapeType shape)
     {
-        string key = "solid_v8_" + shape;
+        string key = "solid_v14_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -32,7 +32,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetNestMesh(ShapeType shape)
     {
-        string key = "nest_v9_" + shape;
+        string key = "nest_v14_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -134,8 +134,8 @@ public static class ShapeMeshFactory3D
     private static Mesh BuildNest(ShapeType shape)
     {
         Vector2[] outer = GetOutline(shape, 0.5f);
-        // Phase 52C: cavity ~block/nest footprint ratio so solids read as fitting the socket.
-        Vector2[] inner = GetOutline(shape, 0.42f);
+        // Phase 5B: chunky molded socket rim (0.36 inner radius for robust rim width)
+        Vector2[] inner = GetOutline(shape, 0.36f);
         NormalizeOutlineAabb(outer, inner);
         ApplyVisualSilhouetteScale(outer, inner, shape);
         ShapeBuild build = GetBuild(shape, nest: true);
@@ -157,25 +157,25 @@ public static class ShapeMeshFactory3D
 
     private static ShapeBuild GetBuild(ShapeType shape, bool nest)
     {
-        // Phase 52F: slightly stronger bevels for soft highlight catch — footprint unchanged.
+        // Phase 5B: chunky physical bevels for 3D highlights under locked 63° pitch camera.
         switch (shape)
         {
             case ShapeType.Circle:
-                return new ShapeBuild { bevel = nest ? 0.11f : 0.11f, smoothWalls = true };
+                return new ShapeBuild { bevel = nest ? 0.14f : 0.22f, smoothWalls = true };
             case ShapeType.Square:
-                return new ShapeBuild { bevel = nest ? 0.10f : 0.095f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.20f, smoothWalls = true };
             case ShapeType.Triangle:
-                return new ShapeBuild { bevel = nest ? 0.07f : 0.065f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.12f : 0.18f, smoothWalls = true };
             case ShapeType.Diamond:
-                return new ShapeBuild { bevel = nest ? 0.10f : 0.095f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.12f : 0.18f, smoothWalls = false };
             case ShapeType.Hexagon:
-                return new ShapeBuild { bevel = nest ? 0.09f : 0.085f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.11f : 0.16f, smoothWalls = false };
             case ShapeType.Star:
-                return new ShapeBuild { bevel = nest ? 0.06f : 0.055f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.08f : 0.12f, smoothWalls = false };
             case ShapeType.Pentagon:
-                return new ShapeBuild { bevel = nest ? 0.085f : 0.08f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.10f : 0.15f, smoothWalls = false };
             default:
-                return new ShapeBuild { bevel = 0.10f, smoothWalls = false };
+                return new ShapeBuild { bevel = 0.18f, smoothWalls = false };
         }
     }
 
@@ -186,7 +186,7 @@ public static class ShapeMeshFactory3D
             case ShapeType.Circle:
                 return RegularPolygon(48, radius);
             case ShapeType.Triangle:
-                return RegularPolygon(3, radius, -90f * Mathf.Deg2Rad);
+                return RoundedTriangleOutline(radius, -90f * Mathf.Deg2Rad);
             case ShapeType.Diamond:
                 return RegularPolygon(4, radius, 0f);
             case ShapeType.Hexagon:
@@ -203,13 +203,73 @@ public static class ShapeMeshFactory3D
 
     private static Vector2[] SquareOutline(float half)
     {
-        return new[]
+        return RoundedSquareOutline(half, half * 0.18f, 4);
+    }
+
+    private static Vector2[] RoundedSquareOutline(float half, float radius, int segmentsPerCorner)
+    {
+        float r = Mathf.Min(radius, half * 0.45f);
+        var points = new List<Vector2>();
+
+        Vector2[] centers = new[]
         {
-            new Vector2(-half, -half),
-            new Vector2(half, -half),
-            new Vector2(half, half),
-            new Vector2(-half, half)
+            new Vector2(half - r, -half + r),  // Bottom-Right
+            new Vector2(half - r, half - r),   // Top-Right
+            new Vector2(-half + r, half - r),  // Top-Left
+            new Vector2(-half + r, -half + r)  // Bottom-Left
         };
+
+        float[] startAngles = new[] { -Mathf.PI * 0.5f, 0f, Mathf.PI * 0.5f, Mathf.PI };
+
+        for (int c = 0; c < 4; c++)
+        {
+            Vector2 center = centers[c];
+            float startA = startAngles[c];
+            for (int i = 0; i <= segmentsPerCorner; i++)
+            {
+                if (i == 0 && c > 0) continue;
+                float a = startA + (i * (Mathf.PI * 0.5f) / segmentsPerCorner);
+                points.Add(new Vector2(center.x + Mathf.Cos(a) * r, center.y + Mathf.Sin(a) * r));
+            }
+        }
+
+        return points.ToArray();
+    }
+
+    private static Vector2[] RoundedTriangleOutline(float radius, float rotation)
+    {
+        float cornerRadius = radius * 0.16f;
+        int segmentsPerCorner = 4;
+        var points = new List<Vector2>();
+
+        Vector2[] sharpVerts = new Vector2[3];
+        for (int i = 0; i < 3; i++)
+        {
+            float a = rotation + (i * Mathf.PI * 2f / 3f);
+            sharpVerts[i] = new Vector2(Mathf.Cos(a) * radius, Mathf.Sin(a) * radius);
+        }
+
+        Vector2 center = Vector2.zero;
+
+        for (int i = 0; i < 3; i++)
+        {
+            Vector2 p = sharpVerts[i];
+            Vector2 dir = (p - center).normalized;
+            Vector2 arcCenter = p - dir * cornerRadius;
+
+            float baseAngle = Mathf.Atan2(dir.y, dir.x);
+            float startAngle = baseAngle - (Mathf.PI / 6f);
+            float endAngle = baseAngle + (Mathf.PI / 6f);
+
+            for (int s = 0; s <= segmentsPerCorner; s++)
+            {
+                if (s == 0 && i > 0) continue;
+                float a = startAngle + (s * (endAngle - startAngle) / segmentsPerCorner);
+                points.Add(new Vector2(arcCenter.x + Mathf.Cos(a) * cornerRadius, arcCenter.y + Mathf.Sin(a) * cornerRadius));
+            }
+        }
+
+        return points.ToArray();
     }
 
     private static Vector2[] RegularPolygon(int sides, float radius, float rotation = 0f)
@@ -419,11 +479,11 @@ public static class ShapeMeshFactory3D
         bool splitNest = hollow && addNestFloor;
 
         AddCap(vertices, normals, rimTriangles, uvs, outerBottom, innerBottom, y0, Vector3.down, hollow);
-        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow);
+        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow, topCrownHeight: hollow ? 0f : 0.075f);
 
         if (addBottomBevel)
         {
-            AddBevelBand(vertices, normals, rimTriangles, uvs, outerBottom, outer, y0, yBevelBottom, outward: true);
+            AddBevelBand(vertices, normals, rimTriangles, uvs, outerBottom, outer, y0, yBevelBottom, outward: true, smoothWalls: smoothWalls);
         }
 
         if (smoothWalls)
@@ -435,7 +495,7 @@ public static class ShapeMeshFactory3D
             AddWalls(vertices, normals, rimTriangles, uvs, outer, yBevelBottom, yBevelTop, outward: true);
         }
 
-        AddBevelBand(vertices, normals, rimTriangles, uvs, outer, outerTop, yBevelTop, y1, outward: true);
+        AddBevelBand(vertices, normals, rimTriangles, uvs, outer, outerTop, yBevelTop, y1, outward: true, smoothWalls: smoothWalls);
 
         if (hollow)
         {
@@ -528,13 +588,23 @@ public static class ShapeMeshFactory3D
         Vector2[] inner,
         float y,
         Vector3 normal,
-        bool hollow)
+        bool hollow,
+        float topCrownHeight = 0f)
     {
         int start = vertices.Count;
         for (int i = 0; i < outer.Length; i++)
         {
             vertices.Add(new Vector3(outer[i].x, y, outer[i].y));
-            normals.Add(normal);
+            if (topCrownHeight > 0f && normal.y > 0f)
+            {
+                Vector3 radial = RadialNormal(outer[i], outward: true);
+                normals.Add(Vector3.Normalize(normal * 0.88f + radial * 0.12f));
+            }
+            else
+            {
+                normals.Add(normal);
+            }
+
             uvs.Add(outer[i] + Vector2.one * 0.5f);
         }
 
@@ -543,7 +613,8 @@ public static class ShapeMeshFactory3D
             // Fan from the footprint origin (AABB center), not the vertex-average
             // centroid, so Triangle/Star mass does not pull the hub off-cell.
             int centerIndex = vertices.Count;
-            vertices.Add(new Vector3(0f, y, 0f));
+            float centerY = y + (normal.y > 0f ? topCrownHeight : 0f);
+            vertices.Add(new Vector3(0f, centerY, 0f));
             normals.Add(normal);
             uvs.Add(new Vector2(0.5f, 0.5f));
 
@@ -705,7 +776,8 @@ public static class ShapeMeshFactory3D
         Vector2[] upper,
         float y0,
         float y1,
-        bool outward)
+        bool outward,
+        bool smoothWalls = false)
     {
         int count = Mathf.Min(lower.Length, upper.Length);
         for (int i = 0; i < count; i++)
@@ -716,22 +788,43 @@ public static class ShapeMeshFactory3D
             Vector3 b1 = new Vector3(upper[i1].x, y1, upper[i1].y);
             Vector3 a1 = new Vector3(upper[i].x, y1, upper[i].y);
 
-            Vector3 n = Vector3.Cross(b0 - a0, a1 - a0).normalized;
-            if (!outward)
-            {
-                n = -n;
-            }
-
-            n = Vector3.Normalize(n + Vector3.up * 0.28f);
-
             int v0 = vertices.Count;
             vertices.Add(a0);
             vertices.Add(b0);
             vertices.Add(b1);
             vertices.Add(a1);
+
+            if (smoothWalls)
+            {
+                Vector3 r_a0 = RadialNormal(lower[i], outward);
+                Vector3 r_b0 = RadialNormal(lower[i1], outward);
+                Vector3 r_b1 = RadialNormal(upper[i1], outward);
+                Vector3 r_a1 = RadialNormal(upper[i], outward);
+
+                float yNorm = y1 > y0 ? 0.707f : -0.707f;
+                normals.Add(Vector3.Normalize(r_a0 * 0.707f + Vector3.up * yNorm));
+                normals.Add(Vector3.Normalize(r_b0 * 0.707f + Vector3.up * yNorm));
+                normals.Add(Vector3.Normalize(r_b1 * 0.400f + Vector3.up * yNorm * 1.2f));
+                normals.Add(Vector3.Normalize(r_a1 * 0.400f + Vector3.up * yNorm * 1.2f));
+            }
+            else
+            {
+                Vector3 n = Vector3.Cross(b0 - a0, a1 - a0).normalized;
+                if (!outward)
+                {
+                    n = -n;
+                }
+
+                n = Vector3.Normalize(n + Vector3.up * 0.28f);
+
+                for (int k = 0; k < 4; k++)
+                {
+                    normals.Add(n);
+                }
+            }
+
             for (int k = 0; k < 4; k++)
             {
-                normals.Add(n);
                 uvs.Add(Vector2.zero);
             }
 

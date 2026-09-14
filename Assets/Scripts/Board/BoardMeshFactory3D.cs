@@ -9,6 +9,11 @@ public static class BoardMeshFactory3D
 {
     private static readonly Dictionary<string, Mesh> Cache = new Dictionary<string, Mesh>();
 
+    public static void ClearCache()
+    {
+        Cache.Clear();
+    }
+
     public static Mesh GetRoundedBox(float sizeX, float sizeY, float sizeZ, float cornerRadius, int cornerSegments = 4)
     {
         string key = $"rbox_{sizeX:F3}_{sizeY:F3}_{sizeZ:F3}_{cornerRadius:F3}_{cornerSegments}";
@@ -394,4 +399,483 @@ public static class BoardMeshFactory3D
             triangles.Add(v0 + 3);
         }
     }
+
+    /// <summary>
+    /// Phase 3J: Isolated single molded socket prototype on an integrated toy-plastic tray.
+    /// Creates a continuous physical manufactured cavity with smooth shoulder fillet,
+    /// drafted wall, bottom fillet, flat recessed floor, surrounding shelf, and chunky outer casing.
+    /// Submesh 0 = Tray frame & top shelf, Submesh 1 = Molded recessed socket cavity.
+    /// </summary>
+    public static Mesh GetSingleSocketPrototype(
+        float traySize = 4.80f,
+        float openSize = 2.40f,
+        float socketDepth = 0.28f,
+        float openRadius = 0.55f,
+        float frameWall = 0.45f,
+        float frameHeight = 0.12f,
+        float boardThickness = 0.45f)
+    {
+        string key = $"proto_socket_v6_{traySize:F3}_{openSize:F3}_{socketDepth:F3}_{openRadius:F3}_{frameWall:F3}_{frameHeight:F3}_{boardThickness:F3}";
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        float outerHx = traySize * 0.5f;
+        float outerHz = traySize * 0.5f;
+        float outerR = Mathf.Clamp(traySize * 0.18f, 0.12f, outerHx * 0.45f);
+
+        float innerHx = outerHx - frameWall;
+        float innerHz = outerHz - frameWall;
+        float innerR = Mathf.Max(0.04f, outerR - frameWall * 0.45f);
+
+        float openHalf = openSize * 0.5f;
+        float openR = Mathf.Clamp(openRadius, 0.04f, openHalf * 0.45f);
+
+        const int segs = 8;
+        const int count = 32;
+
+        System.Func<float, float, float, (Vector2[] pts, Vector2[] outN)> getLoopWithNormals = (hx, hz, r) =>
+        {
+            var pts = new Vector2[count];
+            var outN = new Vector2[count];
+            int idx = 0;
+            
+            // Corner 0: (+X, +Z)
+            float c0x = hx - r; float c0z = hz - r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c0x + ca * r, c0z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            // Corner 1: (-X, +Z)
+            float c1x = -hx + r; float c1z = hz - r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (90f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c1x + ca * r, c1z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            // Corner 2: (-X, -Z)
+            float c2x = -hx + r; float c2z = -hz + r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (180f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c2x + ca * r, c2z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            // Corner 3: (+X, -Z)
+            float c3x = hx - r; float c3z = -hz + r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (270f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c3x + ca * r, c3z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            return (pts, outN);
+        };
+
+        var (outerLoop, outerOutN) = getLoopWithNormals(outerHx, outerHz, outerR);
+        var (outerLipLoop, outerLipOutN) = getLoopWithNormals(outerHx - frameWall * 0.30f, outerHz - frameWall * 0.30f, Mathf.Max(0.06f, outerR - frameWall * 0.20f));
+        var (frameInnerLoop, frameInnerOutN) = getLoopWithNormals(innerHx, innerHz, innerR);
+
+        // Cavity profile:
+        var (r0, r0OutN) = getLoopWithNormals(openHalf, openHalf, openR);
+        float y0 = 0f;
+
+        float inset1 = openSize * 0.05f;
+        var (r1, r1OutN) = getLoopWithNormals(openHalf - inset1, openHalf - inset1, Mathf.Max(0.05f, openR - inset1 * 0.5f));
+        float y1 = -socketDepth * 0.10f;
+
+        float inset2 = openSize * 0.12f;
+        var (r2, r2OutN) = getLoopWithNormals(openHalf - inset2, openHalf - inset2, Mathf.Max(0.04f, openR - inset2 * 0.5f));
+        float y2 = -socketDepth * 0.32f;
+
+        float inset3 = openSize * 0.20f;
+        var (r3, r3OutN) = getLoopWithNormals(openHalf - inset3, openHalf - inset3, Mathf.Max(0.03f, openR - inset3 * 0.5f));
+        float y3 = -socketDepth * 0.65f;
+
+        float inset4 = openSize * 0.26f;
+        var (r4, r4OutN) = getLoopWithNormals(openHalf - inset4, openHalf - inset4, Mathf.Max(0.02f, openR - inset4 * 0.5f));
+        float y4 = -socketDepth * 0.90f;
+
+        float inset5 = openSize * 0.30f;
+        var (r5, r5OutN) = getLoopWithNormals(openHalf - inset5, openHalf - inset5, Mathf.Max(0.015f, openR - inset5 * 0.5f));
+        float y5 = -socketDepth;
+
+        var verts = new List<Vector3>();
+        var norms = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var frameTris = new List<int>();
+        var cavityTris = new List<int>();
+
+        System.Action<List<int>, int, int, int, int> addQuadTo = (targetList, v0, v1, v2, v3) =>
+        {
+            targetList.Add(v0); targetList.Add(v1); targetList.Add(v2);
+            targetList.Add(v0); targetList.Add(v2); targetList.Add(v3);
+        };
+
+        float yOuterBot = -boardThickness;
+        float yOuterMid = frameHeight * 0.5f;
+        float yOuterLip = frameHeight;
+        float yShelf = 0f;
+
+        // 1. Outer side wall (outward facing -> frameTris)
+        for (int i = 0; i < count; i++)
+        {
+            int i1 = (i + 1) % count;
+            Vector3 n0 = new Vector3(outerOutN[i].x, 0f, outerOutN[i].y);
+            Vector3 n1 = new Vector3(outerOutN[i1].x, 0f, outerOutN[i1].y);
+            Vector3 nMid0 = Vector3.Normalize(n0 * 0.85f + Vector3.up * 0.52f);
+            Vector3 nMid1 = Vector3.Normalize(n1 * 0.85f + Vector3.up * 0.52f);
+
+            int v = verts.Count;
+            verts.Add(new Vector3(outerLoop[i].x, yOuterBot, outerLoop[i].y));
+            verts.Add(new Vector3(outerLoop[i].x, yOuterMid, outerLoop[i].y));
+            verts.Add(new Vector3(outerLoop[i1].x, yOuterMid, outerLoop[i1].y));
+            verts.Add(new Vector3(outerLoop[i1].x, yOuterBot, outerLoop[i1].y));
+            norms.Add(n0);
+            norms.Add(nMid0);
+            norms.Add(nMid1);
+            norms.Add(n1);
+            for (int k = 0; k < 4; k++) uvs.Add(Vector2.zero);
+            addQuadTo(frameTris, v, v + 1, v + 2, v + 3);
+        }
+
+        // 2. Outer Lip Bevel (outward/upward facing -> frameTris)
+        for (int i = 0; i < count; i++)
+        {
+            int i1 = (i + 1) % count;
+            Vector3 nMid0 = Vector3.Normalize(new Vector3(outerOutN[i].x, 0f, outerOutN[i].y) * 0.85f + Vector3.up * 0.52f);
+            Vector3 nMid1 = Vector3.Normalize(new Vector3(outerOutN[i1].x, 0f, outerOutN[i1].y) * 0.85f + Vector3.up * 0.52f);
+            Vector3 nLip0 = Vector3.Normalize(new Vector3(outerLipOutN[i].x, 0f, outerLipOutN[i].y) * 0.35f + Vector3.up * 0.94f);
+            Vector3 nLip1 = Vector3.Normalize(new Vector3(outerLipOutN[i1].x, 0f, outerLipOutN[i1].y) * 0.35f + Vector3.up * 0.94f);
+
+            int v = verts.Count;
+            verts.Add(new Vector3(outerLoop[i].x, yOuterMid, outerLoop[i].y));
+            verts.Add(new Vector3(outerLipLoop[i].x, yOuterLip, outerLipLoop[i].y));
+            verts.Add(new Vector3(outerLipLoop[i1].x, yOuterLip, outerLipLoop[i1].y));
+            verts.Add(new Vector3(outerLoop[i1].x, yOuterMid, outerLoop[i1].y));
+            norms.Add(nMid0);
+            norms.Add(nLip0);
+            norms.Add(nLip1);
+            norms.Add(nMid1);
+            for (int k = 0; k < 4; k++) uvs.Add(Vector2.zero);
+            addQuadTo(frameTris, v, v + 1, v + 2, v + 3);
+        }
+
+        // Concentric band helper
+        System.Action<List<int>, Vector2[], float, Vector2[], float, float, Vector2[], float, Vector2[], float, float> addConcentricBandTo =
+            (targetList, innerPts, yIn, innerNorms2D, inWeightIn, upWeightIn,
+             outerPts, yOut, outerNorms2D, inWeightOut, upWeightOut) =>
+        {
+            for (int i = 0; i < count; i++)
+            {
+                int i1 = (i + 1) % count;
+
+                Vector3 inN0_in = new Vector3(-innerNorms2D[i].x, 0f, -innerNorms2D[i].y);
+                Vector3 inN1_in = new Vector3(-innerNorms2D[i1].x, 0f, -innerNorms2D[i1].y);
+                Vector3 inN0_out = new Vector3(-outerNorms2D[i].x, 0f, -outerNorms2D[i].y);
+                Vector3 inN1_out = new Vector3(-outerNorms2D[i1].x, 0f, -outerNorms2D[i1].y);
+
+                Vector3 nIn0 = Vector3.Normalize(inN0_in * inWeightIn + Vector3.up * upWeightIn);
+                Vector3 nIn1 = Vector3.Normalize(inN1_in * inWeightIn + Vector3.up * upWeightIn);
+                Vector3 nOut0 = Vector3.Normalize(inN0_out * inWeightOut + Vector3.up * upWeightOut);
+                Vector3 nOut1 = Vector3.Normalize(inN1_out * inWeightOut + Vector3.up * upWeightOut);
+
+                int v = verts.Count;
+                verts.Add(new Vector3(innerPts[i].x, yIn, innerPts[i].y));
+                verts.Add(new Vector3(innerPts[i1].x, yIn, innerPts[i1].y));
+                verts.Add(new Vector3(outerPts[i1].x, yOut, outerPts[i1].y));
+                verts.Add(new Vector3(outerPts[i].x, yOut, outerPts[i].y));
+
+                norms.Add(nIn0);
+                norms.Add(nIn1);
+                norms.Add(nOut1);
+                norms.Add(nOut0);
+
+                for (int k = 0; k < 4; k++)
+                {
+                    uvs.Add(new Vector2(verts[v + k].x / traySize + 0.5f, verts[v + k].z / traySize + 0.5f));
+                }
+                addQuadTo(targetList, v, v + 1, v + 2, v + 3);
+            }
+        };
+
+        // 3. Inner Frame Slope (-> frameTris)
+        addConcentricBandTo(
+            frameTris,
+            frameInnerLoop, yShelf, frameInnerOutN, 0f, 1f,
+            outerLipLoop, yOuterLip, outerLipOutN, -0.35f, 0.94f);
+
+        // 4. Surrounding Flat Tray Shelf (-> frameTris)
+        addConcentricBandTo(
+            frameTris,
+            r0, y0, r0OutN, 0f, 1f,
+            frameInnerLoop, yShelf, frameInnerOutN, 0f, 1f);
+
+        // 5. Cavity Bands (-> cavityTris)
+        // R4 -> R5 (Bottom Fillet into Flat Floor: 0 deg Up to 30 deg)
+        addConcentricBandTo(cavityTris, r5, y5, r5OutN, 0.00f, 1.00f, r4, y4, r4OutN, 0.50f, 0.86f);
+
+        // R3 -> R4 (Bottom Fillet Entry: 30 deg to 60 deg)
+        addConcentricBandTo(cavityTris, r4, y4, r4OutN, 0.50f, 0.86f, r3, y3, r3OutN, 0.86f, 0.50f);
+
+        // R2 -> R3 (Drafted Wall: 60 deg to 38 deg)
+        addConcentricBandTo(cavityTris, r3, y3, r3OutN, 0.86f, 0.50f, r2, y2, r2OutN, 0.62f, 0.79f);
+
+        // R1 -> R2 (Shoulder Curve: 38 deg to 15 deg)
+        addConcentricBandTo(cavityTris, r2, y2, r2OutN, 0.62f, 0.79f, r1, y1, r1OutN, 0.26f, 0.96f);
+
+        // R0 -> R1 (Shoulder Entry: 15 deg to Top Flat)
+        addConcentricBandTo(cavityTris, r1, y1, r1OutN, 0.26f, 0.96f, r0, y0, r0OutN, 0.00f, 1.00f);
+
+        // 6. Flat Floor Cap (Y = -socketDepth -> cavityTris)
+        int centerIdx = verts.Count;
+        verts.Add(new Vector3(0f, y5, 0f));
+        norms.Add(Vector3.up);
+        uvs.Add(new Vector2(0.5f, 0.5f));
+
+        int floorStart = verts.Count;
+        for (int i = 0; i < count; i++)
+        {
+            verts.Add(new Vector3(r5[i].x, y5, r5[i].y));
+            norms.Add(Vector3.up);
+            uvs.Add(new Vector2(r5[i].x / traySize + 0.5f, r5[i].y / traySize + 0.5f));
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            int i1 = (i + 1) % count;
+            cavityTris.Add(centerIdx);
+            cavityTris.Add(floorStart + i1);
+            cavityTris.Add(floorStart + i);
+        }
+
+        // 7. Bottom Tray Cap (-> frameTris)
+        int capStart = verts.Count;
+        for (int i = 0; i < count; i++)
+        {
+            verts.Add(new Vector3(outerLoop[i].x, yOuterBot, outerLoop[i].y));
+            norms.Add(Vector3.down);
+            uvs.Add(Vector2.zero);
+        }
+        for (int i = 1; i < count - 1; i++)
+        {
+            frameTris.Add(capStart);
+            frameTris.Add(capStart + i + 1);
+            frameTris.Add(capStart + i);
+        }
+
+        var mesh = new Mesh { name = "BoardSingleSocketPrototype" };
+        mesh.SetVertices(verts);
+        mesh.SetNormals(norms);
+        mesh.SetUVs(0, uvs);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(frameTris, 0, true);
+        mesh.SetTriangles(cavityTris, 1, true);
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
+        Cache[key] = mesh;
+        return mesh;
+    }
+
+    /// <summary>
+    /// Phase 3K: Single cell prototype mesh representing a molded plastic socket cavity.
+    /// Features continuous top shelf, smooth convex shoulder fillet, drafted inner wall (15°),
+    /// smooth concave bottom fillet, and flat recessed floor.
+    /// Submesh 0 = Top shelf flange, Submesh 1 = Recessed cavity interior.
+    /// </summary>
+    public static Mesh GetMoldedSocketTile(
+        float cellSize = 1.0f,
+        float socketDepth = 0.11f,
+        float openRatio = 0.88f,
+        float cornerRadius = 0.18f)
+    {
+        string key = $"proto_cell_molded_{cellSize:F3}_{socketDepth:F3}_{openRatio:F3}_{cornerRadius:F3}";
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        float halfP = cellSize * 0.5f;
+        float openHalf = halfP * openRatio;
+        float openR = Mathf.Clamp(cornerRadius, 0.02f, openHalf * 0.45f);
+
+        const int segs = 8;
+        const int count = 32;
+
+        System.Func<float, float, float, (Vector2[] pts, Vector2[] outN)> getLoop = (hx, hz, r) =>
+        {
+            var pts = new Vector2[count];
+            var outN = new Vector2[count];
+            int idx = 0;
+            float c0x = hx - r; float c0z = hz - r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c0x + ca * r, c0z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            float c1x = -hx + r; float c1z = hz - r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (90f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c1x + ca * r, c1z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            float c2x = -hx + r; float c2z = -hz + r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (180f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c2x + ca * r, c2z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            float c3x = hx - r; float c3z = -hz + r;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (270f + 90f * i / segs) * Mathf.Deg2Rad;
+                float ca = Mathf.Cos(a); float sa = Mathf.Sin(a);
+                pts[idx] = new Vector2(c3x + ca * r, c3z + sa * r);
+                outN[idx] = new Vector2(ca, sa).normalized;
+                idx++;
+            }
+            return (pts, outN);
+        };
+
+        var (outerFlange, outerFlangeN) = getLoop(halfP, halfP, halfP * 0.12f);
+        var (r0, r0N) = getLoop(openHalf, openHalf, openR);
+        float y0 = 0f;
+
+        float inset1 = openHalf * 0.05f;
+        var (r1, r1N) = getLoop(openHalf - inset1, openHalf - inset1, Mathf.Max(0.02f, openR - inset1 * 0.5f));
+        float y1 = -socketDepth * 0.12f;
+
+        float inset2 = openHalf * 0.14f;
+        var (r2, r2N) = getLoop(openHalf - inset2, openHalf - inset2, Mathf.Max(0.02f, openR - inset2 * 0.5f));
+        float y2 = -socketDepth * 0.45f;
+
+        float inset3 = openHalf * 0.22f;
+        var (r3, r3N) = getLoop(openHalf - inset3, openHalf - inset3, Mathf.Max(0.02f, openR - inset3 * 0.5f));
+        float y3 = -socketDepth * 0.80f;
+
+        float inset4 = openHalf * 0.28f;
+        var (r4, r4N) = getLoop(openHalf - inset4, openHalf - inset4, Mathf.Max(0.015f, openR - inset4 * 0.5f));
+        float y4 = -socketDepth;
+
+        var verts = new List<Vector3>();
+        var norms = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var shelfTris = new List<int>();
+        var cavityTris = new List<int>();
+
+        System.Action<List<int>, int, int, int, int> addQuadTo = (targetList, v0, v1, v2, v3) =>
+        {
+            targetList.Add(v0); targetList.Add(v1); targetList.Add(v2);
+            targetList.Add(v0); targetList.Add(v2); targetList.Add(v3);
+        };
+
+        for (int i = 0; i < count; i++)
+        {
+            int i1 = (i + 1) % count;
+            int v = verts.Count;
+            verts.Add(new Vector3(r0[i].x, y0, r0[i].y));
+            verts.Add(new Vector3(r0[i1].x, y0, r0[i1].y));
+            verts.Add(new Vector3(outerFlange[i1].x, y0, outerFlange[i1].y));
+            verts.Add(new Vector3(outerFlange[i].x, y0, outerFlange[i].y));
+
+            for (int k = 0; k < 4; k++)
+            {
+                norms.Add(Vector3.up);
+                uvs.Add(new Vector2(verts[v + k].x / cellSize + 0.5f, verts[v + k].z / cellSize + 0.5f));
+            }
+            addQuadTo(shelfTris, v, v + 1, v + 2, v + 3);
+        }
+
+        System.Action<List<int>, Vector2[], float, Vector2[], float, float, Vector2[], float, Vector2[], float, float> addBandTo =
+            (targetList, innerPts, yIn, innerN, inW_In, upW_In, outerPts, yOut, outerN, inW_Out, upW_Out) =>
+        {
+            for (int i = 0; i < count; i++)
+            {
+                int i1 = (i + 1) % count;
+                Vector3 inN0_in = new Vector3(-innerN[i].x, 0f, -innerN[i].y);
+                Vector3 inN1_in = new Vector3(-innerN[i1].x, 0f, -innerN[i1].y);
+                Vector3 inN0_out = new Vector3(-outerN[i].x, 0f, -outerN[i].y);
+                Vector3 inN1_out = new Vector3(-outerN[i1].x, 0f, -outerN[i1].y);
+
+                Vector3 nIn0 = Vector3.Normalize(inN0_in * inW_In + Vector3.up * upW_In);
+                Vector3 nIn1 = Vector3.Normalize(inN1_in * inW_In + Vector3.up * upW_In);
+                Vector3 nOut0 = Vector3.Normalize(inN0_out * inW_Out + Vector3.up * upW_Out);
+                Vector3 nOut1 = Vector3.Normalize(inN1_out * inW_Out + Vector3.up * upW_Out);
+
+                int v = verts.Count;
+                verts.Add(new Vector3(innerPts[i].x, yIn, innerPts[i].y));
+                verts.Add(new Vector3(innerPts[i1].x, yIn, innerPts[i1].y));
+                verts.Add(new Vector3(outerPts[i1].x, yOut, outerPts[i1].y));
+                verts.Add(new Vector3(outerPts[i].x, yOut, outerPts[i].y));
+
+                norms.Add(nIn0); norms.Add(nIn1); norms.Add(nOut1); norms.Add(nOut0);
+                for (int k = 0; k < 4; k++)
+                {
+                    uvs.Add(new Vector2(verts[v + k].x / cellSize + 0.5f, verts[v + k].z / cellSize + 0.5f));
+                }
+                addQuadTo(targetList, v, v + 1, v + 2, v + 3);
+            }
+        };
+
+        addBandTo(cavityTris, r4, y4, r4N, 0.20f, 0.98f, r3, y3, r3N, 0.70f, 0.71f);
+        addBandTo(cavityTris, r3, y3, r3N, 0.70f, 0.71f, r2, y2, r2N, 0.85f, 0.52f);
+        addBandTo(cavityTris, r2, y2, r2N, 0.85f, 0.52f, r1, y1, r1N, 0.50f, 0.86f);
+        addBandTo(cavityTris, r1, y1, r1N, 0.50f, 0.86f, r0, y0, r0N, 0.00f, 1.00f);
+
+        int centerIdx = verts.Count;
+        verts.Add(new Vector3(0f, y4, 0f));
+        norms.Add(Vector3.up);
+        uvs.Add(new Vector2(0.5f, 0.5f));
+
+        int floorStart = verts.Count;
+        for (int i = 0; i < count; i++)
+        {
+            verts.Add(new Vector3(r4[i].x, y4, r4[i].y));
+            norms.Add(Vector3.up);
+            uvs.Add(new Vector2(r4[i].x / cellSize + 0.5f, r4[i].y / cellSize + 0.5f));
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            int i1 = (i + 1) % count;
+            cavityTris.Add(centerIdx);
+            cavityTris.Add(floorStart + i1);
+            cavityTris.Add(floorStart + i);
+        }
+
+        var mesh = new Mesh { name = "BoardMoldedSocketTilePrototype" };
+        mesh.SetVertices(verts);
+        mesh.SetNormals(norms);
+        mesh.SetUVs(0, uvs);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(shelfTris, 0, true);
+        mesh.SetTriangles(cavityTris, 1, true);
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
+        Cache[key] = mesh;
+        return mesh;
+    }
 }
+
+

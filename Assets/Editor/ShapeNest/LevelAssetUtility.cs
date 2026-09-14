@@ -103,7 +103,8 @@ internal static class LevelAssetUtility
         IList<LevelTargetData> targets,
         bool overwrite,
         int gridWidth = 5,
-        int gridHeight = 5)
+        int gridHeight = 5,
+        IList<Vector2Int> blockedCells = null)
     {
         EnsureLevelsFolder();
         string path = $"{LevelsFolder}/{levelName}.asset";
@@ -146,6 +147,7 @@ internal static class LevelAssetUtility
         asset.gridHeight = Mathf.Max(1, gridHeight);
         CopyBlocks(blocks, asset.blocks);
         CopyTargets(targets, asset.targets);
+        CopyBlockedCells(blockedCells, asset.blockedCells);
         EditorUtility.SetDirty(asset);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -184,6 +186,20 @@ internal static class LevelAssetUtility
             {
                 destination.Add(source[i].Clone());
             }
+        }
+    }
+
+    private static void CopyBlockedCells(IList<Vector2Int> source, List<Vector2Int> destination)
+    {
+        destination.Clear();
+        if (source == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            destination.Add(source[i]);
         }
     }
 }

@@ -14,13 +14,13 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
     private const float LoopDuration = 0.75f;
 
     /// <summary>Perpendicular gap between adjacent curve centers, in cellPitch fractions.</summary>
-    private const float LineSpacingFraction = 0.16f;
+    private const float LineSpacingFraction = 0.22f;
 
     /// <summary>Shared along-axis distance from target toward block (all curves use this).</summary>
     private const float AlongBaseFraction = 0.34f;
 
     /// <summary>Bezier mid bulge — must stay below lineSpacing so arcs do not overlap.</summary>
-    private const float BulgeFraction = 0.07f;
+    private const float BulgeFraction = 0.065f;
 
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -242,7 +242,7 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
         if (sessionOwner != null)
         {
             BlockMover mover = sessionOwner.GetComponent<BlockMover>();
-            if (mover == null || !mover.IsDragging)
+            if (sessionOwner.IsSettled && (mover == null || !mover.IsDragging))
             {
                 Hide();
                 TargetCallEffect call = target.GetComponent<TargetCallEffect>();
@@ -386,9 +386,9 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
         float baseDist = pitch * AlongBaseFraction;
         float halfSpan = pitch * 0.26f;
         // Keep bulge < spacing so the three parallel strokes read as separate curves.
-        float bulge = pitch * Mathf.Min(BulgeFraction, LineSpacingFraction * 0.45f);
+        float bulge = pitch * Mathf.Min(BulgeFraction, LineSpacingFraction * 0.35f);
         float lift = pitch * 0.14f;
-        float width = pitch * 0.028f;
+        float width = pitch * 0.026f;
         float travel = pitch * 0.06f;
         float y = targetWorld.y + lift;
 

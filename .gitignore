@@ -104,3 +104,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Development captures, crash recovery, and one-off validation output
+/Captures/
+/Report85B.txt
+/[Aa]ssets/Screenshots/
+/[Aa]ssets/_Recovery/

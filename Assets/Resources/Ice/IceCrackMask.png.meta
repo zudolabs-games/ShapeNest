@@ -1,0 +1,2756 @@
+fileFormatVersion: 2
+guid: 4498749e67d1f45a7a4993cb6dc1207c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 6561126684863708819
+    second: IceCrackMask_0
+  - first:
+      213: 1904902766170484448
+    second: IceCrackMask_1
+  - first:
+      213: -61491750805033736
+    second: IceCrackMask_2
+  - first:
+      213: -3626467243062901751
+    second: IceCrackMask_3
+  - first:
+      213: -4532998191373845313
+    second: IceCrackMask_4
+  - first:
+      213: -747701994208011994
+    second: IceCrackMask_5
+  - first:
+      213: 4400029965012442158
+    second: IceCrackMask_6
+  - first:
+      213: -5369721270693727014
+    second: IceCrackMask_7
+  - first:
+      213: -8733596346488093787
+    second: IceCrackMask_8
+  - first:
+      213: 6919438676293101903
+    second: IceCrackMask_9
+  - first:
+      213: -4183223179598788312
+    second: IceCrackMask_10
+  - first:
+      213: -6724609872656942733
+    second: IceCrackMask_11
+  - first:
+      213: 6774818854830072262
+    second: IceCrackMask_12
+  - first:
+      213: -5432245349402049262
+    second: IceCrackMask_13
+  - first:
+      213: 2524524688968699794
+    second: IceCrackMask_14
+  - first:
+      213: -7252899366865656664
+    second: IceCrackMask_15
+  - first:
+      213: -4649029290939145856
+    second: IceCrackMask_16
+  - first:
+      213: 8781353773295081868
+    second: IceCrackMask_17
+  - first:
+      213: -8042775095512703206
+    second: IceCrackMask_18
+  - first:
+      213: -5072765049165731435
+    second: IceCrackMask_19
+  - first:
+      213: -4507234499280405458
+    second: IceCrackMask_20
+  - first:
+      213: 6883949717449122811
+    second: IceCrackMask_21
+  - first:
+      213: -8407566502859171403
+    second: IceCrackMask_22
+  - first:
+      213: -8610333739588346360
+    second: IceCrackMask_23
+  - first:
+      213: -8372782946511318909
+    second: IceCrackMask_24
+  - first:
+      213: 1188914820685331676
+    second: IceCrackMask_25
+  - first:
+      213: 3357656734859279159
+    second: IceCrackMask_26
+  - first:
+      213: -6235302209901007391
+    second: IceCrackMask_27
+  - first:
+      213: -8411973073713163662
+    second: IceCrackMask_28
+  - first:
+      213: -4679282661542314712
+    second: IceCrackMask_29
+  - first:
+      213: 6204474166572435328
+    second: IceCrackMask_30
+  - first:
+      213: 1697120247432940845
+    second: IceCrackMask_31
+  - first:
+      213: 10511871628637366
+    second: IceCrackMask_32
+  - first:
+      213: -3042787006363048547
+    second: IceCrackMask_33
+  - first:
+      213: -1742630466077254332
+    second: IceCrackMask_34
+  - first:
+      213: -7757166350256711277
+    second: IceCrackMask_35
+  - first:
+      213: 2671293045534011793
+    second: IceCrackMask_36
+  - first:
+      213: -5164914977672638271
+    second: IceCrackMask_37
+  - first:
+      213: 8284834742002077700
+    second: IceCrackMask_38
+  - first:
+      213: 2376969430752613684
+    second: IceCrackMask_39
+  - first:
+      213: -2822602562541870619
+    second: IceCrackMask_40
+  - first:
+      213: 2270914869381998876
+    second: IceCrackMask_41
+  - first:
+      213: -7887825050026332747
+    second: IceCrackMask_42
+  - first:
+      213: 3774007882915794741
+    second: IceCrackMask_43
+  - first:
+      213: 243453484961606102
+    second: IceCrackMask_44
+  - first:
+      213: -2359356777227803101
+    second: IceCrackMask_45
+  - first:
+      213: -360745431985857024
+    second: IceCrackMask_46
+  - first:
+      213: 1239202859441049457
+    second: IceCrackMask_47
+  - first:
+      213: 1800712344177184280
+    second: IceCrackMask_48
+  - first:
+      213: 7397479707764823618
+    second: IceCrackMask_49
+  - first:
+      213: -2174562117634945256
+    second: IceCrackMask_50
+  - first:
+      213: -8475555900868158926
+    second: IceCrackMask_51
+  - first:
+      213: -7096361947904427553
+    second: IceCrackMask_52
+  - first:
+      213: 7740667506860242805
+    second: IceCrackMask_53
+  - first:
+      213: -7365456546520034138
+    second: IceCrackMask_54
+  - first:
+      213: -4831209139942074582
+    second: IceCrackMask_55
+  - first:
+      213: 2678028004911892801
+    second: IceCrackMask_56
+  - first:
+      213: 8749992661725583864
+    second: IceCrackMask_57
+  - first:
+      213: -3661615908805828698
+    second: IceCrackMask_58
+  - first:
+      213: -8497055513768608562
+    second: IceCrackMask_59
+  - first:
+      213: -6297151537984141785
+    second: IceCrackMask_60
+  - first:
+      213: 2780512951670699878
+    second: IceCrackMask_61
+  - first:
+      213: 1469818448170546448
+    second: IceCrackMask_62
+  - first:
+      213: 1833905147600657563
+    second: IceCrackMask_63
+  - first:
+      213: -5524528083393285898
+    second: IceCrackMask_64
+  - first:
+      213: 7782119580272257845
+    second: IceCrackMask_65
+  - first:
+      213: -3174416743247204044
+    second: IceCrackMask_66
+  - first:
+      213: -6979375820596966109
+    second: IceCrackMask_67
+  - first:
+      213: -5596412316115072401
+    second: IceCrackMask_68
+  - first:
+      213: -5420243134144856163
+    second: IceCrackMask_69
+  - first:
+      213: -2418135580817271773
+    second: IceCrackMask_70
+  - first:
+      213: -7823479917935507696
+    second: IceCrackMask_71
+  - first:
+      213: 7235064934384409983
+    second: IceCrackMask_72
+  - first:
+      213: 6196174485496467651
+    second: IceCrackMask_73
+  - first:
+      213: -7184973946544839367
+    second: IceCrackMask_74
+  - first:
+      213: -3724254652686341658
+    second: IceCrackMask_75
+  - first:
+      213: 4896909706477106389
+    second: IceCrackMask_76
+  - first:
+      213: -5197138476269710898
+    second: IceCrackMask_77
+  - first:
+      213: 2794369224221598631
+    second: IceCrackMask_78
+  - first:
+      213: 1404250709176900225
+    second: IceCrackMask_79
+  - first:
+      213: 3802619946151809274
+    second: IceCrackMask_80
+  - first:
+      213: 4757281200248900304
+    second: IceCrackMask_81
+  - first:
+      213: 520340669301132495
+    second: IceCrackMask_82
+  - first:
+      213: -1739092226468201877
+    second: IceCrackMask_83
+  - first:
+      213: -2739493263094728729
+    second: IceCrackMask_84
+  - first:
+      213: -2757687219541295261
+    second: IceCrackMask_85
+  - first:
+      213: -2107212856755302486
+    second: IceCrackMask_86
+  - first:
+      213: 5599889074797228323
+    second: IceCrackMask_87
+  - first:
+      213: 8097316354025971853
+    second: IceCrackMask_88
+  - first:
+      213: 1898120507431284387
+    second: IceCrackMask_89
+  - first:
+      213: -2485156562698341907
+    second: IceCrackMask_90
+  - first:
+      213: 8888913511011848260
+    second: IceCrackMask_91
+  - first:
+      213: -7351772408406068621
+    second: IceCrackMask_92
+  - first:
+      213: 6124431894017847023
+    second: IceCrackMask_93
+  - first:
+      213: 407677210031366830
+    second: IceCrackMask_94
+  - first:
+      213: 3770015213337535228
+    second: IceCrackMask_95
+  - first:
+      213: -6450162358341666796
+    second: IceCrackMask_96
+  - first:
+      213: 8364696631220758992
+    second: IceCrackMask_97
+  - first:
+      213: -6065693147632242813
+    second: IceCrackMask_98
+  - first:
+      213: 5821064504317089486
+    second: IceCrackMask_99
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 1
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 0
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: IceCrackMask_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 180
+        width: 55
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 39e33a125fdcd0b50800000000000000
+      internalID: 6561126684863708819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_1
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 245
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ee204529f29f6a10800000000000000
+      internalID: 1904902766170484448
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_2
+      rect:
+        serializedVersion: 2
+        x: 62
+        y: 229
+        width: 61
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8fc26a41499852ff0800000000000000
+      internalID: -61491750805033736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_3
+      rect:
+        serializedVersion: 2
+        x: 124
+        y: 248
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 90445ab91433cadc0800000000000000
+      internalID: -3626467243062901751
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_4
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 228
+        width: 16
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbc7cab692e8711c0800000000000000
+      internalID: -4532998191373845313
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_5
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 241
+        width: 7
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 629516d6ff0af95f0800000000000000
+      internalID: -747701994208011994
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_6
+      rect:
+        serializedVersion: 2
+        x: 153
+        y: 243
+        width: 53
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e2c14a9d0fb001d30800000000000000
+      internalID: 4400029965012442158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_7
+      rect:
+        serializedVersion: 2
+        x: 222
+        y: 243
+        width: 18
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad4f07d44faea75b0800000000000000
+      internalID: -5369721270693727014
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_8
+      rect:
+        serializedVersion: 2
+        x: 238
+        y: 235
+        width: 6
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a38deb35680cc680800000000000000
+      internalID: -8733596346488093787
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_9
+      rect:
+        serializedVersion: 2
+        x: 243
+        y: 247
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f49ac89b0d8c60060800000000000000
+      internalID: 6919438676293101903
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_10
+      rect:
+        serializedVersion: 2
+        x: 122
+        y: 232
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82985db8ea432f5c0800000000000000
+      internalID: -4183223179598788312
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_11
+      rect:
+        serializedVersion: 2
+        x: 150
+        y: 220
+        width: 13
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 379b23703f26da2a0800000000000000
+      internalID: -6724609872656942733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_12
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 230
+        width: 25
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c1e3cb9addf40e50800000000000000
+      internalID: 6774818854830072262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_13
+      rect:
+        serializedVersion: 2
+        x: 185
+        y: 216
+        width: 26
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2158f10d2a9cc94b0800000000000000
+      internalID: -5432245349402049262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_14
+      rect:
+        serializedVersion: 2
+        x: 210
+        y: 208
+        width: 19
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29fcea044d9e80320800000000000000
+      internalID: 2524524688968699794
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_15
+      rect:
+        serializedVersion: 2
+        x: 217
+        y: 229
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a4215e0476885b90800000000000000
+      internalID: -7252899366865656664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_16
+      rect:
+        serializedVersion: 2
+        x: 219
+        y: 236
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 081af23dd745b7fb0800000000000000
+      internalID: -4649029290939145856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_17
+      rect:
+        serializedVersion: 2
+        x: 228
+        y: 200
+        width: 28
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c891a403bb2add970800000000000000
+      internalID: 8781353773295081868
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_18
+      rect:
+        serializedVersion: 2
+        x: 54
+        y: 217
+        width: 40
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a1f5b9fb9a2526090800000000000000
+      internalID: -8042775095512703206
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_19
+      rect:
+        serializedVersion: 2
+        x: 94
+        y: 210
+        width: 19
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 599a57f701be999b0800000000000000
+      internalID: -5072765049165731435
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_20
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 223
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e2c710f6a161371c0800000000000000
+      internalID: -4507234499280405458
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_21
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 209
+        width: 22
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bf3a4389bc3b88f50800000000000000
+      internalID: 6883949717449122811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_22
+      rect:
+        serializedVersion: 2
+        x: 134
+        y: 221
+        width: 11
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5b91b939fc2525b80800000000000000
+      internalID: -8407566502859171403
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_23
+      rect:
+        serializedVersion: 2
+        x: 158
+        y: 126
+        width: 98
+        height: 101
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80e96465513f18880800000000000000
+      internalID: -8610333739588346360
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_24
+      rect:
+        serializedVersion: 2
+        x: 15
+        y: 185
+        width: 58
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3809eb36546edcb80800000000000000
+      internalID: -8372782946511318909
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_25
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 196
+        width: 11
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cdc7523fabfdf7010800000000000000
+      internalID: 1188914820685331676
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_26
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 197
+        width: 6
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 73b3cfeb20bc89e20800000000000000
+      internalID: 3357656734859279159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_27
+      rect:
+        serializedVersion: 2
+        x: 85
+        y: 185
+        width: 24
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ed64a71da1c779a0800000000000000
+      internalID: -6235302209901007391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_28
+      rect:
+        serializedVersion: 2
+        x: 117
+        y: 176
+        width: 43
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2721d29de0ba24b80800000000000000
+      internalID: -8411973073713163662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_29
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 142
+        width: 6
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82d30231639df0fb0800000000000000
+      internalID: -4679282661542314712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_30
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 183
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08743acb168ba1650800000000000000
+      internalID: 6204474166572435328
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_31
+      rect:
+        serializedVersion: 2
+        x: 70
+        y: 148
+        width: 41
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2d0d519fd16d8710800000000000000
+      internalID: 1697120247432940845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_32
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 180
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b47956dd78552000800000000000000
+      internalID: 10511871628637366
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_33
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 178
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d956e8ec659d5c5d0800000000000000
+      internalID: -3042787006363048547
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_34
+      rect:
+        serializedVersion: 2
+        x: 122
+        y: 179
+        width: 6
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 44d11bee2dee0d7e0800000000000000
+      internalID: -1742630466077254332
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_35
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 109
+        width: 33
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 399d55dbd42095490800000000000000
+      internalID: -7757166350256711277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_36
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 101
+        width: 44
+        height: 69
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 191b60e2fd6521520800000000000000
+      internalID: 2671293045534011793
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_37
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 158
+        width: 19
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c05ab451398258b0800000000000000
+      internalID: -5164914977672638271
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_38
+      rect:
+        serializedVersion: 2
+        x: 110
+        y: 136
+        width: 54
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40059db8d45a9f270800000000000000
+      internalID: 8284834742002077700
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_39
+      rect:
+        serializedVersion: 2
+        x: 246
+        y: 161
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 435d8f18a11bcf020800000000000000
+      internalID: 2376969430752613684
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_40
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 134
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5e1a5959ce914d8d0800000000000000
+      internalID: -2822602562541870619
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_41
+      rect:
+        serializedVersion: 2
+        x: 105
+        y: 143
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c19aaa8ba09e38f10800000000000000
+      internalID: 2270914869381998876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_42
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 131
+        width: 15
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bda0c298e0d88290800000000000000
+      internalID: -7887825050026332747
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_43
+      rect:
+        serializedVersion: 2
+        x: 41
+        y: 127
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53f48b88c28ff5430800000000000000
+      internalID: 3774007882915794741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_44
+      rect:
+        serializedVersion: 2
+        x: 90
+        y: 99
+        width: 18
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d9a77a97abe06300800000000000000
+      internalID: 243453484961606102
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_45
+      rect:
+        serializedVersion: 2
+        x: 100
+        y: 135
+        width: 12
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3262de2f281e14fd0800000000000000
+      internalID: -2359356777227803101
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_46
+      rect:
+        serializedVersion: 2
+        x: 119
+        y: 125
+        width: 13
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 00e5320e0ff5efaf0800000000000000
+      internalID: -360745431985857024
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_47
+      rect:
+        serializedVersion: 2
+        x: 247
+        y: 132
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17fc1a16f68823110800000000000000
+      internalID: 1239202859441049457
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_48
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 120
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81e8751265a6df810800000000000000
+      internalID: 1800712344177184280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_49
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 113
+        width: 11
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2469b76c99029a660800000000000000
+      internalID: 7397479707764823618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_50
+      rect:
+        serializedVersion: 2
+        x: 109
+        y: 117
+        width: 17
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81f095c764762d1e0800000000000000
+      internalID: -2174562117634945256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_51
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 117
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 23a99c640d6c06a80800000000000000
+      internalID: -8475555900868158926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_52
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 110
+        width: 22
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd9be811868a48d90800000000000000
+      internalID: -7096361947904427553
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_53
+      rect:
+        serializedVersion: 2
+        x: 233
+        y: 113
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57730dee5106c6b60800000000000000
+      internalID: 7740667506860242805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_54
+      rect:
+        serializedVersion: 2
+        x: 236
+        y: 126
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a419187b44a8c990800000000000000
+      internalID: -7365456546520034138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_55
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 99
+        width: 10
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a27d12252e814fcb0800000000000000
+      internalID: -4831209139942074582
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_56
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 115
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 149425b18444a2520800000000000000
+      internalID: 2678028004911892801
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_57
+      rect:
+        serializedVersion: 2
+        x: 119
+        y: 101
+        width: 15
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8f99d6567f73e6970800000000000000
+      internalID: 8749992661725583864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_58
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 111
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6af95b32bb35f2dc0800000000000000
+      internalID: -3661615908805828698
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_59
+      rect:
+        serializedVersion: 2
+        x: 173
+        y: 112
+        width: 23
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ecc3c019705641a80800000000000000
+      internalID: -8497055513768608562
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_60
+      rect:
+        serializedVersion: 2
+        x: 184
+        y: 37
+        width: 72
+        height: 88
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72686a93a060c98a0800000000000000
+      internalID: -6297151537984141785
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_61
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 95
+        width: 20
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66774b93ccd569620800000000000000
+      internalID: 2780512951670699878
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_62
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 32
+        width: 63
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 01575875718d56410800000000000000
+      internalID: 1469818448170546448
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_63
+      rect:
+        serializedVersion: 2
+        x: 85
+        y: 97
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b9c5f7ae307537910800000000000000
+      internalID: 1833905147600657563
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_64
+      rect:
+        serializedVersion: 2
+        x: 90
+        y: 59
+        width: 37
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f07ca57afee453b0800000000000000
+      internalID: -5524528083393285898
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_65
+      rect:
+        serializedVersion: 2
+        x: 134
+        y: 101
+        width: 17
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53b6dbdd684affb60800000000000000
+      internalID: 7782119580272257845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_66
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 96
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 431b2b17ac432f3d0800000000000000
+      internalID: -3174416743247204044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_67
+      rect:
+        serializedVersion: 2
+        x: 148
+        y: 83
+        width: 39
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32d0e536ba6442f90800000000000000
+      internalID: -6979375820596966109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_68
+      rect:
+        serializedVersion: 2
+        x: 184
+        y: 99
+        width: 19
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6a075946ac8552b0800000000000000
+      internalID: -5596412316115072401
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_69
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 26
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d9fbb01569d67c4b0800000000000000
+      internalID: -5420243134144856163
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_70
+      rect:
+        serializedVersion: 2
+        x: 126
+        y: 77
+        width: 26
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32457a6408e017ed0800000000000000
+      internalID: -2418135580817271773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_71
+      rect:
+        serializedVersion: 2
+        x: 129
+        y: 56
+        width: 20
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0174d08177a6d6390800000000000000
+      internalID: -7823479917935507696
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_72
+      rect:
+        serializedVersion: 2
+        x: 149
+        y: 66
+        width: 12
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7d1edc893d186460800000000000000
+      internalID: 7235064934384409983
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_73
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 63
+        width: 20
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c01b56addb3df550800000000000000
+      internalID: 6196174485496467651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_74
+      rect:
+        serializedVersion: 2
+        x: 180
+        y: 67
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 93522c36348d94c90800000000000000
+      internalID: -7184973946544839367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_75
+      rect:
+        serializedVersion: 2
+        x: 75
+        y: 61
+        width: 17
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e9e885102ac05cc0800000000000000
+      internalID: -3724254652686341658
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_76
+      rect:
+        serializedVersion: 2
+        x: 169
+        y: 47
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d4fabfde6155f340800000000000000
+      internalID: 4896909706477106389
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_77
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 55
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec1dd69671e00e7b0800000000000000
+      internalID: -5197138476269710898
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_78
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 99
+        height: 55
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a32305110897c620800000000000000
+      internalID: 2794369224221598631
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_79
+      rect:
+        serializedVersion: 2
+        x: 93
+        y: 52
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 18a54187496ec7310800000000000000
+      internalID: 1404250709176900225
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_80
+      rect:
+        serializedVersion: 2
+        x: 125
+        y: 51
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af09132a1be95c430800000000000000
+      internalID: 3802619946151809274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_81
+      rect:
+        serializedVersion: 2
+        x: 134
+        y: 36
+        width: 21
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0daca75eb02450240800000000000000
+      internalID: 4757281200248900304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_82
+      rect:
+        serializedVersion: 2
+        x: 148
+        y: 40
+        width: 18
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fcc02e3f41f983700800000000000000
+      internalID: 520340669301132495
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_83
+      rect:
+        serializedVersion: 2
+        x: 189
+        y: 42
+        width: 23
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6a38b985d08dd7e0800000000000000
+      internalID: -1739092226468201877
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_84
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 13
+        width: 5
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e7b9a4446d5bf9d0800000000000000
+      internalID: -2739493263094728729
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_85
+      rect:
+        serializedVersion: 2
+        x: 47
+        y: 31
+        width: 18
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36f3b9da51abab9d0800000000000000
+      internalID: -2757687219541295261
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_86
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 25
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aafc6fe321da1c2e0800000000000000
+      internalID: -2107212856755302486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_87
+      rect:
+        serializedVersion: 2
+        x: 153
+        y: 22
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32131eca17dc6bd40800000000000000
+      internalID: 5599889074797228323
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_88
+      rect:
+        serializedVersion: 2
+        x: 164
+        y: 33
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d80eda392527f5070800000000000000
+      internalID: 8097316354025971853
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_89
+      rect:
+        serializedVersion: 2
+        x: 172
+        y: 27
+        width: 24
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ae635a7b8a775a10800000000000000
+      internalID: 1898120507431284387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_90
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 26
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: de1722de543f28dd0800000000000000
+      internalID: -2485156562698341907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_91
+      rect:
+        serializedVersion: 2
+        x: 214
+        y: 31
+        width: 10
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 44018072eb3cb5b70800000000000000
+      internalID: 8888913511011848260
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_92
+      rect:
+        serializedVersion: 2
+        x: 223
+        y: 31
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 372307722f149f990800000000000000
+      internalID: -7351772408406068621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_93
+      rect:
+        serializedVersion: 2
+        x: 233
+        y: 20
+        width: 23
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: feea106eb5a5ef450800000000000000
+      internalID: 6124431894017847023
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_94
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 12
+        width: 21
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea221f6334c58a500800000000000000
+      internalID: 407677210031366830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_95
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 3
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cf26dc4bcd8c15430800000000000000
+      internalID: 3770015213337535228
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_96
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 0
+        width: 63
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 418f27f628b6c76a0800000000000000
+      internalID: -6450162358341666796
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_97
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 12
+        width: 24
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d9e1dd944f551470800000000000000
+      internalID: 8364696631220758992
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_98
+      rect:
+        serializedVersion: 2
+        x: 215
+        y: 0
+        width: 31
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 38febda383452dba0800000000000000
+      internalID: -6065693147632242813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: IceCrackMask_99
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 42
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec6947a435398c050800000000000000
+      internalID: 5821064504317089486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      IceCrackMask_0: 6561126684863708819
+      IceCrackMask_1: 1904902766170484448
+      IceCrackMask_10: -4183223179598788312
+      IceCrackMask_11: -6724609872656942733
+      IceCrackMask_12: 6774818854830072262
+      IceCrackMask_13: -5432245349402049262
+      IceCrackMask_14: 2524524688968699794
+      IceCrackMask_15: -7252899366865656664
+      IceCrackMask_16: -4649029290939145856
+      IceCrackMask_17: 8781353773295081868
+      IceCrackMask_18: -8042775095512703206
+      IceCrackMask_19: -5072765049165731435
+      IceCrackMask_2: -61491750805033736
+      IceCrackMask_20: -4507234499280405458
+      IceCrackMask_21: 6883949717449122811
+      IceCrackMask_22: -8407566502859171403
+      IceCrackMask_23: -8610333739588346360
+      IceCrackMask_24: -8372782946511318909
+      IceCrackMask_25: 1188914820685331676
+      IceCrackMask_26: 3357656734859279159
+      IceCrackMask_27: -6235302209901007391
+      IceCrackMask_28: -8411973073713163662
+      IceCrackMask_29: -4679282661542314712
+      IceCrackMask_3: -3626467243062901751
+      IceCrackMask_30: 6204474166572435328
+      IceCrackMask_31: 1697120247432940845
+      IceCrackMask_32: 10511871628637366
+      IceCrackMask_33: -3042787006363048547
+      IceCrackMask_34: -1742630466077254332
+      IceCrackMask_35: -7757166350256711277
+      IceCrackMask_36: 2671293045534011793
+      IceCrackMask_37: -5164914977672638271
+      IceCrackMask_38: 8284834742002077700
+      IceCrackMask_39: 2376969430752613684
+      IceCrackMask_4: -4532998191373845313
+      IceCrackMask_40: -2822602562541870619
+      IceCrackMask_41: 2270914869381998876
+      IceCrackMask_42: -7887825050026332747
+      IceCrackMask_43: 3774007882915794741
+      IceCrackMask_44: 243453484961606102
+      IceCrackMask_45: -2359356777227803101
+      IceCrackMask_46: -360745431985857024
+      IceCrackMask_47: 1239202859441049457
+      IceCrackMask_48: 1800712344177184280
+      IceCrackMask_49: 7397479707764823618
+      IceCrackMask_5: -747701994208011994
+      IceCrackMask_50: -2174562117634945256
+      IceCrackMask_51: -8475555900868158926
+      IceCrackMask_52: -7096361947904427553
+      IceCrackMask_53: 7740667506860242805
+      IceCrackMask_54: -7365456546520034138
+      IceCrackMask_55: -4831209139942074582
+      IceCrackMask_56: 2678028004911892801
+      IceCrackMask_57: 8749992661725583864
+      IceCrackMask_58: -3661615908805828698
+      IceCrackMask_59: -8497055513768608562
+      IceCrackMask_6: 4400029965012442158
+      IceCrackMask_60: -6297151537984141785
+      IceCrackMask_61: 2780512951670699878
+      IceCrackMask_62: 1469818448170546448
+      IceCrackMask_63: 1833905147600657563
+      IceCrackMask_64: -5524528083393285898
+      IceCrackMask_65: 7782119580272257845
+      IceCrackMask_66: -3174416743247204044
+      IceCrackMask_67: -6979375820596966109
+      IceCrackMask_68: -5596412316115072401
+      IceCrackMask_69: -5420243134144856163
+      IceCrackMask_7: -5369721270693727014
+      IceCrackMask_70: -2418135580817271773
+      IceCrackMask_71: -7823479917935507696
+      IceCrackMask_72: 7235064934384409983
+      IceCrackMask_73: 6196174485496467651
+      IceCrackMask_74: -7184973946544839367
+      IceCrackMask_75: -3724254652686341658
+      IceCrackMask_76: 4896909706477106389
+      IceCrackMask_77: -5197138476269710898
+      IceCrackMask_78: 2794369224221598631
+      IceCrackMask_79: 1404250709176900225
+      IceCrackMask_8: -8733596346488093787
+      IceCrackMask_80: 3802619946151809274
+      IceCrackMask_81: 4757281200248900304
+      IceCrackMask_82: 520340669301132495
+      IceCrackMask_83: -1739092226468201877
+      IceCrackMask_84: -2739493263094728729
+      IceCrackMask_85: -2757687219541295261
+      IceCrackMask_86: -2107212856755302486
+      IceCrackMask_87: 5599889074797228323
+      IceCrackMask_88: 8097316354025971853
+      IceCrackMask_89: 1898120507431284387
+      IceCrackMask_9: 6919438676293101903
+      IceCrackMask_90: -2485156562698341907
+      IceCrackMask_91: 8888913511011848260
+      IceCrackMask_92: -7351772408406068621
+      IceCrackMask_93: 6124431894017847023
+      IceCrackMask_94: 407677210031366830
+      IceCrackMask_95: 3770015213337535228
+      IceCrackMask_96: -6450162358341666796
+      IceCrackMask_97: 8364696631220758992
+      IceCrackMask_98: -6065693147632242813
+      IceCrackMask_99: 5821064504317089486
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

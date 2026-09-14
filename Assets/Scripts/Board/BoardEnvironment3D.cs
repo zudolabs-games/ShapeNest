@@ -34,11 +34,11 @@ public class BoardEnvironment3D : MonoBehaviour
         EnsureFloor();
         EnsureUnderShadow(board);
 
-        // Phase 52J: quieter indigo backdrop — board/pieces stay the focus.
-        clearColor = new Color(0.09f, 0.055f, 0.28f, 1f);
+        // Soft indigo backdrop — board remains the colorful focus.
+        clearColor = new Color(0.09f, 0.06f, 0.26f, 1f);
         floorColor = clearColor;
-        // Phase 52I ambient baseline retained for side-face readability.
-        ambientColor = new Color(0.18f, 0.15f, 0.31f, 1f);
+        // Phase 6: rich indigo ambient for side/cavity depth without washing out key-light form.
+        ambientColor = new Color(0.32f, 0.28f, 0.48f, 1f);
 
         if (targetCamera != null)
         {
@@ -48,7 +48,9 @@ public class BoardEnvironment3D : MonoBehaviour
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = ambientColor;
-        RenderSettings.ambientIntensity = 1f;
+        RenderSettings.ambientIntensity = 1.05f;
+        // Studio plastic sheen — controlled reflections.
+        RenderSettings.reflectionIntensity = 0.90f;
 
         if (board != null)
         {
@@ -69,7 +71,8 @@ public class BoardEnvironment3D : MonoBehaviour
                     0.002f,
                     board.BoardCenterWorld.z + footprint.y * 0.04f);
                 underBoardShadow.localScale = new Vector3(shadowSpan, 1f, shadowSpan * 0.88f);
-                ApplyMatColor(underBoardShadow.GetComponent<MeshRenderer>(), new Color(0.01f, 0.005f, 0.04f, 0.78f));
+                // Soft board grounding disc — supports cast shadows without a dark outline.
+                ApplyMatColor(underBoardShadow.GetComponent<MeshRenderer>(), new Color(0.01f, 0.005f, 0.04f, 0.62f));
             }
         }
     }

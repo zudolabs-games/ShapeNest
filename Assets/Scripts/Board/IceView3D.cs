@@ -3,14 +3,15 @@ using UnityEngine;
 
 /// <summary>
 /// World3D presentation for <see cref="IceState"/>. Gameplay ice state remains authoritative.
-/// Owns DOTween durability transitions and melt; SyncFromSource never restarts an in-flight tween
-/// toward the same target state.
+/// Owns crystalline ice shell rendering, DOTween durability transitions, freeze-on growth, and melt.
+/// SyncFromSource never restarts an in-flight tween toward the same target state.
 /// </summary>
 [DisallowMultipleComponent]
 public class IceView3D : MonoBehaviour
 {
-    private const float DurabilityTransitionDuration = 0.22f;
-    private const float MeltDuration = 0.34f;
+    private const float FreezeOnDuration = 0.40f;
+    private const float DurabilityTransitionDuration = 0.24f;
+    private const float MeltDuration = 0.36f;
 
     [SerializeField]
     private Transform shell;
@@ -19,14 +20,18 @@ public class IceView3D : MonoBehaviour
     private MeshRenderer shellRenderer;
 
     [SerializeField]
-    private float thickness = 0.12f;
+    private TMPro.TextMeshPro durabilityText;
 
     [SerializeField]
-    private float footprintPadding = 0.05f;
+    private float thickness = 0.12f; // increased from 0.06 to give substantial ice volume
 
     [SerializeField]
-    private float heightOverBlock = 0.045f;
+    private float footprintPadding = 0.14f;
 
+    [SerializeField]
+    private float heightOverBlock = 0.05f;
+
+    [SerializeField]
     private IceState source;
     private static Material sharedIceMaterial;
 
@@ -48,13 +53,13 @@ public class IceView3D : MonoBehaviour
     private ShapeType layoutShape = ShapeType.Square;
     private bool layoutIsChain;
     private float presentedThickness;
-    private float presentedAlpha = 0.62f;
-    private Color presentedEmission = new Color(0.25f, 0.75f, 1.1f) * 0.35f;
+    private float presentedFreezeProgress = 1f;
+    private float presentedCrackAmount;
 
     public IceState Source => source;
     public bool IsBound => source != null;
 
-    /// <summary>True while a durability transition or melt tween is running.</summary>
+    /// <summary>True while a durability transition, freeze-on, or melt tween is running.</summary>
     public bool IsPresentationAnimating =>
         isMelting || (activeSequence != null && activeSequence.IsActive());
 
@@ -67,6 +72,9 @@ public class IceView3D : MonoBehaviour
         {
             shellRenderer.sharedMaterial = material;
         }
+
+        Block block = ice != null ? ice.GetComponent<Block>() : null;
+        Debug.Log($"[ICE_LIFECYCLE] Bind: IceView3D ID={GetInstanceID()}, IceState ID={(ice != null ? ice.GetInstanceID() : 0)}, Block ID={(block != null ? block.GetInstanceID() : 0)}, Cell={(block != null ? block.GridPosition : Vector2Int.zero)}, IsFrozen={(ice != null && ice.IsFrozen)}, Durability={(ice != null ? ice.Durability : 0)}, activeSelf={gameObject.activeSelf}");
 
         if (!sameSource)
         {
@@ -83,6 +91,7 @@ public class IceView3D : MonoBehaviour
 
     public void ClearBind()
     {
+        Debug.Log($"[ICE_LIFECYCLE] ClearBind called on IceView3D ID={GetInstanceID()}");
         KillOwnedTweens(false);
         source = null;
         wasFrozen = false;
@@ -90,6 +99,7 @@ public class IceView3D : MonoBehaviour
         targetDurability = -1;
         isMelting = false;
         meltVfxPlayed = false;
+        UpdateDurabilityNumber(0);
         if (shell != null)
         {
             shell.gameObject.SetActive(false);
@@ -110,12 +120,15 @@ public class IceView3D : MonoBehaviour
 
         if (!frozen)
         {
+            UpdateDurabilityNumber(0);
             if (wasFrozen || presentedDurability > 0)
             {
+                Debug.Log($"[ICE_LIFECYCLE] SyncFromSource: IceState IsFrozen is false (wasFrozen={wasFrozen}, presentedDurability={presentedDurability}). Starting BeginMelt() on IceView3D ID={GetInstanceID()}.");
                 BeginMelt();
             }
             else
             {
+                Debug.Log($"[ICE_LIFECYCLE] SyncFromSource: IceState IsFrozen is false. Calling HideImmediate() on IceView3D ID={GetInstanceID()}.");
                 HideImmediate();
             }
 
@@ -123,19 +136,36 @@ public class IceView3D : MonoBehaviour
             return;
         }
 
-        wasFrozen = true;
+        bool previouslyFrozen = wasFrozen;
         if (!RefreshLayoutMetrics())
         {
-            shell.gameObject.SetActive(false);
+            Debug.LogWarning($"[ICE_LIFECYCLE] SyncFromSource: RefreshLayoutMetrics returned false for IceView3D ID={GetInstanceID()} (source block missing or presenter null). Retaining frozen view.");
+            if (shell != null && !shell.gameObject.activeSelf)
+            {
+                shell.gameObject.SetActive(true);
+            }
             return;
         }
 
-        shell.gameObject.SetActive(true);
+        wasFrozen = true;
+        if (shell != null && !shell.gameObject.activeSelf)
+        {
+            shell.gameObject.SetActive(true);
+        }
+
+        UpdateDurabilityNumber(durability);
 
         if (presentedDurability < 1)
         {
-            // First show: snap to current gameplay durability (level load / bind).
-            ApplyPresentedState(durability, animate: false);
+            if (!previouslyFrozen)
+            {
+                BeginFreezeOn(durability);
+            }
+            else
+            {
+                // First show: snap to current gameplay durability (level load / bind).
+                ApplyPresentedState(durability, animate: false);
+            }
             return;
         }
 
@@ -149,7 +179,7 @@ public class IceView3D : MonoBehaviour
         if (durability == presentedDurability && !IsPresentationAnimating)
         {
             ApplyLayoutTransform(presentedThickness);
-            ApplyAppearanceImmediate(presentedDurability, presentedAlpha, presentedEmission);
+            ApplyAppearanceImmediate(presentedDurability, presentedFreezeProgress, presentedCrackAmount, 0f);
             return;
         }
 
@@ -158,6 +188,7 @@ public class IceView3D : MonoBehaviour
 
     private void OnDisable()
     {
+        Debug.Log($"[ICE_LIFECYCLE] OnDisable on IceView3D ID={GetInstanceID()}");
         KillOwnedTweens(false);
         isMelting = false;
         activeSequence = null;
@@ -165,9 +196,244 @@ public class IceView3D : MonoBehaviour
 
     private void OnDestroy()
     {
+        Debug.Log($"[ICE_LIFECYCLE] OnDestroy on IceView3D ID={GetInstanceID()}");
         KillOwnedTweens(false);
         isMelting = false;
         activeSequence = null;
+    }
+
+    private void Update()
+    {
+        if (shellRenderer != null && presentedDurability > 0 && shellRenderer.gameObject.activeInHierarchy)
+        {
+            float time = Time.time;
+            
+            // Subtle crystalline specular shimmer on idle ice
+            if (!IsPresentationAnimating)
+            {
+                float shimmer = Mathf.Max(0f, Mathf.Sin(time * 2.2f) * 0.4f + Mathf.Sin(time * 0.7f) * 0.2f);
+                var block = new MaterialPropertyBlock();
+                shellRenderer.GetPropertyBlock(block);
+                block.SetFloat("_Shimmer", shimmer);
+                shellRenderer.SetPropertyBlock(block);
+                
+                if (Random.value < 0.003f)
+                {
+                    BoardVfx3D.PlayIceSparkle(transform.position);
+                }
+            }
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (source != null && source.IsFrozen)
+        {
+            Block block = source.GetComponent<Block>();
+            if (block != null)
+            {
+                BoardPresenter3D presenter = FindPresenter();
+                if (presenter != null)
+                {
+                    transform.position = CalculateBlockVisualCenter(block, presenter);
+                }
+            }
+        }
+    }
+
+    private Vector3 CalculateBlockVisualCenter(Block block, BoardPresenter3D presenter)
+    {
+        float blockHeight = BoardAdaptivePresentation3D.BlockHeightRatio * presenter.CellWorldSize;
+        float surfaceLift = 0.03f;
+        float surfaceY = presenter.CellSurfaceWorldY;
+        Vector3 center;
+
+        if (block.WorldView != null)
+        {
+            blockHeight = block.WorldView.PieceHeight;
+            surfaceLift = block.WorldView.SurfaceLift;
+            center = block.WorldView.GetVisualRootWorldPosition();
+        }
+        else
+        {
+            GetBlockFootprint(block, out Vector2Int min, out Vector2Int max);
+            IGridSpace space = presenter.GridSpace;
+            Vector3 a = space.GridToWorld(min);
+            Vector3 b = space.GridToWorld(max);
+            center = (a + b) * 0.5f;
+
+            float pieceFootprint = presenter.CellWorldSize * BoardAdaptivePresentation3D.BlockFootprintRatio;
+            Vector3 offset = BoardAdaptivePresentation3D.ResolveBoardPlaneScreenDownWorld() * (BoardAdaptivePresentation3D.VisualCenterBoardPlaneOffsetLocal * pieceFootprint);
+            center += offset;
+        }
+
+        center.y = surfaceY + surfaceLift + blockHeight * 0.5f;
+        return center;
+    }
+
+    private bool RefreshLayoutMetrics()
+    {
+        Block block = source != null ? source.GetComponent<Block>() : null;
+        if (block == null)
+        {
+            return false;
+        }
+
+        BoardPresenter3D presenter = FindPresenter();
+        if (presenter == null)
+        {
+            return false;
+        }
+
+        GetBlockFootprint(block, out Vector2Int min, out Vector2Int max);
+        float cell = presenter.CellWorldSize;
+        layoutScale = cell / BoardAdaptivePresentation3D.ReferenceCellSize;
+        layoutIsChain = (max.x - min.x) + (max.y - min.y) > 0;
+        layoutShape = block.GetOuterShape(block.AnchorCellIndex);
+
+        float pieceFootprint = cell * BoardAdaptivePresentation3D.BlockFootprintRatio;
+        float blockHeight = BoardAdaptivePresentation3D.BlockHeightRatio * cell;
+
+        if (block.WorldView != null)
+        {
+            pieceFootprint = Mathf.Max(0.05f, block.WorldView.ConfiguredFootprintScale.x);
+            blockHeight = block.WorldView.PieceHeight;
+        }
+
+        Vector3 center = CalculateBlockVisualCenter(block, presenter);
+
+        float rawWidth = (max.x - min.x) * cell + pieceFootprint;
+        float rawDepth = (max.y - min.y) * cell + pieceFootprint;
+
+        // Ice casing scale: width + 20%, height + 15%
+        layoutSizeX = rawWidth * 1.20f;
+        layoutSizeZ = rawDepth * 1.20f;
+
+        layoutBlockHeight = blockHeight;
+        layoutPieceCenterY = center.y;
+        transform.position = center;
+        ApplyLayoutTransform(presentedThickness);
+        ApplyShellMesh();
+        return true;
+    }
+
+    private Vector3 ComputePresentationCameraOffset()
+    {
+        Camera cam = Camera.main;
+        var boardCam = FindFirstObjectByType<BoardCamera3D>();
+        if (boardCam != null && boardCam.Camera != null)
+        {
+            cam = boardCam.Camera;
+        }
+
+        Vector3 dirToCamera = cam != null
+            ? -cam.transform.forward
+            : new Vector3(0f, 0.913545f, -0.406737f);
+
+        const float offsetDistance = 0.035f;
+        return dirToCamera * (offsetDistance * layoutScale);
+    }
+
+    private void ApplyLayoutTransform(float stageThickness, float xzMultiplier = 1f)
+    {
+        if (shell == null)
+        {
+            return;
+        }
+
+        Vector3 depthOffset = ComputePresentationCameraOffset();
+        shell.localPosition = depthOffset;
+
+        float y = Mathf.Max(0.001f, stageThickness);
+        shell.localScale = new Vector3(
+            layoutSizeX * xzMultiplier,
+            y,
+            layoutSizeZ * xzMultiplier);
+
+        if (durabilityText != null)
+        {
+            float textY = (layoutBlockHeight * 0.5f) + 0.015f;
+            durabilityText.transform.localPosition = depthOffset + new Vector3(0f, textY, -0.01f);
+        }
+    }
+
+    private float ThicknessForDurability(int durability)
+    {
+        int stage = Mathf.Clamp(durability, 1, 3);
+        float cover = layoutBlockHeight * 1.15f;
+        return Mathf.Max(0.05f, cover * (0.98f + 0.02f * stage));
+    }
+
+    private void BeginFreezeOn(int durability)
+    {
+        durability = Mathf.Clamp(durability, 1, 3);
+        RefreshLayoutMetrics();
+        presentedDurability = durability;
+        targetDurability = durability;
+        
+        float finalThickness = ThicknessForDurability(durability);
+        float finalCrack = CrackAmountForDurability(durability);
+        
+        presentedThickness = 0.001f;
+        presentedFreezeProgress = 0.05f;
+        presentedCrackAmount = finalCrack;
+        
+        ApplyLayoutTransform(presentedThickness, 0.85f);
+        ApplyAppearanceImmediate(durability, presentedFreezeProgress, presentedCrackAmount, 0f);
+        
+        if (shell != null && !shell.gameObject.activeSelf)
+        {
+            shell.gameObject.SetActive(true);
+        }
+
+        UpdateDurabilityNumber(durability);
+        if (durabilityText != null && durabilityText.gameObject.activeSelf)
+        {
+            durabilityText.transform.DOKill();
+            durabilityText.transform.localScale = Vector3.zero;
+            durabilityText.transform.DOScale(Vector3.one, FreezeOnDuration).SetEase(Ease.OutBack);
+        }
+
+        BoardVfx3D.PlayIceFreezeFrost(transform.position);
+
+        KillOwnedTweens(false);
+        activeSequence = DOTween.Sequence().SetLink(gameObject);
+        
+        // Crystalline freeze-on growth transition
+        activeSequence.Append(TweenAnimationUtility.Progress(FreezeOnDuration, t =>
+        {
+            float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
+            presentedThickness = Mathf.LerpUnclamped(0.001f, finalThickness, eased);
+            presentedFreezeProgress = Mathf.LerpUnclamped(0.05f, 1f, eased);
+            
+            // Subtle crystalline bounce on freeze lock
+            float xz = Mathf.LerpUnclamped(0.85f, 1.05f, eased);
+            if (t > 0.8f)
+            {
+                xz = Mathf.LerpUnclamped(1.05f, 1f, (t - 0.8f) * 5f);
+            }
+            
+            ApplyLayoutTransform(presentedThickness, xz);
+            ApplyAppearanceImmediate(durability, presentedFreezeProgress, presentedCrackAmount, 0f);
+        }));
+        
+        activeSequence.AppendCallback(() => 
+        {
+            BoardVfx3D.PlayIceSparkle(transform.position);
+        });
+
+        activeSequence.OnComplete(() =>
+        {
+            presentedDurability = durability;
+            targetDurability = durability;
+            presentedThickness = finalThickness;
+            presentedFreezeProgress = 1f;
+            presentedCrackAmount = finalCrack;
+            ApplyLayoutTransform(finalThickness);
+            ApplyAppearanceImmediate(durability, 1f, finalCrack, 0f);
+            UpdateDurabilityNumber(durability);
+            activeSequence = null;
+        });
     }
 
     private void ApplyPresentedState(int durability, bool animate)
@@ -177,11 +443,11 @@ public class IceView3D : MonoBehaviour
         presentedDurability = durability;
         targetDurability = durability;
         presentedThickness = ThicknessForDurability(durability);
-        presentedAlpha = AlphaForDurability(durability);
-        presentedEmission = EmissionForDurability(durability);
+        presentedFreezeProgress = 1f;
+        presentedCrackAmount = CrackAmountForDurability(durability);
         ApplyLayoutTransform(presentedThickness);
-        ApplyAppearanceImmediate(durability, presentedAlpha, presentedEmission);
-        EnsureCrackOverlays(durability);
+        ApplyAppearanceImmediate(durability, presentedFreezeProgress, presentedCrackAmount, 0f);
+        UpdateDurabilityNumber(durability);
     }
 
     private void BeginDurabilityTransition(int from, int to)
@@ -197,43 +463,48 @@ public class IceView3D : MonoBehaviour
             return;
         }
 
+        if (from > to)
+        {
+            BoardVfx3D.PlayIceBreakShards(transform.position, to);
+        }
+
         KillOwnedTweens(false);
 
         float fromThickness = ThicknessForDurability(from);
         float toThickness = ThicknessForDurability(to);
-        float fromAlpha = AlphaForDurability(from);
-        float toAlpha = AlphaForDurability(to);
-        Color fromEmission = EmissionForDurability(from);
-        Color toEmission = EmissionForDurability(to);
+        float fromCrack = CrackAmountForDurability(from);
+        float toCrack = CrackAmountForDurability(to);
 
         presentedThickness = fromThickness;
-        presentedAlpha = fromAlpha;
-        presentedEmission = fromEmission;
+        presentedFreezeProgress = 1f;
+        presentedCrackAmount = fromCrack;
         ApplyLayoutTransform(fromThickness);
-        ApplyAppearanceImmediate(from, fromAlpha, fromEmission);
-        EnsureCrackOverlays(from);
+        ApplyAppearanceImmediate(from, 1f, fromCrack, 0f);
+        UpdateDurabilityNumber(to, animatePunch: true);
 
         activeSequence = DOTween.Sequence().SetLink(gameObject);
         activeSequence.Append(TweenAnimationUtility.Progress(DurabilityTransitionDuration, t =>
         {
             float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
             presentedThickness = Mathf.LerpUnclamped(fromThickness, toThickness, eased);
-            presentedAlpha = Mathf.LerpUnclamped(fromAlpha, toAlpha, eased);
-            presentedEmission = Color.LerpUnclamped(fromEmission, toEmission, eased);
-            float pulse = 1f + (0.03f * Mathf.Sin(eased * Mathf.PI));
+            presentedCrackAmount = Mathf.LerpUnclamped(fromCrack, toCrack, eased);
+            
+            // Impact pulse on damage
+            float pulse = 1f + (0.04f * Mathf.Sin(eased * Mathf.PI));
             ApplyLayoutTransform(presentedThickness, pulse);
-            ApplyAppearanceImmediate(to, presentedAlpha, presentedEmission);
+            ApplyAppearanceImmediate(to, 1f, presentedCrackAmount, 0.4f * (1f - eased));
         }));
+        
         activeSequence.OnComplete(() =>
         {
             presentedDurability = to;
             targetDurability = to;
             presentedThickness = toThickness;
-            presentedAlpha = toAlpha;
-            presentedEmission = toEmission;
+            presentedCrackAmount = toCrack;
+            presentedFreezeProgress = 1f;
             ApplyLayoutTransform(toThickness);
-            ApplyAppearanceImmediate(to, toAlpha, toEmission);
-            EnsureCrackOverlays(to);
+            ApplyAppearanceImmediate(to, 1f, toCrack, 0f);
+            UpdateDurabilityNumber(to);
             activeSequence = null;
         });
     }
@@ -247,6 +518,7 @@ public class IceView3D : MonoBehaviour
 
         isMelting = true;
         targetDurability = 0;
+        UpdateDurabilityNumber(0);
         KillOwnedTweens(false);
 
         if (!shell.gameObject.activeSelf)
@@ -258,8 +530,7 @@ public class IceView3D : MonoBehaviour
         float startThickness = presentedThickness > 0.001f
             ? presentedThickness
             : ThicknessForDurability(Mathf.Max(1, presentedDurability));
-        float startAlpha = presentedAlpha;
-        Color startEmission = presentedEmission;
+        float startCrack = presentedCrackAmount;
         Vector3 startScale = shell.localScale;
         if (startScale.sqrMagnitude < 0.0001f)
         {
@@ -270,22 +541,24 @@ public class IceView3D : MonoBehaviour
         if (!meltVfxPlayed)
         {
             meltVfxPlayed = true;
+            BoardVfx3D.PlayIceBreakShards(transform.position, 0);
             BoardVfx3D.PlayIceMelt(transform.position);
         }
 
-        float endThickness = startThickness * 0.15f;
+        float endThickness = startThickness * 0.12f;
         activeSequence = DOTween.Sequence().SetLink(gameObject);
         activeSequence.Append(TweenAnimationUtility.Progress(MeltDuration, t =>
         {
             float eased = TweenAnimationUtility.EvaluateEaseInQuad(t);
-            float squash = Mathf.LerpUnclamped(1f, 1.08f, Mathf.Sin(t * Mathf.PI) * 0.5f);
+            float squash = Mathf.LerpUnclamped(1f, 1.06f, Mathf.Sin(t * Mathf.PI) * 0.5f);
             presentedThickness = Mathf.LerpUnclamped(startThickness, endThickness, eased);
-            presentedAlpha = Mathf.LerpUnclamped(startAlpha, 0f, eased);
-            presentedEmission = Color.LerpUnclamped(startEmission, Color.black, eased);
-            float xz = Mathf.LerpUnclamped(1f, 0.72f, eased) * squash;
+            presentedFreezeProgress = Mathf.LerpUnclamped(1f, 0f, eased);
+            presentedCrackAmount = Mathf.LerpUnclamped(startCrack, 1f, eased);
+            float xz = Mathf.LerpUnclamped(1f, 0.70f, eased) * squash;
             ApplyLayoutTransform(presentedThickness, xz);
-            ApplyAppearanceImmediate(1, presentedAlpha, presentedEmission);
+            ApplyAppearanceImmediate(1, presentedFreezeProgress, presentedCrackAmount, 0f);
         }));
+        
         activeSequence.OnComplete(() =>
         {
             FinishMelt();
@@ -298,9 +571,11 @@ public class IceView3D : MonoBehaviour
         presentedDurability = 0;
         targetDurability = 0;
         presentedThickness = 0f;
-        presentedAlpha = 0f;
+        presentedFreezeProgress = 0f;
+        presentedCrackAmount = 0f;
         wasFrozen = false;
         activeSequence = null;
+        UpdateDurabilityNumber(0);
         HideImmediate();
     }
 
@@ -311,148 +586,43 @@ public class IceView3D : MonoBehaviour
             shell.gameObject.SetActive(false);
         }
 
+        UpdateDurabilityNumber(0);
         presentedDurability = 0;
         targetDurability = 0;
     }
 
-    private bool RefreshLayoutMetrics()
-    {
-        Block block = source != null ? source.GetComponent<Block>() : null;
-        if (block == null || block.Board == null)
-        {
-            return false;
-        }
-
-        BoardPresenter3D presenter = FindPresenter();
-        if (presenter == null)
-        {
-            return false;
-        }
-
-        GetBlockFootprint(block, out Vector2Int min, out Vector2Int max);
-        IGridSpace space = presenter.GridSpace;
-        Vector3 a = space.GridToWorld(min);
-        Vector3 b = space.GridToWorld(max);
-        Vector3 center = (a + b) * 0.5f;
-        float cell = presenter.CellWorldSize;
-        layoutScale = cell / BoardAdaptivePresentation3D.ReferenceCellSize;
-        float pad = footprintPadding * layoutScale;
-        layoutIsChain = (max.x - min.x) + (max.y - min.y) > 0;
-        layoutShape = block.GetOuterShape(block.AnchorCellIndex);
-
-        float pieceFootprint = cell * BoardAdaptivePresentation3D.BlockFootprintRatio;
-        if (block.WorldView != null)
-        {
-            pieceFootprint = Mathf.Max(0.05f, block.WorldView.ConfiguredFootprintScale.x);
-        }
-
-        layoutSizeX = (max.x - min.x) * cell + pieceFootprint + pad * 2f;
-        layoutSizeZ = (max.y - min.y) * cell + pieceFootprint + pad * 2f;
-
-        float surfaceY = presenter.CellSurfaceWorldY;
-        float blockHeight = BoardAdaptivePresentation3D.BlockHeightRatio * cell;
-        float surfaceLift = 0.025f;
-        if (block.WorldView != null)
-        {
-            blockHeight = block.WorldView.PieceHeight;
-            surfaceLift = block.WorldView.SurfaceLift;
-        }
-
-        layoutBlockHeight = blockHeight;
-        layoutPieceCenterY = surfaceY + surfaceLift + blockHeight * 0.5f;
-        center.y = layoutPieceCenterY;
-        transform.position = center;
-        if (shell != null)
-        {
-            shell.localPosition = Vector3.zero;
-        }
-
-        ApplyShellMesh();
-        return true;
-    }
-
-    private void ApplyLayoutTransform(float stageThickness, float xzMultiplier = 1f)
-    {
-        if (shell == null)
-        {
-            return;
-        }
-
-        RefreshLayoutMetrics();
-        float y = Mathf.Max(0.001f, stageThickness);
-        shell.localScale = new Vector3(
-            layoutSizeX * xzMultiplier,
-            y,
-            layoutSizeZ * xzMultiplier);
-    }
-
-    private float ThicknessForDurability(int durability)
+    private static float CrackAmountForDurability(int durability)
     {
         int stage = Mathf.Clamp(durability, 1, 3);
-        float cover = layoutBlockHeight + (thickness * 0.4f + heightOverBlock) * layoutScale * 2f;
-        return Mathf.Max(0.04f, cover * (0.94f + 0.03f * stage));
+        return stage == 3 ? 0f : stage == 2 ? 0.45f : 0.90f;
     }
 
-    private static float AlphaForDurability(int durability)
-    {
-        // Phase 52K: frosted shell — intact ice more opaque; cracked ice clearer so shape shows.
-        int stage = Mathf.Clamp(durability, 1, 3);
-        return stage == 3 ? 0.58f : stage == 2 ? 0.48f : 0.38f;
-    }
-
-    /// <summary>
-    /// Emission disabled for Phase 52K frosted look — kept for tween signature compatibility.
-    /// </summary>
-    private static Color EmissionForDurability(int durability)
-    {
-        _ = durability;
-        return Color.black;
-    }
-
-    private void ApplyAppearanceImmediate(int durabilityStage, float alpha, Color emission)
+    private void ApplyAppearanceImmediate(int durabilityStage, float freezeProgress, float crackAmount, float shimmer)
     {
         if (shellRenderer == null)
         {
             return;
         }
 
-        _ = emission;
-        shellRenderer.sharedMaterial = GetSharedIceMaterial();
+        Material mat = GetSharedIceMaterial();
+        shellRenderer.sharedMaterial = mat;
         var block = new MaterialPropertyBlock();
         shellRenderer.GetPropertyBlock(block);
-        // Soft icy tint — underlying ShapeVisuals3D piece colors stay recognizable.
-        Color c = new Color(0.55f, 0.88f, 1f, alpha);
-        block.SetColor("_BaseColor", c);
-        block.SetColor("_Color", c);
-        block.SetColor("_EmissionColor", Color.black);
+
+        Texture2D iceTex = mat != null && mat.HasProperty("_IceTex") ? (Texture2D)mat.GetTexture("_IceTex") : null;
+        if (iceTex != null)
+        {
+            block.SetTexture("_IceTex", iceTex);
+        }
+
+        block.SetFloat("_FreezeProgress", Mathf.Clamp01(freezeProgress));
+        block.SetFloat("_CrackAmount", Mathf.Clamp01(crackAmount));
+        block.SetFloat("_Shimmer", Mathf.Clamp01(shimmer));
+        block.SetFloat("_Smoothness", 0.50f);
 
         shellRenderer.SetPropertyBlock(block);
-        EnsureCrackOverlays(Mathf.Clamp(durabilityStage, 1, 3));
-    }
 
-    private void EnsureCrackOverlays(int durabilityStage)
-    {
-        Transform cracks = transform.Find("IceCracks");
-        if (cracks == null && shell != null)
-        {
-            cracks = shell.Find("IceCracks");
-        }
-
-        if (cracks == null)
-        {
-            var go = new GameObject("IceCracks");
-            go.transform.SetParent(shell != null ? shell : transform, false);
-            cracks = go.transform;
-            CreateCrackLine(cracks, "CrackA", new Vector3(0.15f, 0.51f, -0.1f), 28f);
-            CreateCrackLine(cracks, "CrackB", new Vector3(-0.12f, 0.51f, 0.18f), -35f);
-            CreateCrackLine(cracks, "CrackC", new Vector3(0.02f, 0.51f, 0.05f), 70f);
-        }
-
-        int visible = durabilityStage >= 3 ? 0 : durabilityStage == 2 ? 1 : 3;
-        for (int i = 0; i < cracks.childCount; i++)
-        {
-            cracks.GetChild(i).gameObject.SetActive(i < visible);
-        }
+        Debug.Log($"[ICE_TEXTURE_BINDING] IceView3D ID={GetInstanceID()} -> ShellRenderer='{shellRenderer.name}', Material='{(mat != null ? mat.name : "null")}', Shader='{(mat != null && mat.shader != null ? mat.shader.name : "null")}', _IceTex='{(iceTex != null ? iceTex.name : "NULL")}'");
     }
 
     private void KillOwnedTweens(bool complete)
@@ -463,66 +633,6 @@ public class IceView3D : MonoBehaviour
         }
 
         activeSequence = null;
-    }
-
-    private static void CreateCrackLine(Transform parent, string name, Vector3 localPos, float yaw)
-    {
-        GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        line.name = name;
-        line.transform.SetParent(parent, false);
-        line.transform.localPosition = localPos;
-        line.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-        line.transform.localScale = new Vector3(0.55f, 0.015f, 0.028f);
-        Collider col = line.GetComponent<Collider>();
-        if (col != null)
-        {
-            Object.Destroy(col);
-        }
-
-        MeshRenderer renderer = line.GetComponent<MeshRenderer>();
-        if (renderer != null)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var mat = new Material(shader)
-            {
-                name = "IceCrack3D",
-                color = new Color(0.72f, 0.86f, 0.95f, 0.32f)
-            };
-            if (mat.HasProperty("_BaseColor"))
-            {
-                mat.SetColor("_BaseColor", mat.color);
-            }
-
-            if (mat.HasProperty("_Metallic"))
-            {
-                mat.SetFloat("_Metallic", 0f);
-            }
-
-            if (mat.HasProperty("_Smoothness"))
-            {
-                mat.SetFloat("_Smoothness", 0.35f);
-            }
-
-            if (mat.HasProperty("_EmissionColor"))
-            {
-                mat.DisableKeyword("_EMISSION");
-                mat.SetColor("_EmissionColor", Color.black);
-            }
-
-            if (mat.HasProperty("_Surface"))
-            {
-                mat.SetFloat("_Surface", 1f);
-                mat.SetOverrideTag("RenderType", "Transparent");
-                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                mat.SetInt("_ZWrite", 0);
-                mat.renderQueue = 3001;
-                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            }
-
-            renderer.sharedMaterial = mat;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        }
     }
 
     private void EnsureShell()
@@ -549,7 +659,7 @@ public class IceView3D : MonoBehaviour
                 GameObject cube = new GameObject("IceShell");
                 cube.transform.SetParent(transform, false);
                 var filter = cube.AddComponent<MeshFilter>();
-                filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.20f, 3);
+                filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.22f, 4);
                 cube.AddComponent<MeshRenderer>();
                 shell = cube.transform;
             }
@@ -568,11 +678,77 @@ public class IceView3D : MonoBehaviour
         {
             shellRenderer.sharedMaterial = GetSharedIceMaterial();
         }
-
         if (shellRenderer != null)
         {
             shellRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             shellRenderer.receiveShadows = true;
+        }
+    }
+
+    private void EnsureDurabilityText()
+    {
+        if (durabilityText != null)
+        {
+            return;
+        }
+
+        Transform existing = transform.Find("IceDurabilityText");
+        if (existing != null)
+        {
+            durabilityText = existing.GetComponent<TMPro.TextMeshPro>();
+        }
+
+        if (durabilityText == null)
+        {
+            GameObject textGo = new GameObject("IceDurabilityText");
+            textGo.transform.SetParent(transform, false);
+            durabilityText = textGo.AddComponent<TMPro.TextMeshPro>();
+        }
+
+        durabilityText.transform.localRotation = Quaternion.Euler(66f, 0f, 0f);
+        durabilityText.alignment = TMPro.TextAlignmentOptions.Center;
+        durabilityText.fontStyle = TMPro.FontStyles.Bold;
+        durabilityText.fontSize = 2.0f;
+        durabilityText.color = new Color(0.92f, 0.97f, 1.0f, 0.95f);
+
+        if (durabilityText.fontMaterial != null)
+        {
+            durabilityText.fontMaterial.EnableKeyword("OUTLINE_ON");
+            durabilityText.fontMaterial.SetFloat(TMPro.ShaderUtilities.ID_OutlineWidth, 0.14f);
+            durabilityText.fontMaterial.SetColor(TMPro.ShaderUtilities.ID_OutlineColor, new Color(0.08f, 0.18f, 0.35f, 0.80f));
+            durabilityText.fontMaterial.DisableKeyword("UNDERLAY_ON");
+            durabilityText.fontMaterial.renderQueue = 3030;
+        }
+
+        var mr = durabilityText.GetComponent<MeshRenderer>();
+        if (mr != null)
+        {
+            mr.sortingOrder = 5;
+        }
+    }
+
+    private void UpdateDurabilityNumber(int durability, bool animatePunch = false)
+    {
+        EnsureDurabilityText();
+        if (durabilityText == null)
+        {
+            return;
+        }
+
+        if (durability <= 0 || isMelting || !wasFrozen)
+        {
+            durabilityText.gameObject.SetActive(false);
+            return;
+        }
+
+        durabilityText.gameObject.SetActive(true);
+        durabilityText.text = durability.ToString();
+
+        if (animatePunch)
+        {
+            durabilityText.transform.DOKill();
+            durabilityText.transform.localScale = Vector3.one * 1.35f;
+            durabilityText.transform.DOScale(Vector3.one, 0.22f).SetEase(Ease.OutBack);
         }
     }
 
@@ -589,14 +765,8 @@ public class IceView3D : MonoBehaviour
             filter = shell.gameObject.AddComponent<MeshFilter>();
         }
 
-        if (layoutIsChain)
-        {
-            // Slightly softer corners for molded ice around chains.
-            filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.20f, 3);
-            return;
-        }
-
-        filter.sharedMesh = ShapeMeshFactory3D.GetSolidMesh(layoutShape);
+        // Smooth, chunky rounded translucent ice chunk surrounding the entire block
+        filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.22f, 8);
     }
 
     private static BoardPresenter3D FindPresenter()
@@ -643,32 +813,60 @@ public class IceView3D : MonoBehaviour
             return sharedIceMaterial;
         }
 
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        // Phase 52K: frosted translucent plastic — not clear glass, no emission, Metallic 0.
+        Shader shader = Shader.Find("Universal Render Pipeline/Custom/IceCrystalShell")
+            ?? Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Standard");
+
         sharedIceMaterial = new Material(shader)
         {
-            name = "Ice3D_Runtime",
-            color = new Color(0.55f, 0.88f, 1f, 0.58f)
+            name = "Ice3D_CrystallineRuntime"
         };
+
+        // Pale cyan / white ice colors for ice.jpeg presentation casing:
+        // Center: pale translucent glaze allowing block readability
+        // Body: translucent pale cyan volume
+        // Rim: frosted white highlight
+        Color centerIce = new Color(0.90f, 0.97f, 1.0f, 0.22f);
+        Color baseIce = new Color(0.82f, 0.93f, 0.97f, 0.58f);
+        Color frostRim = new Color(0.96f, 0.99f, 1.0f, 0.92f);
+        Color crackTint = new Color(1.0f, 1.0f, 1.0f, 0.95f);
+
+        if (sharedIceMaterial.HasProperty("_CenterColor"))
+        {
+            sharedIceMaterial.SetColor("_CenterColor", centerIce);
+        }
+
         if (sharedIceMaterial.HasProperty("_BaseColor"))
         {
-            sharedIceMaterial.SetColor("_BaseColor", sharedIceMaterial.color);
+            sharedIceMaterial.SetColor("_BaseColor", baseIce);
+        }
+
+        if (sharedIceMaterial.HasProperty("_FrostColor"))
+        {
+            sharedIceMaterial.SetColor("_FrostColor", frostRim);
+        }
+
+        if (sharedIceMaterial.HasProperty("_CrackColor"))
+        {
+            sharedIceMaterial.SetColor("_CrackColor", crackTint);
         }
 
         if (sharedIceMaterial.HasProperty("_Smoothness"))
         {
-            sharedIceMaterial.SetFloat("_Smoothness", 0.48f);
+            sharedIceMaterial.SetFloat("_Smoothness", 0.88f);
         }
 
-        if (sharedIceMaterial.HasProperty("_Metallic"))
+        // Bind the temporary ice.jpeg texture supplied by designer
+        Texture2D iceTex = Resources.Load<Texture2D>("Ice/ice");
+#if UNITY_EDITOR
+        if (iceTex == null)
         {
-            sharedIceMaterial.SetFloat("_Metallic", 0f);
+            iceTex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/ice.jpeg");
         }
-
-        if (sharedIceMaterial.HasProperty("_EmissionColor"))
+#endif
+        if (iceTex != null && sharedIceMaterial.HasProperty("_IceTex"))
         {
-            sharedIceMaterial.DisableKeyword("_EMISSION");
-            sharedIceMaterial.SetColor("_EmissionColor", Color.black);
+            sharedIceMaterial.SetTexture("_IceTex", iceTex);
         }
 
         if (sharedIceMaterial.HasProperty("_Surface"))
@@ -679,7 +877,7 @@ public class IceView3D : MonoBehaviour
             sharedIceMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
             sharedIceMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             sharedIceMaterial.SetInt("_ZWrite", 0);
-            sharedIceMaterial.renderQueue = 3000;
+            sharedIceMaterial.renderQueue = 3020;
             sharedIceMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         }
 

@@ -1,5 +1,6 @@
 using System.Text;
 using UnityEngine;
+using System.Collections.Generic;
 
 internal struct SolverBlock
 {
@@ -27,6 +28,7 @@ internal sealed class SolverLevel
     public int Height;
     public SolverBlock[] InitialBlocks;
     public SolverTarget[] Targets;
+        public HashSet<Vector2Int> BlockedCells;
 }
 
 internal sealed class SolverState

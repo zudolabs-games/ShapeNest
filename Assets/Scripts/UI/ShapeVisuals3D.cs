@@ -7,21 +7,21 @@ using UnityEngine;
 /// </summary>
 public static class ShapeVisuals3D
 {
-    /// <summary>Phase 52I: solid movable pieces — soft plastic highlight for side-face depth.</summary>
+    /// <summary>Phase 6: solid movable pieces — soft plastic specular highlight catching studio key light.</summary>
     public const float BlockMetallic = 0f;
-    public const float BlockSmoothness = 0.67f;
+    public const float BlockSmoothness = 0.74f;
 
-    /// <summary>Phase 52I: recessed sockets — rim catches soft plastic highlight.</summary>
+    /// <summary>Phase 6: recessed sockets — rim catches soft plastic highlight.</summary>
     public const float NestMetallic = 0f;
-    public const float NestSmoothness = 0.62f;
+    public const float NestSmoothness = 0.68f;
 
-    /// <summary>Phase 52I: darker matte cavity floor/walls (same hue family).</summary>
+    /// <summary>Phase 6: darker matte cavity floor/walls (same hue family).</summary>
     public const float NestCavityMetallic = 0f;
-    public const float NestCavitySmoothness = 0.22f;
+    public const float NestCavitySmoothness = 0.28f;
 
-    /// <summary>Phase 52I: chain bars share the same plastic family as blocks.</summary>
+    /// <summary>Phase 6: chain bars share the same plastic family as blocks.</summary>
     public const float ConnectorMetallic = 0f;
-    public const float ConnectorSmoothness = 0.64f;
+    public const float ConnectorSmoothness = 0.68f;
 
     private static Material[] blockMaterials;
     private static Material[] nestMaterials;
@@ -37,17 +37,17 @@ public static class ShapeVisuals3D
         new System.Collections.Generic.Dictionary<int, Material[]>();
 
     /// <summary>
-    /// Saturated toy palette (ShapeType order). Used as primary Phase 13 look.
+    /// Saturated toy palette (ShapeType order). Premium toy-plastic color look.
     /// </summary>
     private static readonly Color[] FallbackBlockColors =
     {
-        new Color(1.00f, 0.82f, 0.18f, 1f), // Square — gold/yellow
-        new Color(0.20f, 0.78f, 1.00f, 1f), // Circle — cyan
-        new Color(1.00f, 0.32f, 0.38f, 1f), // Triangle — coral/red
-        new Color(0.35f, 0.95f, 0.42f, 1f), // Diamond — lime green
-        new Color(0.28f, 0.55f, 1.00f, 1f), // Hexagon — vivid blue
-        new Color(0.95f, 0.35f, 0.95f, 1f), // Star — magenta
-        new Color(1.00f, 0.55f, 0.12f, 1f)  // Pentagon — orange
+        new Color(1.00f, 0.84f, 0.15f, 1f), // Square — vivid sunny gold/yellow
+        new Color(0.18f, 0.82f, 1.00f, 1f), // Circle — bright toy cyan
+        new Color(1.00f, 0.30f, 0.36f, 1f), // Triangle — vibrant coral red
+        new Color(0.30f, 0.92f, 0.45f, 1f), // Diamond — vivid lime green
+        new Color(0.25f, 0.58f, 1.00f, 1f), // Hexagon — vivid royal blue
+        new Color(0.95f, 0.32f, 0.95f, 1f), // Star — vibrant magenta
+        new Color(1.00f, 0.52f, 0.10f, 1f)  // Pentagon — bright toy orange
     };
 
     public static Material BlockMaterial(ShapeType shape, ShapeNestTheme theme = null)

@@ -89,7 +89,7 @@ public class StaticObstacleView3D : MonoBehaviour
             centroid += world;
         }
 
-        transform.position = centroid / boundCells.Count;
+        transform.position = Vector3.zero;
 
         for (int i = boundCells.Count; i < cellPlates.Count; i++)
         {
@@ -105,23 +105,27 @@ public class StaticObstacleView3D : MonoBehaviour
             cellsRoot = root != null ? root : new GameObject("Cells").transform;
             cellsRoot.SetParent(transform, false);
         }
+
+        cellPlates.Clear();
+        for (int i = 0; i < cellsRoot.childCount; i++)
+        {
+            cellPlates.Add(cellsRoot.GetChild(i));
+        }
     }
 
     private void EnsurePlateCount(int count)
     {
         while (cellPlates.Count < count)
         {
-            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            plate.name = "StaticObstacleCell_" + cellPlates.Count;
+            var plate = new GameObject("StaticObstacleCell_" + cellPlates.Count);
             plate.transform.SetParent(cellsRoot, false);
-            Collider collider = plate.GetComponent<Collider>();
-            if (collider != null)
-            {
-                Destroy(collider);
-            }
+            var filter = plate.AddComponent<MeshFilter>();
+            filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(1f, 1f, 1f, 0.20f, 4);
+            MeshRenderer renderer = plate.AddComponent<MeshRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            renderer.receiveShadows = true;
 
-            MeshRenderer renderer = plate.GetComponent<MeshRenderer>();
-            if (renderer != null && sharedPlateMaterial != null)
+            if (sharedPlateMaterial != null)
             {
                 renderer.sharedMaterial = sharedPlateMaterial;
             }

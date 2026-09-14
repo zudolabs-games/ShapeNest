@@ -47,22 +47,15 @@ internal static class ShapeNestSolver
             return result;
         }
 
+        // BuildRuntimeState and related runtime-faithful start removed; using legacy SolverState for BFScompatibility
+        
+        // Use legacy SolverState for BFS
         SolverState start = CreateInitialState(level);
         result.InitialMoveCount = CountLegalMoves(level, start);
-
-        if (start.AllSettled)
-        {
-            result.Status = SolverStatus.Solved;
-            result.ReplayVerified = true;
-            result.ExploredStates = 1;
-            return result;
-        }
-
         var queue = new Queue<SolverState>();
         var visited = new Dictionary<string, int>();
         var parent = new Dictionary<string, string>();
         var moveFromParent = new Dictionary<string, SolverMove>();
-
         queue.Enqueue(start);
         visited[start.Key] = 0;
         int explored = 0;
@@ -259,6 +252,12 @@ internal static class ShapeNestSolver
                 return current;
             }
 
+            if (level.BlockedCells != null && level.BlockedCells.Contains(next))
+            {
+                collisionStop = true;
+                return current;
+            }
+
             int occupant = GetBlockIndexAt(state, next.x, next.y);
             if (occupant >= 0 && occupant != movingIndex)
             {
@@ -352,7 +351,10 @@ internal static class ShapeNestSolver
             Width = width,
             Height = height,
             InitialBlocks = blocks.ToArray(),
-            Targets = targets.ToArray()
+            Targets = targets.ToArray(),
+            BlockedCells = data != null && data.blockedCells != null
+                ? new HashSet<Vector2Int>(data.blockedCells)
+                : new HashSet<Vector2Int>()
         };
     }
 
@@ -360,7 +362,8 @@ internal static class ShapeNestSolver
         int width,
         int height,
         IList<LevelBlockData> blocks,
-        IList<LevelTargetData> targets)
+        IList<LevelTargetData> targets,
+        IList<Vector2Int> blockedCells = null)
     {
         var solverBlocks = new List<SolverBlock>();
         if (blocks != null)
@@ -408,7 +411,10 @@ internal static class ShapeNestSolver
             Width = width,
             Height = height,
             InitialBlocks = solverBlocks.ToArray(),
-            Targets = solverTargets.ToArray()
+            Targets = solverTargets.ToArray(),
+            BlockedCells = blockedCells != null
+                ? new HashSet<Vector2Int>(blockedCells)
+                : new HashSet<Vector2Int>()
         };
     }
 

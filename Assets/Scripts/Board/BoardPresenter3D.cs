@@ -280,6 +280,55 @@ public class BoardPresenter3D : MonoBehaviour
         builtGap = cellGap;
     }
 
+    /// <summary>
+    /// Phase 3J: Renders an isolated single socket prototype with surrounding molded tray shelf
+    /// and chunky outer casing under the locked gameplay camera.
+    /// </summary>
+    public void BuildSingleSocketPrototype(
+        float traySize = 4.80f,
+        float openSize = 2.40f,
+        float socketDepth = 0.28f,
+        float openRadius = 0.55f)
+    {
+        EnsureHierarchy();
+        ClearChildren(surfaceRoot);
+        ClearChildren(cellsRoot);
+        ClearChildren(frameRoot);
+
+        gridSpace.Bind(transform);
+        gridSpace.Configure(1, 1, openSize, 0f, 0f);
+
+        GameObject proto = new GameObject("SingleSocketPrototype");
+        proto.transform.SetParent(surfaceRoot, false);
+        proto.transform.localPosition = Vector3.zero;
+        proto.transform.localRotation = Quaternion.identity;
+        proto.transform.localScale = Vector3.one;
+
+        var filter = proto.AddComponent<MeshFilter>();
+        filter.sharedMesh = BoardMeshFactory3D.GetSingleSocketPrototype(
+            traySize,
+            openSize,
+            socketDepth,
+            openRadius,
+            0.45f,
+            0.12f,
+            0.45f);
+
+        var renderer = proto.AddComponent<MeshRenderer>();
+        var matFrame = boardMaterial != null ? boardMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+        var matCavity = cellMaterial != null ? cellMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+
+        Color trayColor = new Color(0.28f, 0.23f, 0.55f, 1f);
+        Color pocketColor = new Color(0.18f, 0.14f, 0.38f, 1f);
+
+        TuneSharedMaterial(matFrame, trayColor, 0.02f, 0.60f);
+        TuneSharedMaterial(matCavity, pocketColor, 0.02f, 0.45f);
+
+        renderer.sharedMaterials = new Material[] { matFrame, matCavity };
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        renderer.receiveShadows = true;
+    }
+
     private void SyncFromBoardManager(bool force)
     {
         TryResolveBoardManager();
@@ -439,6 +488,18 @@ public class BoardPresenter3D : MonoBehaviour
             {
                 Vector2Int cell = new Vector2Int(x, y);
                 Vector3 center = gridSpace.GridToLocal(cell);
+
+                // Single Socket Prototype Experiment: Render cell (0,0) as a 3D molded cavity prototype.
+                if (x == 0 && y == 0)
+                {
+                    GameObject protoTile = CreateMoldedSocketPrototypeTile(cell, cellWorldSize, cellRecess);
+                    protoTile.transform.SetParent(cellsRoot, false);
+                    protoTile.transform.localPosition = new Vector3(center.x, floorTop + tileThickness, center.z);
+                    protoTile.transform.localRotation = Quaternion.identity;
+                    protoTile.transform.localScale = Vector3.one;
+                    continue;
+                }
+
                 GameObject tile = CreateCellTile(cell, tileFace, tileThickness, out bool keepDesignerMaterials);
                 tile.transform.SetParent(cellsRoot, false);
                 tile.transform.localPosition = new Vector3(center.x, cellCenterY, center.z);
@@ -453,6 +514,22 @@ public class BoardPresenter3D : MonoBehaviour
 
         // Phase 52J: readable molded slots — slightly lighter than slab, matte, subordinate to pieces.
         TuneSharedMaterial(cellMaterial, new Color(0.20f, 0.16f, 0.41f, 1f), 0f, 0.34f);
+    }
+
+    private GameObject CreateMoldedSocketPrototypeTile(Vector2Int cell, float cellSize, float recessDepth)
+    {
+        GameObject tile = new GameObject($"Cell_Proto_{cell.x}_{cell.y}");
+        var filter = tile.AddComponent<MeshFilter>();
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedSocketTile(cellSize, recessDepth, 0.88f, cellSize * 0.18f);
+        var renderer = tile.AddComponent<MeshRenderer>();
+
+        var matShelf = boardMaterial != null ? boardMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+        var matCavity = cellMaterial != null ? cellMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+
+        renderer.sharedMaterials = new Material[] { matShelf, matCavity };
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        renderer.receiveShadows = true;
+        return tile;
     }
 
     private GameObject CreateCellTile(Vector2Int cell, float face, float thickness, out bool keepDesignerMaterials)
@@ -490,6 +567,12 @@ public class BoardPresenter3D : MonoBehaviour
         for (int i = root.childCount - 1; i >= 0; i--)
         {
             Transform child = root.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            child.gameObject.SetActive(false);
             if (Application.isPlaying)
             {
                 Destroy(child.gameObject);

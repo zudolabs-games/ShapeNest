@@ -76,8 +76,8 @@ public class BoardPresentationController : MonoBehaviour
 
     [SerializeField]
     [Range(0.8f, 0.98f)]
-    [Tooltip("Board footprint as a fraction of available Gameplay Area (0.92 ≈ 92%).")]
-    private float presentationFitPadding = 0.92f;
+    [Tooltip("Board footprint as a fraction of available Gameplay Area (0.96 ≈ 96%).")]
+    private float presentationFitPadding = 0.96f;
 
     [SerializeField]
     private BoardEnvironment3D boardEnvironment;
@@ -378,16 +378,17 @@ public class BoardPresentationController : MonoBehaviour
         ResolveReferences();
         RefreshAdaptivePresentation(force: false);
 
-        Block[] blocks = FindObjectsByType<Block>(FindObjectsSortMode.None);
-        Target[] targets = FindObjectsByType<Target>(FindObjectsSortMode.None);
-        IceState[] ices = FindObjectsByType<IceState>(FindObjectsSortMode.None);
-        ShutterState[] shutters = FindObjectsByType<ShutterState>(FindObjectsSortMode.None);
+        Block[] blocks = FindObjectsByType<Block>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Target[] targets = FindObjectsByType<Target>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        IceState[] ices = FindObjectsByType<IceState>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        ShutterState[] shutters = FindObjectsByType<ShutterState>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         if (worldViewsByBlockId.Count > 0
             && blocks.Length > 0
             && !HasAnyTrackedBlock(blocks))
         {
             BoardVfx3D.ClearAll();
+            ClearAllPieceViewsImmediate();
         }
 
         SyncWorldPieceViews(blocks, targets);
@@ -399,12 +400,13 @@ public class BoardPresentationController : MonoBehaviour
         CleanupFinishedPieceViews(blocks, targets);
         DestroyUntrackedPieceViews();
         DestroyUntrackedConnectors();
+        DestroyUntrackedObstacleViews();
         SetUiBoardVisualsActive(false);
         Physics.SyncTransforms();
     }
 
     /// <summary>
-    /// True when a playable (non-settled, non-frozen) Block exists without a bound WorldView.
+    /// True when a playable (non-settled) Block exists without a bound WorldView.
     /// </summary>
     public bool HasUnboundPlayableBlocks()
     {
@@ -412,7 +414,7 @@ public class BoardPresentationController : MonoBehaviour
         for (int i = 0; i < blocks.Length; i++)
         {
             Block block = blocks[i];
-            if (block == null || block.IsSettled || block.IsFrozen)
+            if (block == null || block.IsSettled)
             {
                 continue;
             }
@@ -420,6 +422,40 @@ public class BoardPresentationController : MonoBehaviour
             if (block.WorldView == null)
             {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// True when a frozen IceState or closed ShutterState exists without an active 3D obstacle view.
+    /// </summary>
+    public bool HasUnboundObstacles()
+    {
+        IceState[] ices = FindObjectsByType<IceState>(FindObjectsSortMode.None);
+        for (int i = 0; i < ices.Length; i++)
+        {
+            IceState ice = ices[i];
+            if (ice != null && ice.IsFrozen)
+            {
+                if (!worldViewsByIceId.TryGetValue(ice.GetInstanceID(), out IceView3D v) || v == null)
+                {
+                    return true;
+                }
+            }
+        }
+
+        ShutterState[] shutters = FindObjectsByType<ShutterState>(FindObjectsSortMode.None);
+        for (int i = 0; i < shutters.Length; i++)
+        {
+            ShutterState shutter = shutters[i];
+            if (shutter != null && shutter.IsClosed)
+            {
+                if (!worldViewsByShutterId.TryGetValue(shutter.GetInstanceID(), out ShutterView3D sv) || sv == null)
+                {
+                    return true;
+                }
             }
         }
 
@@ -436,7 +472,7 @@ public class BoardPresentationController : MonoBehaviour
         for (int i = 0; i < blocks.Length; i++)
         {
             Block block = blocks[i];
-            if (block == null || block.IsSettled || block.IsFrozen)
+            if (block == null || block.IsSettled)
             {
                 continue;
             }
@@ -465,7 +501,7 @@ public class BoardPresentationController : MonoBehaviour
         ShutterState[] shutters = FindObjectsByType<ShutterState>(FindObjectsSortMode.None);
         int obstacleFp = ComputeObstacleFingerprint(ices, shutters);
 
-        // Phase 52O: clear ephemeral VFX when every tracked block instance was replaced
+        // Phase 52O: clear ephemeral VFX and stale piece views when every tracked block instance was replaced
         // (restart / level change). Skip empty boards so level-complete VFX can finish.
         if (Application.isPlaying
             && worldViewsByBlockId.Count > 0
@@ -473,6 +509,7 @@ public class BoardPresentationController : MonoBehaviour
             && !HasAnyTrackedBlock(blocks))
         {
             BoardVfx3D.ClearAll();
+            ClearAllPieceViewsImmediate();
         }
 
         bool dirty = blocks.Length != lastSyncedBlockCount
@@ -483,8 +520,8 @@ public class BoardPresentationController : MonoBehaviour
             dirty = NeedsPresentationResync(blocks, targets);
         }
 
-        // Phase 60: never leave playable pieces unbound waiting for a later dirty pass.
-        if (!dirty && HasUnboundPlayableBlocks())
+        // Phase 60: never leave playable pieces or obstacles unbound waiting for a later dirty pass.
+        if (!dirty && (HasUnboundPlayableBlocks() || HasUnboundObstacles()))
         {
             dirty = true;
         }
@@ -509,6 +546,7 @@ public class BoardPresentationController : MonoBehaviour
         CleanupFinishedPieceViews(blocks, targets);
         DestroyUntrackedPieceViews();
         DestroyUntrackedConnectors();
+        DestroyUntrackedObstacleViews();
 
         // Layout systems may re-enable UI board chrome — keep it hidden.
         SetUiBoardVisualsActive(false);
@@ -746,28 +784,32 @@ public class BoardPresentationController : MonoBehaviour
         if (boardLight != null)
         {
             boardLight.gameObject.SetActive(true);
-            // Phase 52I: soft key + fill for side-face depth without over-lighting.
-            boardLight.intensity = 1.38f;
-            boardLight.color = new Color(1f, 0.985f, 0.96f, 1f);
+            // Phase 6: studio key light — 52° elevation catches shoulder bevels, soft grounding shadows.
+            boardLight.intensity = 2.10f;
+            boardLight.color = new Color(1.00f, 0.985f, 0.95f, 1f);
             boardLight.shadows = LightShadows.Soft;
             boardLight.shadowStrength = 0.50f;
-            boardLight.transform.rotation = Quaternion.Euler(52f, 318f, 0f);
+            boardLight.shadowBias = 0.015f;
+            boardLight.shadowNormalBias = 0.20f;
+            boardLight.transform.rotation = Quaternion.Euler(52f, 322f, 0f);
         }
 
         Light fillLight = FindNamedLight("BoardFillLight");
         if (fillLight != null)
         {
             fillLight.gameObject.SetActive(true);
-            fillLight.intensity = 0.52f;
-            fillLight.color = new Color(0.55f, 0.52f, 0.84f, 1f);
+            // Phase 6: soft cool fill keeps side walls and nest cavities clearly readable with rich 3D depth.
+            fillLight.intensity = 0.65f;
+            fillLight.color = new Color(0.72f, 0.76f, 0.95f, 1f);
             fillLight.shadows = LightShadows.None;
-            fillLight.transform.rotation = Quaternion.Euler(28f, 145f, 0f);
+            fillLight.transform.rotation = Quaternion.Euler(36f, 148f, 0f);
         }
 
         EnsureBoardEnvironment();
         ShapeVisuals3D.Invalidate();
         PieceView3D.InvalidateContactShadowMaterials();
         ShapeMeshFactory3D.ClearCache();
+        BoardMeshFactory3D.ClearCache();
 
         // Phase 51B: comfortable in-cell footprint; height scales with cell size.
         blockFootprintFactor = BoardAdaptivePresentation3D.BlockFootprintRatio;
@@ -929,7 +971,7 @@ public class BoardPresentationController : MonoBehaviour
         for (int i = 0; i < blocks.Length; i++)
         {
             Block live = blocks[i];
-            if (live != null && worldViewsByBlockId.ContainsKey(live.GetInstanceID()))
+            if (live != null && live.gameObject.activeInHierarchy && worldViewsByBlockId.ContainsKey(live.GetInstanceID()))
             {
                 return true;
             }
@@ -1460,6 +1502,16 @@ public class BoardPresentationController : MonoBehaviour
 
         Transform iceRoot = boardPresenter3D.IceRoot;
         Transform shuttersRoot = boardPresenter3D.ShuttersRoot;
+        if (iceRoot != null && !iceRoot.gameObject.activeSelf)
+        {
+            iceRoot.gameObject.SetActive(true);
+        }
+
+        if (shuttersRoot != null && !shuttersRoot.gameObject.activeSelf)
+        {
+            shuttersRoot.gameObject.SetActive(true);
+        }
+
         var keepIce = new HashSet<int>();
         var keepShutters = new HashSet<int>();
 
@@ -1500,8 +1552,14 @@ public class BoardPresentationController : MonoBehaviour
             }
             else
             {
-                // Sync only — re-Bind would reset presented durability and snap visuals.
-                view.SyncFromSource();
+                if (view.Source != ice)
+                {
+                    view.Bind(ice, IceView3D.GetSharedIceMaterial());
+                }
+                else
+                {
+                    view.SyncFromSource();
+                }
             }
         }
 
@@ -3538,6 +3596,7 @@ public class BoardPresentationController : MonoBehaviour
                 DOTween.Kill(go, complete: false);
             }
 
+            go.SetActive(false);
             if (!Application.isPlaying || immediate)
             {
                 DestroyImmediate(go);
@@ -3612,7 +3671,8 @@ public class BoardPresentationController : MonoBehaviour
         var remove = new List<int>();
         foreach (var pair in map)
         {
-            if (!keep.Contains(pair.Key))
+            PieceView3D view = pair.Value;
+            if (!keep.Contains(pair.Key) || view == null)
             {
                 remove.Add(pair.Key);
             }
@@ -3623,14 +3683,7 @@ public class BoardPresentationController : MonoBehaviour
             int id = remove[i];
             if (map.TryGetValue(id, out PieceView3D view) && view != null)
             {
-                if (Application.isPlaying)
-                {
-                    Destroy(view.gameObject);
-                }
-                else
-                {
-                    DestroyImmediate(view.gameObject);
-                }
+                DestroyView(view, immediate: true);
             }
 
             map.Remove(id);
@@ -3645,7 +3698,7 @@ public class BoardPresentationController : MonoBehaviour
             for (int i = 0; i < blocks.Length; i++)
             {
                 Block block = blocks[i];
-                if (block == null || block.IsMatched)
+                if (block == null || !block.gameObject.activeInHierarchy || block.IsMatched)
                 {
                     continue;
                 }
@@ -3665,7 +3718,7 @@ public class BoardPresentationController : MonoBehaviour
             for (int i = 0; i < targets.Length; i++)
             {
                 Target target = targets[i];
-                if (target == null || target.IsMatched)
+                if (target == null || !target.gameObject.activeInHierarchy || target.IsMatched)
                 {
                     continue;
                 }
@@ -3727,6 +3780,69 @@ public class BoardPresentationController : MonoBehaviour
 
         DestroyUntrackedUnder(boardPresenter3D.PiecesRoot);
         DestroyUntrackedUnder(boardPresenter3D.NestsRoot);
+    }
+
+    private void DestroyUntrackedObstacleViews()
+    {
+        if (boardPresenter3D == null)
+        {
+            return;
+        }
+
+        if (boardPresenter3D.IceRoot != null)
+        {
+            Transform iceRoot = boardPresenter3D.IceRoot;
+            for (int i = iceRoot.childCount - 1; i >= 0; i--)
+            {
+                Transform child = iceRoot.GetChild(i);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                IceView3D view = child.GetComponent<IceView3D>();
+                if (view == null || view.Source == null || !worldViewsByIceId.ContainsValue(view))
+                {
+                    Debug.Log($"[ICE_LIFECYCLE] DestroyUntrackedObstacleViews: Destroying untracked obstacle child '{child.name}'. View null? {(view == null)}, Source null? {(view != null && view.Source == null)}, Tracked? {(view != null && worldViewsByIceId.ContainsValue(view))}");
+                    child.gameObject.SetActive(false);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(child.gameObject);
+                    }
+                }
+            }
+        }
+
+        if (boardPresenter3D.ShuttersRoot != null)
+        {
+            Transform shuttersRoot = boardPresenter3D.ShuttersRoot;
+            for (int i = shuttersRoot.childCount - 1; i >= 0; i--)
+            {
+                Transform child = shuttersRoot.GetChild(i);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                ShutterView3D view = child.GetComponent<ShutterView3D>();
+                if (view == null || view.Source == null || !worldViewsByShutterId.ContainsValue(view))
+                {
+                    child.gameObject.SetActive(false);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(child.gameObject);
+                    }
+                }
+            }
+        }
     }
 
     private void DestroyUntrackedConnectors()
@@ -3962,6 +4078,33 @@ public class BoardPresentationController : MonoBehaviour
         SweepUnregisteredNestedInnerTravelers(immediate: true);
     }
 
+    public void ClearAllPieceViewsImmediate()
+    {
+        var doomedBlocks = new List<PieceView3D>(worldViewsByBlockId.Values);
+        for (int i = 0; i < doomedBlocks.Count; i++)
+        {
+            if (doomedBlocks[i] != null)
+            {
+                DestroyView(doomedBlocks[i], immediate: true);
+            }
+        }
+        worldViewsByBlockId.Clear();
+        extraViewsByBlockId.Clear();
+
+        var doomedTargets = new List<PieceView3D>(worldViewsByTargetId.Values);
+        for (int i = 0; i < doomedTargets.Count; i++)
+        {
+            if (doomedTargets[i] != null)
+            {
+                DestroyView(doomedTargets[i], immediate: true);
+            }
+        }
+        worldViewsByTargetId.Clear();
+        extraViewsByTargetId.Clear();
+
+        ClearAllNestedInnerTravelersImmediate();
+    }
+
     private void SweepUnregisteredNestedInnerTravelers(bool immediate)
     {
         if (boardPresenter3D == null)
@@ -4136,6 +4279,8 @@ public class BoardPresentationController : MonoBehaviour
             int id = removeIce[i];
             if (worldViewsByIceId.TryGetValue(id, out IceView3D view) && view != null)
             {
+                IceState ice = view.Source;
+                Debug.Log($"[ICE_LIFECYCLE] CleanupFinishedObstacleViews: Destroying IceView3D ID={view.GetInstanceID()} (IceState ID={id}, Source null? {(ice == null)}, IsFrozen={(ice != null && ice.IsFrozen)}, Animating={view.IsPresentationAnimating})");
                 if (Application.isPlaying)
                 {
                     Destroy(view.gameObject);
@@ -4201,6 +4346,11 @@ public class BoardPresentationController : MonoBehaviour
             int id = remove[i];
             if (map.TryGetValue(id, out T view) && view != null)
             {
+                if (view is IceView3D iceView)
+                {
+                    Debug.Log($"[ICE_LIFECYCLE] PruneObstacleViews: Pruning and Destroying IceView3D ID={iceView.GetInstanceID()} (IceState ID={id})");
+                }
+                view.gameObject.SetActive(false);
                 if (Application.isPlaying)
                 {
                     Destroy(view.gameObject);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
@@ -11,12 +12,14 @@ public static class BoardVfx3D
     private static Material sharedBurstMaterial;
     private static Material sharedRingMaterial;
     private static Mesh sharedParticleMesh;
+    private static Mesh sharedIceShardMesh;
 
     private enum BurstFeel
     {
         MatchFlash,
         MatchBurst,
         IceMelt,
+        IceBreak,
         ShutterOpen,
         HammerImpact,
         HammerFlash,
@@ -103,6 +106,74 @@ public static class BoardVfx3D
         Color ring = c;
         ring.a = 0.28f;
         SpawnRing(worldPosition, ring, 0.14f, "NestMatchFlashRingVFX", 0.62f);
+    }
+
+    public static void PlayIceFreezeFrost(Vector3 worldPosition)
+    {
+        float s = PresentationScale();
+        Color frost = new Color(0.92f, 0.98f, 1f, 0.85f);
+        SpawnBurst(
+            worldPosition + Vector3.up * (0.025f * s),
+            frost,
+            14,
+            0.22f * s,
+            0.38f,
+            "IceFreezeFrostVFX",
+            0.045f * s,
+            BurstFeel.IceBreak);
+            
+        Color mist = new Color(0.85f, 0.94f, 1.0f, 0.40f);
+        SpawnBurst(
+            worldPosition + Vector3.up * (0.012f * s),
+            mist,
+            6,
+            0.12f * s,
+            0.45f,
+            "IceFreezeMistVFX",
+            0.07f * s,
+            BurstFeel.IceMelt);
+    }
+
+    public static void PlayIceBreakShards(Vector3 worldPosition, int durability)
+    {
+        float s = PresentationScale();
+        Color shardColor = new Color(0.85f, 0.96f, 1f, 0.95f);
+        int shardCount = durability <= 1 ? 16 : 8;
+        SpawnBurst(
+            worldPosition + Vector3.up * (0.04f * s),
+            shardColor,
+            shardCount,
+            0.28f * s,
+            0.42f,
+            "IceBreakShardsVFX",
+            0.050f * s,
+            BurstFeel.IceBreak);
+
+        Color mist = new Color(0.82f, 0.92f, 0.98f, 0.35f);
+        SpawnBurst(
+            worldPosition + Vector3.up * (0.02f * s),
+            mist,
+            5,
+            0.10f * s,
+            0.35f,
+            "IceBreakMistVFX",
+            0.065f * s,
+            BurstFeel.IceMelt);
+    }
+
+    public static void PlayIceSparkle(Vector3 worldPosition)
+    {
+        float s = PresentationScale();
+        Color sparkleColor = new Color(1f, 1f, 1f, 0.95f);
+        SpawnBurst(
+            worldPosition + Vector3.up * (0.03f * s),
+            sparkleColor,
+            2,
+            0.03f * s,
+            0.25f,
+            "IceSparkleVFX",
+            0.035f * s,
+            BurstFeel.IceBreak);
     }
 
     public static void PlayIceMelt(Vector3 worldPosition)
@@ -532,7 +603,7 @@ public static class BoardVfx3D
 
         var renderer = go.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Mesh;
-        renderer.mesh = GetSharedParticleMesh();
+        renderer.mesh = feel == BurstFeel.IceBreak ? GetIceShardParticleMesh() : GetSharedParticleMesh();
         renderer.sharedMaterial = GetBurstMaterial();
         renderer.alignment = ParticleSystemRenderSpace.World;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -548,6 +619,8 @@ public static class BoardVfx3D
         {
             case BurstFeel.IceMelt:
                 return -0.08f;
+            case BurstFeel.IceBreak:
+                return 0.50f;
             case BurstFeel.ShutterOpen:
                 return 0.55f;
             case BurstFeel.MatchFlash:
@@ -571,6 +644,8 @@ public static class BoardVfx3D
                 return 0.04f * scale;
             case BurstFeel.IceMelt:
                 return 0.10f * scale;
+            case BurstFeel.IceBreak:
+                return 0.09f * scale;
             case BurstFeel.HammerImpact:
                 return 0.10f * scale;
             case BurstFeel.ShutterOpen:
@@ -699,6 +774,56 @@ public static class BoardVfx3D
         }
 
         return sharedParticleMesh;
+    }
+
+    private static Mesh GetIceShardParticleMesh()
+    {
+        if (sharedIceShardMesh != null)
+        {
+            return sharedIceShardMesh;
+        }
+
+        // Faceted crystal octahedron/shard mesh with sharp planar normals
+        var mesh = new Mesh { name = "IceShardParticleMesh" };
+        Vector3 top = new Vector3(0f, 0.55f, 0f);
+        Vector3 bottom = new Vector3(0f, -0.45f, 0f);
+        Vector3 p0 = new Vector3(0.35f, 0.05f, 0f);
+        Vector3 p1 = new Vector3(0.05f, 0.02f, 0.38f);
+        Vector3 p2 = new Vector3(-0.32f, -0.05f, 0.05f);
+        Vector3 p3 = new Vector3(-0.05f, -0.02f, -0.35f);
+
+        var verts = new List<Vector3>();
+        var norms = new List<Vector3>();
+        var tris = new List<int>();
+
+        void AddTri(Vector3 a, Vector3 b, Vector3 c)
+        {
+            int idx = verts.Count;
+            Vector3 n = Vector3.Cross(b - a, c - a).normalized;
+            verts.Add(a); verts.Add(b); verts.Add(c);
+            norms.Add(n); norms.Add(n); norms.Add(n);
+            tris.Add(idx); tris.Add(idx + 1); tris.Add(idx + 2);
+        }
+
+        // Top pyramid
+        AddTri(top, p1, p0);
+        AddTri(top, p2, p1);
+        AddTri(top, p3, p2);
+        AddTri(top, p0, p3);
+
+        // Bottom pyramid
+        AddTri(bottom, p0, p1);
+        AddTri(bottom, p1, p2);
+        AddTri(bottom, p2, p3);
+        AddTri(bottom, p3, p0);
+
+        mesh.SetVertices(verts);
+        mesh.SetNormals(norms);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
+
+        sharedIceShardMesh = mesh;
+        return sharedIceShardMesh;
     }
 
     private static Material GetBurstMaterial()

@@ -1197,7 +1197,9 @@ public class PieceView3D : MonoBehaviour, IPieceView
         configuredShape = shape;
         configuredAsNest = asNest;
         configuredSolidMaterial = material;
-        pieceHeight = Mathf.Max(0.01f, height);
+        // Phase 5B: chunky physical volume under 63° camera pitch
+        float heightMultiplier = asNest ? 1.60f : 1.50f;
+        pieceHeight = Mathf.Max(0.01f, height * heightMultiplier);
 
         if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
         {
