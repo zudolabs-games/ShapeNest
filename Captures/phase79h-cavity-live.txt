@@ -1,8 +1,0 @@
-maxCav=0.02823 maxOuter=0.00000 maxRoot=0.00000 final=Completed frames=17
-START state=Calling
-f=1 state=Calling dCav=0.00000 local=(0.0000, 0.0000, 0.0000) t=0.030
-f=2 state=Calling dCav=0.00448 local=(0.0109, 0.0000, 0.0000) t=0.037
-f=3 state=Calling dCav=0.00651 local=(-0.0159, 0.0000, 0.0000) t=0.044
-f=4 state=Calling dCav=0.01427 local=(-0.0348, 0.0000, 0.0000) t=0.051
-f=6 state=Calling dCav=0.02371 local=(-0.0577, 0.0000, 0.0000) t=0.065
-f=12 state=Calling dCav=0.02065 local=(-0.0503, 0.0000, 0.0000) t=0.137

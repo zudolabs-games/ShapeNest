@@ -1,6 +1,0 @@
-[79E] CLOSEUP PROOF
-worldDisp=0.1027 expected=0.1027
-limePixels rest=10572 peak=10556
-limeCentroidShiftX_px=46.57 (512px closeup, orthoSize=0.565)
-pixelChanged=25782
-PASS_VISIBLE=True

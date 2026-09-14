@@ -1,3 +1,0 @@
-playing=False
-level=Campaign_01_FirstMove
-greenHits=0

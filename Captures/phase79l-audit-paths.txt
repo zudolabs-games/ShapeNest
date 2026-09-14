@@ -1,3 +1,0 @@
-foundOneAwayPaths=1
-block=Triangle@(1, 4) id=Triangle:White oneAway=(2, 4) dir=(1, 0) cand=(3, 4) matchWorld=(4, 4) target=Triangle@(4, 4) cellIdx=1 collect=2 live=True wv=Nest3D_Triangle_-275492 reject=False accentCell=Triangle:White
-block=Triangle@(1, 4) id=Triangle:White oneAway=(2, 4) dir=(1, 0) cand=(3, 4) matchWorld=(4, 5) target=Triangle@(4, 4) cellIdx=3 collect=2 live=True wv=Nest3D_Triangle_-275492 reject=False accentCell=Triangle:White
