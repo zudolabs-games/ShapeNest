@@ -13,17 +13,17 @@ public class BoardCamera3D : MonoBehaviour
 
     [SerializeField]
     [Range(20f, 75f)]
-    private float fieldOfView = 44f;
+    private float fieldOfView = 36f;
 
     [SerializeField]
     [Tooltip("Pitch above the board in degrees (0 = horizontal, 90 = top-down).")]
-    [Range(25f, 90f)]
-    private float lookPitch = 63f;
+    [Range(15f, 90f)]
+    private float lookPitch = 90f;
 
     [SerializeField]
     [Min(0.1f)]
     [Tooltip("Scales framing distance. 1 = fit fill targets; >1 pulls back.")]
-    private float distanceMultiplier = 1.08f;
+    private float distanceMultiplier = 1.0f;
 
     [SerializeField]
     [Min(0.3f)]
@@ -33,19 +33,19 @@ public class BoardCamera3D : MonoBehaviour
     [SerializeField]
     [Range(0.4f, 0.98f)]
     [Tooltip("Target board height as a fraction of the Gameplay Area (or full Game view fallback).")]
-    private float targetVerticalFill = 0.92f;
+    private float targetVerticalFill = 0.85f;
 
     [SerializeField]
     [Range(0.55f, 0.98f)]
     [Tooltip("Target board width as a fraction of the Gameplay Area (or full Game view fallback).")]
-    private float targetHorizontalFill = 0.90f;
+    private float targetHorizontalFill = 0.88f;
 
     [SerializeField]
     [Tooltip("Look-at bias in world space. Under default pitch, -Z raises the board on screen; +Z lowers it.")]
-    private Vector3 lookOffset = new Vector3(0f, 0.03f, -0.10f);
+    private Vector3 lookOffset = new Vector3(0f, 0f, 0f);
 
     [SerializeField]
-    private bool useOrthographic = false;
+    private bool useOrthographic = true;
 
     private float lastFramedAspect = -1f;
     private Vector2 lastGameplayScreenSize = new Vector2(-1f, -1f);
@@ -119,7 +119,7 @@ public class BoardCamera3D : MonoBehaviour
 
         Quaternion rotation = Quaternion.Euler(lookPitch, 0f, 0f);
         transform.rotation = rotation;
-        transform.position = new Vector3(0f, 8f, -0.3f);
+        transform.position = new Vector3(0f, 8f, 0f);
 
         cachedCamera.nearClipPlane = 0.05f;
         cachedCamera.farClipPlane = 100f;
@@ -179,9 +179,9 @@ public class BoardCamera3D : MonoBehaviour
 
             Quaternion rotation = Quaternion.Euler(lookPitch, 0f, 0f);
             float distance = span * Mathf.Max(0.1f, distanceMultiplier);
-            Vector3 offset = rotation * new Vector3(0f, 0f, -distance);
-            transform.position = target + offset;
-            transform.rotation = Quaternion.LookRotation(target - transform.position, Vector3.up);
+            Vector3 forwardDir = rotation * Vector3.forward;
+            transform.position = target - forwardDir * distance;
+            transform.rotation = rotation;
             lastFramedAspect = aspect;
             lastBoardFootprint = footprint;
         }
@@ -199,66 +199,49 @@ public class BoardCamera3D : MonoBehaviour
             float distByWidth;
             float distByHeight;
 
-            float pitchRad = lookPitch * Mathf.Deg2Rad;
+            float effectiveAngleDeg = Mathf.Clamp(30f - lookPitch, 15f, 85f);
+            float effectiveAngleRad = effectiveAngleDeg * Mathf.Deg2Rad;
             float halfFovRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
             float tanHalfFov = Mathf.Tan(halfFovRad);
 
-            float blockHeight = board.CellWorldSize * BoardAdaptivePresentation3D.BlockHeightRatio;
-            float projectedExtY = (footprint.y * Mathf.Sin(pitchRad) + blockHeight * Mathf.Cos(pitchRad)) * 0.5f;
+            float totalThickness = board.CellWorldSize * (BoardAdaptivePresentation3D.ThicknessRatio + BoardAdaptivePresentation3D.BlockHeightRatio);
+            float projectedExtY = (footprint.y * Mathf.Sin(effectiveAngleRad) + totalThickness * Mathf.Cos(effectiveAngleRad)) * 0.5f;
             float projectedExtX = footprint.x * 0.5f;
 
             float fillH = Mathf.Clamp(targetVerticalFill, 0.4f, 0.98f);
             float fillW = Mathf.Clamp(targetHorizontalFill, 0.55f, 0.98f);
 
-            if (hasGameplayRect)
-            {
-                float screenH = Mathf.Max(1f, ResolveScreenHeight());
-                float screenW = Mathf.Max(1f, ResolveScreenWidth());
-                // Gameplay Area fractions are Screen-normalized; camera aspect comes from pixelRect.
-                float gpFracH = gpScreen.height / screenH;
-                float gpFracW = gpScreen.width / screenW;
+            float effectiveTanH = tanHalfFov * fillH;
+            float effectiveTanW = aspect * tanHalfFov * fillW;
 
-                float effectiveTanH = tanHalfFov * gpFracH * fillH;
-                float effectiveTanW = aspect * tanHalfFov * gpFracW * fillW;
-
-                distByHeight = projectedExtY / Mathf.Max(0.01f, effectiveTanH);
-                distByWidth = projectedExtX / Mathf.Max(0.01f, effectiveTanW);
-                lastGameplayScreenSize = gpScreen.size;
-            }
-            else
-            {
-                float effectiveTanH = tanHalfFov * fillH;
-                float effectiveTanW = aspect * tanHalfFov * fillW;
-
-                distByHeight = projectedExtY / Mathf.Max(0.01f, effectiveTanH);
-                distByWidth = projectedExtX / Mathf.Max(0.01f, effectiveTanW);
-                lastGameplayScreenSize = new Vector2(-1f, -1f);
-            }
+            distByHeight = projectedExtY / Mathf.Max(0.01f, effectiveTanH);
+            distByWidth = projectedExtX / Mathf.Max(0.01f, effectiveTanW);
 
             float requiredDist = Mathf.Max(distByHeight, distByWidth) * distanceMultiplier;
             Quaternion rotation = Quaternion.Euler(lookPitch, 0f, 0f);
-            Vector3 offset = rotation * new Vector3(0f, 0f, -requiredDist);
-            transform.position = target + offset;
-            transform.rotation = Quaternion.LookRotation(target - transform.position, Vector3.up);
+            Vector3 forwardDir = rotation * Vector3.forward;
+            transform.position = target - forwardDir * requiredDist;
+            transform.rotation = rotation;
             lastFramedAspect = aspect;
             lastBoardFootprint = footprint;
         }
     }
 
     /// <summary>
-    /// Phase 1 composition defaults matching the reference camera: perspective, moderate FOV,
-    /// toy-tray pitch, intentional Gameplay Area margins, slight downward board bias.
+    /// Reference composition defaults: top-down orthographic camera (90° pitch),
+    /// rendering symmetrical molded tray with clean grid alignment.
+    /// Occupies 85-88% of screen width with safe portrait margins for HUD and boosters.
     /// </summary>
     public void ApplyArtDirectionDefaults()
     {
-        useOrthographic = false;
-        lookPitch = 63f;
-        distanceMultiplier = 1.08f;
+        useOrthographic = true;
+        lookPitch = 90f;
+        distanceMultiplier = 1.0f;
         orthographicSpanFactor = 0.85f;
-        targetVerticalFill = 0.92f;
-        targetHorizontalFill = 0.90f;
-        lookOffset = new Vector3(0f, 0.03f, -0.10f);
-        fieldOfView = 44f;
+        targetVerticalFill = 0.82f;
+        targetHorizontalFill = 0.86f;
+        lookOffset = new Vector3(0f, 0f, 0f);
+        fieldOfView = 36f;
     }
 
     /// <summary>
@@ -268,6 +251,11 @@ public class BoardCamera3D : MonoBehaviour
     private float ResolveRenderAspect()
     {
         CacheCamera();
+        if (cachedCamera != null && cachedCamera.targetTexture != null && cachedCamera.targetTexture.height > 1)
+        {
+            return (float)cachedCamera.targetTexture.width / cachedCamera.targetTexture.height;
+        }
+
         if (cachedCamera != null && cachedCamera.pixelHeight > 1)
         {
             return Mathf.Clamp(cachedCamera.aspect, 0.45f, 2f);
@@ -279,11 +267,21 @@ public class BoardCamera3D : MonoBehaviour
 
     private float ResolveScreenWidth()
     {
+        CacheCamera();
+        if (cachedCamera != null && cachedCamera.targetTexture != null)
+        {
+            return cachedCamera.targetTexture.width;
+        }
         return Mathf.Max(1f, Screen.width);
     }
 
     private float ResolveScreenHeight()
     {
+        CacheCamera();
+        if (cachedCamera != null && cachedCamera.targetTexture != null)
+        {
+            return cachedCamera.targetTexture.height;
+        }
         return Mathf.Max(1f, Screen.height);
     }
 

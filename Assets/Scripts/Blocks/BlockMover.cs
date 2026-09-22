@@ -569,6 +569,11 @@ public class BlockMover : MonoBehaviour
         fingerVisualVelocity = Vector3.zero;
         fingerVisualSettling = false;
         isMoving = true;
+        if (TryGetWorldMotion(block, out WorldPieceMotion worldMotion))
+        {
+            worldMotion.EnsureCarry();
+        }
+
         dragRoutine = StartCoroutine(DragRoutine(board));
         BoardUndoHistory undoHistory = BoardUndoHistory.Resolve();
         undoHistory?.BeginPendingCapture(board);
@@ -776,8 +781,8 @@ public class BlockMover : MonoBehaviour
         Vector3 originWorld = SeatedCellWorld(space, originCell);
         Vector3 maxWorld = SeatedCellWorld(space, legalMax);
         Vector3 axisVec = maxWorld - originWorld;
-        float axisLenSq = (axisVec.x * axisVec.x) + (axisVec.z * axisVec.z);
-        if (axisLenSq < 0.000001f)
+        float axisLen = axisVec.magnitude;
+        if (axisLen < 0.000001f)
         {
             // Next cell is blocked (target, obstacle, board edge, etc.).
             // Stay seated on the legal cell — do not preview into the barrier.
@@ -785,14 +790,11 @@ public class BlockMover : MonoBehaviour
             return originWorld;
         }
 
-        float axisLen = Mathf.Sqrt(axisLenSq);
-        Vector3 dir = new Vector3(axisVec.x / axisLen, 0f, axisVec.z / axisLen);
+        Vector3 dir = axisVec / axisLen;
         Vector3 toDesired = desiredBoardWorld - originWorld;
-        toDesired.y = 0f;
         float t = Vector3.Dot(toDesired, dir);
         t = Mathf.Clamp(t, 0f, axisLen);
         Vector3 result = originWorld + (dir * t);
-        result.y = originWorld.y;
         return result;
     }
 
@@ -818,7 +820,9 @@ public class BlockMover : MonoBehaviour
             carry = 0f;
         }
 
-        world.y += lift + halfHeight + carry;
+        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        Vector3 boardNormal = presenter != null ? presenter.transform.up : Vector3.up;
+        world += boardNormal * (lift + halfHeight + carry);
         return world;
     }
 
@@ -868,33 +872,43 @@ public class BlockMover : MonoBehaviour
             Mathf.Infinity,
             dt);
 
-        // Hard clamp: never travel past the constrained target on XZ.
+        // Clamp travel within the constrained segment
         Vector3 toTarget = fingerVisualTarget - current;
-        toTarget.y = 0f;
         Vector3 moved = next - current;
-        moved.y = 0f;
         float targetLenSq = toTarget.sqrMagnitude;
         if (targetLenSq > 0.0000001f)
         {
             float along = Vector3.Dot(moved, toTarget);
             if (along > targetLenSq)
             {
-                next.x = fingerVisualTarget.x;
-                next.z = fingerVisualTarget.z;
-                fingerVisualVelocity.x = 0f;
-                fingerVisualVelocity.z = 0f;
+                next = fingerVisualTarget;
+                fingerVisualVelocity = Vector3.zero;
             }
         }
         else
         {
-            next.x = fingerVisualTarget.x;
-            next.z = fingerVisualTarget.z;
-            fingerVisualVelocity.x = 0f;
-            fingerVisualVelocity.z = 0f;
+            next = fingerVisualTarget;
+            fingerVisualVelocity = Vector3.zero;
         }
 
-        // Keep seated Y from the constrained target (includes carry lift).
-        next.y = fingerVisualTarget.y;
+        // Anchor next precisely to the tilted board surface at its current position + boardNormal * lift
+        BoardManager board = cachedBoard != null ? cachedBoard : GetBoard();
+        IGridSpace space = MotionGridSpace(board);
+        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        Transform boardRoot = presenter != null ? presenter.transform : null;
+        if (boardRoot != null && space is GridSpace3D grid3D)
+        {
+            Vector3 local = boardRoot.InverseTransformPoint(next);
+            Vector3 surfaceLocal = new Vector3(local.x, grid3D.SurfaceLocalY, local.z);
+            Vector3 surfaceWorld = boardRoot.TransformPoint(surfaceLocal);
+            Vector3 boardNormal = boardRoot.up;
+            PieceView3D pieceView = block != null ? block.WorldView : null;
+            float halfHeight = pieceView != null ? Mathf.Abs(pieceView.transform.lossyScale.y) * 0.5f : 0.11f;
+            float lift = pieceView != null ? pieceView.SurfaceLift : 0.02f;
+            float carry = Mathf.Max(pieceView != null ? pieceView.PresentationLift : 0f, 0.08f);
+            next = surfaceWorld + boardNormal * (lift + halfHeight + carry);
+        }
+
         if (PieceMotionMath.IsFinite(next))
         {
             view.position = next;

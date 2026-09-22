@@ -18,7 +18,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetSolidMesh(ShapeType shape)
     {
-        string key = "solid_v14_" + shape;
+        string key = "solid_v16_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -32,7 +32,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetNestMesh(ShapeType shape)
     {
-        string key = "nest_v14_" + shape;
+        string key = "nest_v16_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -47,7 +47,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Outer rim only (nest submesh 0). Presentation split for Phase 79G socket beckon.</summary>
     public static Mesh GetNestRimMesh(ShapeType shape)
     {
-        string key = "nest_rim_v9_" + shape;
+        string key = "nest_rim_v16_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -62,7 +62,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Inner cavity walls/floor only (nest submesh 1). Presentation-only socket beckon target.</summary>
     public static Mesh GetNestCavityMesh(ShapeType shape)
     {
-        string key = "nest_cavity_v9_" + shape;
+        string key = "nest_cavity_v16_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -134,8 +134,9 @@ public static class ShapeMeshFactory3D
     private static Mesh BuildNest(ShapeType shape)
     {
         Vector2[] outer = GetOutline(shape, 0.5f);
-        // Phase 5B: chunky molded socket rim (0.36 inner radius for robust rim width)
-        Vector2[] inner = GetOutline(shape, 0.36f);
+        // Pass C: narrower inner radius = wider colored socket flange/lip.
+        float innerRadius = shape == ShapeType.Triangle ? 0.26f : 0.30f;
+        Vector2[] inner = GetOutline(shape, innerRadius);
         NormalizeOutlineAabb(outer, inner);
         ApplyVisualSilhouetteScale(outer, inner, shape);
         ShapeBuild build = GetBuild(shape, nest: true);
@@ -157,25 +158,26 @@ public static class ShapeMeshFactory3D
 
     private static ShapeBuild GetBuild(ShapeType shape, bool nest)
     {
-        // Phase 5B: chunky physical bevels for 3D highlights under locked 63° pitch camera.
+        // Pass C: smaller top-edge bevel → bigger flat top → more visible side walls → chunkier appearance.
+        // Nest bevel kept slightly larger so the colored rim/flange still catches keylight.
         switch (shape)
         {
             case ShapeType.Circle:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.22f, smoothWalls = true };
+                return new ShapeBuild { bevel = nest ? 0.14f : 0.12f, smoothWalls = true };
             case ShapeType.Square:
-                return new ShapeBuild { bevel = nest ? 0.13f : 0.20f, smoothWalls = true };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.12f, smoothWalls = false };
             case ShapeType.Triangle:
-                return new ShapeBuild { bevel = nest ? 0.12f : 0.18f, smoothWalls = true };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.12f, smoothWalls = false };
             case ShapeType.Diamond:
-                return new ShapeBuild { bevel = nest ? 0.12f : 0.18f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.12f, smoothWalls = false };
             case ShapeType.Hexagon:
-                return new ShapeBuild { bevel = nest ? 0.11f : 0.16f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.12f, smoothWalls = false };
             case ShapeType.Star:
-                return new ShapeBuild { bevel = nest ? 0.08f : 0.12f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.11f : 0.10f, smoothWalls = false };
             case ShapeType.Pentagon:
-                return new ShapeBuild { bevel = nest ? 0.10f : 0.15f, smoothWalls = false };
+                return new ShapeBuild { bevel = nest ? 0.13f : 0.12f, smoothWalls = false };
             default:
-                return new ShapeBuild { bevel = 0.18f, smoothWalls = false };
+                return new ShapeBuild { bevel = 0.12f, smoothWalls = false };
         }
     }
 
@@ -457,16 +459,18 @@ public static class ShapeMeshFactory3D
     {
         float y0 = -height * 0.5f;
         float y1 = height * 0.5f;
-        float bevel = Mathf.Clamp(bevelFraction, 0.03f, 0.22f) * height;
+        float bevel = Mathf.Clamp(bevelFraction, 0.03f, 0.26f) * height;
         float yBevelTop = y1 - bevel;
         float yBevelBottom = addBottomBevel ? y0 + bevel : y0;
         // Keep the top face close to the footprint AABB so a heavy chamfer cannot
         // read as a shift when the board camera shows the near wall.
-        float inset = 1f - Mathf.Clamp(bevelFraction, 0.03f, 0.22f) * 0.5f;
+        float inset = 1f - Mathf.Clamp(bevelFraction, 0.03f, 0.26f) * 0.55f;
         Vector2[] outerTop = ScaleOutline(outer, inset);
         Vector2[] outerBottom = addBottomBevel ? ScaleOutline(outer, inset) : outer;
         bool hollow = inner != null && inner.Length >= 3;
-        Vector2[] innerTop = hollow ? ScaleOutline(inner, Mathf.Lerp(1f, inset, 0.35f)) : null;
+        // Pass C: 0.75 taper factor creates a more dramatic chamfer at the socket cavity entrance.
+        // innerTop is smaller than inner → sloped wall visible from above like a real molded socket draft.
+        Vector2[] innerTop = hollow ? ScaleOutline(inner, Mathf.Lerp(1f, inset, 0.75f)) : null;
         Vector2[] innerBottom = hollow && addBottomBevel
             ? ScaleOutline(inner, Mathf.Lerp(1f, inset, 0.35f))
             : inner;
@@ -479,7 +483,7 @@ public static class ShapeMeshFactory3D
         bool splitNest = hollow && addNestFloor;
 
         AddCap(vertices, normals, rimTriangles, uvs, outerBottom, innerBottom, y0, Vector3.down, hollow);
-        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow, topCrownHeight: hollow ? 0f : 0.075f);
+        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow, topCrownHeight: 0f);
 
         if (addBottomBevel)
         {
@@ -518,8 +522,9 @@ public static class ShapeMeshFactory3D
 
             if (addNestFloor)
             {
-                // Deeper socket floor; tiny Y bias avoids coplanar z-fight with rim bevels.
-                float floorY = Mathf.Lerp(y0, y1, 0.10f) - 0.001f;
+                // Pass C: floor pushed down to 5% from bottom = maximum visible depth.
+                // Combined with the taller NestHeightRatio the cavity reads as a true recessed socket.
+                float floorY = Mathf.Lerp(y0, y1, 0.05f);
                 AddCap(vertices, normals, cavity, uvs, inner, null, floorY, Vector3.up, hollow: false);
             }
         }
@@ -804,18 +809,18 @@ public static class ShapeMeshFactory3D
                 float yNorm = y1 > y0 ? 0.707f : -0.707f;
                 normals.Add(Vector3.Normalize(r_a0 * 0.707f + Vector3.up * yNorm));
                 normals.Add(Vector3.Normalize(r_b0 * 0.707f + Vector3.up * yNorm));
-                normals.Add(Vector3.Normalize(r_b1 * 0.400f + Vector3.up * yNorm * 1.2f));
-                normals.Add(Vector3.Normalize(r_a1 * 0.400f + Vector3.up * yNorm * 1.2f));
+                normals.Add(Vector3.Normalize(r_b1 * 0.707f + Vector3.up * yNorm));
+                normals.Add(Vector3.Normalize(r_a1 * 0.707f + Vector3.up * yNorm));
             }
             else
             {
-                Vector3 n = Vector3.Cross(b0 - a0, a1 - a0).normalized;
+                Vector3 edge = b0 - a0;
+                Vector3 slope = a1 - a0;
+                Vector3 n = Vector3.Cross(slope, edge).normalized;
                 if (!outward)
                 {
                     n = -n;
                 }
-
-                n = Vector3.Normalize(n + Vector3.up * 0.28f);
 
                 for (int k = 0; k < 4; k++)
                 {

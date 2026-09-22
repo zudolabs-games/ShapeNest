@@ -8,26 +8,26 @@ using UnityEngine;
 public static class BoardAdaptivePresentation3D
 {
     public const float ReferenceCellSize = 1f;
-    public const float GapRatio = 0.08f;
-    public const float FramePadRatio = 0.18f;
-    public const float FrameWallRatio = 0.18f;
-    public const float ThicknessRatio = 0.34f;
-    public const float RecessRatio = 0.11f;
-    public const float CornerRadiusRatio = 0.36f;
-    public const float BlockHeightRatio = 0.42f;
-    public const float NestHeightRatio = 0.18f;
+    public const float GapRatio = 0.04f;
+    public const float FramePadRatio = 0.20f;
+    public const float FrameWallRatio = 0.36f;
+    public const float ThicknessRatio = 0.46f;
+    public const float RecessRatio = 0.18f;
+    public const float CornerRadiusRatio = 0.46f;
+    public const float BlockHeightRatio = 0.60f; // Pass C: chunky physical height
+    public const float NestHeightRatio = 0.40f;  // Pass C: deep molded socket cavity
 
     /// <summary>Visible recessed tile face as fraction of cell pitch (matches BoardPresenter3D).</summary>
-    public const float CellTileFaceRatio = 0.88f;
+    public const float CellTileFaceRatio = 0.84f;
 
     /// <summary>
-    /// Solid block XZ footprint as fraction of cell pitch. Phase 51B: ~67% pitch (~76% of tile face)
-    /// so extruded shapes sit inside the rounded cell with even visual breathing room.
+    /// Solid block XZ footprint as fraction of cell pitch. ~76% pitch (~90% of cavity opening)
+    /// so extruded shapes look thick and satisfying with clear side walls and in-cell clearance.
     /// </summary>
-    public const float BlockFootprintRatio = 0.67f;
+    public const float BlockFootprintRatio = 0.76f;
 
-    /// <summary>Nest outer footprint as fraction of cell pitch (slightly larger than blocks).</summary>
-    public const float NestFootprintRatio = 0.80f;
+    /// <summary>Nest outer footprint as fraction of cell pitch.</summary>
+    public const float NestFootprintRatio = 0.84f;
 
     /// <summary>Phase 52A: chain connector bar radius as fraction of cell pitch (~22% diameter).</summary>
     public const float ConnectorRadiusRatio = 0.11f;
@@ -47,7 +47,7 @@ public static class BoardAdaptivePresentation3D
     /// so pieces read centered under BoardCamera3D without sinking into tiles.
     /// Nests are not shifted. Does not move PieceView3D roots or chain spacing.
     /// </summary>
-    public const float VisualCenterBoardPlaneOffsetLocal = 0.12f;
+    public const float VisualCenterBoardPlaneOffsetLocal = 0f;
 
     /// <summary>
     /// Board-plane local offset for <see cref="PieceView3D"/> visualRoot.

@@ -7,21 +7,21 @@ using UnityEngine;
 /// </summary>
 public static class ShapeVisuals3D
 {
-    /// <summary>Phase 6: solid movable pieces — soft plastic specular highlight catching studio key light.</summary>
+    /// <summary>Solid movable pieces — standard Unity Lit material response.</summary>
     public const float BlockMetallic = 0f;
-    public const float BlockSmoothness = 0.74f;
+    public const float BlockSmoothness = 0.5f;
 
-    /// <summary>Phase 6: recessed sockets — rim catches soft plastic highlight.</summary>
+    /// <summary>Recessed sockets — standard Unity Lit material response.</summary>
     public const float NestMetallic = 0f;
-    public const float NestSmoothness = 0.68f;
+    public const float NestSmoothness = 0.5f;
 
-    /// <summary>Phase 6: darker matte cavity floor/walls (same hue family).</summary>
+    /// <summary>Darker cavity floor/walls — matte response reads as genuine depth.</summary>
     public const float NestCavityMetallic = 0f;
-    public const float NestCavitySmoothness = 0.28f;
+    public const float NestCavitySmoothness = 0.15f; // Pass C: more matte = darker perceived cavity
 
-    /// <summary>Phase 6: chain bars share the same plastic family as blocks.</summary>
+    /// <summary>Chain bars share the same plastic family as blocks.</summary>
     public const float ConnectorMetallic = 0f;
-    public const float ConnectorSmoothness = 0.68f;
+    public const float ConnectorSmoothness = 0.74f;
 
     private static Material[] blockMaterials;
     private static Material[] nestMaterials;
@@ -156,7 +156,7 @@ public static class ShapeVisuals3D
             return;
         }
 
-        Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Shader lit = GetDefaultLitShader();
         int count = System.Enum.GetValues(typeof(ShapeType)).Length;
         blockMaterials = new Material[count];
         nestMaterials = new Material[count];
@@ -189,44 +189,37 @@ public static class ShapeVisuals3D
         initialized = true;
     }
 
-    private static Material CreateLit(Shader shader, string name, Color color, float metallic, float smoothness)
+    public static Shader GetDefaultLitShader()
     {
+        if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null)
+        {
+            return Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        }
+
+        return Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit");
+    }
+
+    private static Material CreateLit(Shader shader, string name, Color color, float metallic = 0f, float smoothness = 0f)
+    {
+        if (shader == null)
+        {
+            shader = GetDefaultLitShader();
+        }
+
         var material = new Material(shader)
         {
             name = name,
             color = color
         };
+
         if (material.HasProperty("_BaseColor"))
         {
             material.SetColor("_BaseColor", color);
         }
 
-        if (material.HasProperty("_Metallic"))
+        if (material.HasProperty("_Color"))
         {
-            material.SetFloat("_Metallic", metallic);
-        }
-
-        if (material.HasProperty("_Smoothness"))
-        {
-            material.SetFloat("_Smoothness", smoothness);
-        }
-
-        // Normal pieces must not rely on emission; keep keyword off.
-        if (material.HasProperty("_EmissionColor"))
-        {
-            material.SetColor("_EmissionColor", Color.black);
-            material.DisableKeyword("_EMISSION");
-        }
-
-        if (material.HasProperty("_SpecularHighlights"))
-        {
-            material.SetFloat("_SpecularHighlights", 1f);
-        }
-
-        if (material.HasProperty("_EnvironmentReflections"))
-        {
-            // Soft local specular from lights; avoid busy env reflections on mobile.
-            material.SetFloat("_EnvironmentReflections", 0f);
+            material.SetColor("_Color", color);
         }
 
         return material;
@@ -280,7 +273,7 @@ public static class ShapeVisuals3D
         Color resolved = isNest ? nestRim : blockColor;
         float metallic = isNest ? NestMetallic : BlockMetallic;
         float smoothness = isNest ? NestSmoothness : BlockSmoothness;
-        Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Shader lit = GetDefaultLitShader();
         string prefix = isNest ? "Nest3D_" : "Block3D_";
         Material created = CreateLit(lit, prefix + shape + "_" + color, resolved, metallic, smoothness);
         cache[key] = created;
@@ -300,7 +293,7 @@ public static class ShapeVisuals3D
         Color blockColor = ResolvePaletteColor(color, shape);
         Color nestRim = ResolveNestColor(shape, blockColor);
         Color nestCavity = ResolveNestCavityColor(nestRim, blockColor);
-        Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Shader lit = GetDefaultLitShader();
         Material cavity = CreateLit(
             lit,
             "NestCavity3D_" + shape + "_" + color,
@@ -330,8 +323,7 @@ public static class ShapeVisuals3D
 
         if (TryAverageOpaqueColor(sprite, out Color sampled))
         {
-            // Keep theme hue identity but push hard toward saturated toy look.
-            return Color.Lerp(Saturate(sampled, 1.45f, 0.95f), fallback, 0.35f);
+            return sampled;
         }
 
         return fallback;
@@ -339,18 +331,15 @@ public static class ShapeVisuals3D
 
     private static Color ResolveNestColor(ShapeType shape, Color blockColor)
     {
-        // Same hue family as block — rim stays the established nest identity color.
         _ = shape;
-        Color nest = Darken(Saturate(blockColor, 1.12f, 0.78f), 0.22f);
-        nest.a = 1f;
-        return nest;
+        return blockColor;
     }
 
     private static Color ResolveNestCavityColor(Color nestRim, Color blockColor)
     {
-        // Darker recess in the same family — not a new hue.
+        // 35% darkening for the inner cavity walls/floor — reads as deep recessed socket
         _ = blockColor;
-        Color cavity = Darken(nestRim, 0.36f);
+        Color cavity = Darken(nestRim, 0.35f);
         cavity.a = 1f;
         return cavity;
     }

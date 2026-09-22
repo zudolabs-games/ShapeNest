@@ -48,9 +48,17 @@ internal static class ShapeNestSolver
         }
 
         // BuildRuntimeState and related runtime-faithful start removed; using legacy SolverState for BFScompatibility
-        
-        // Use legacy SolverState for BFS
+
         SolverState start = CreateInitialState(level);
+        if (start.AllSettled)
+        {
+            result.Solution = new SolverMove[0];
+            result.MoveCount = 0;
+            result.Status = SolverStatus.Solved;
+            result.ReplayVerified = true;
+            return result;
+        }
+
         result.InitialMoveCount = CountLegalMoves(level, start);
         var queue = new Queue<SolverState>();
         var visited = new Dictionary<string, int>();

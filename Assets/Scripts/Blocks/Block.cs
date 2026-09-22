@@ -779,7 +779,11 @@ public class Block : MonoBehaviour
         dragSelected = true;
         RaiseInDrawOrder();
         AnimateSelectionScale(restScale * dragSelectScale, 1f);
-        ForEachWorldView(view => view.PlayTapFeedback());
+        ForEachWorldView(view =>
+        {
+            view.PlayTapFeedback();
+            view.SetDragRenderPriority(true);
+        });
     }
 
     /// <summary>
@@ -807,6 +811,7 @@ public class Block : MonoBehaviour
         visualState = isSettled ? VisualState.Settled : VisualState.Normal;
         CaptureRestScale();
         RestoreDrawOrder();
+        ForEachWorldView(view => view.SetDragRenderPriority(false));
         if (!isActiveAndEnabled)
         {
             StopSelectionRoutine();

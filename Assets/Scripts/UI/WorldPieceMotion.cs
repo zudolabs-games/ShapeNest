@@ -907,7 +907,7 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         }
     }
 
-    private void EnsureCarry(float cellAxis)
+    public void EnsureCarry(float cellAxis = 0f)
     {
         if (pieceView == null || carryActive || carryHasSettled)
         {
@@ -917,6 +917,11 @@ public class WorldPieceMotion : MonoBehaviour, IPieceMotion
         if (!IsGameplayDragging())
         {
             return;
+        }
+
+        if (cellAxis <= 0.0001f)
+        {
+            cellAxis = ResolveCellAxis();
         }
 
         BeginPickup(cellAxis, !pieceView.IsMotionLocked);

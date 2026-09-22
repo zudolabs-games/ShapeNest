@@ -207,7 +207,7 @@ public class IceView3D : MonoBehaviour
         if (shellRenderer != null && presentedDurability > 0 && shellRenderer.gameObject.activeInHierarchy)
         {
             float time = Time.time;
-            
+
             // Subtle crystalline specular shimmer on idle ice
             if (!IsPresentationAnimating)
             {
@@ -216,7 +216,7 @@ public class IceView3D : MonoBehaviour
                 shellRenderer.GetPropertyBlock(block);
                 block.SetFloat("_Shimmer", shimmer);
                 shellRenderer.SetPropertyBlock(block);
-                
+
                 if (Random.value < 0.003f)
                 {
                     BoardVfx3D.PlayIceSparkle(transform.position);
@@ -370,17 +370,17 @@ public class IceView3D : MonoBehaviour
         RefreshLayoutMetrics();
         presentedDurability = durability;
         targetDurability = durability;
-        
+
         float finalThickness = ThicknessForDurability(durability);
         float finalCrack = CrackAmountForDurability(durability);
-        
+
         presentedThickness = 0.001f;
         presentedFreezeProgress = 0.05f;
         presentedCrackAmount = finalCrack;
-        
+
         ApplyLayoutTransform(presentedThickness, 0.85f);
         ApplyAppearanceImmediate(durability, presentedFreezeProgress, presentedCrackAmount, 0f);
-        
+
         if (shell != null && !shell.gameObject.activeSelf)
         {
             shell.gameObject.SetActive(true);
@@ -398,26 +398,26 @@ public class IceView3D : MonoBehaviour
 
         KillOwnedTweens(false);
         activeSequence = DOTween.Sequence().SetLink(gameObject);
-        
+
         // Crystalline freeze-on growth transition
         activeSequence.Append(TweenAnimationUtility.Progress(FreezeOnDuration, t =>
         {
             float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
             presentedThickness = Mathf.LerpUnclamped(0.001f, finalThickness, eased);
             presentedFreezeProgress = Mathf.LerpUnclamped(0.05f, 1f, eased);
-            
+
             // Subtle crystalline bounce on freeze lock
             float xz = Mathf.LerpUnclamped(0.85f, 1.05f, eased);
             if (t > 0.8f)
             {
                 xz = Mathf.LerpUnclamped(1.05f, 1f, (t - 0.8f) * 5f);
             }
-            
+
             ApplyLayoutTransform(presentedThickness, xz);
             ApplyAppearanceImmediate(durability, presentedFreezeProgress, presentedCrackAmount, 0f);
         }));
-        
-        activeSequence.AppendCallback(() => 
+
+        activeSequence.AppendCallback(() =>
         {
             BoardVfx3D.PlayIceSparkle(transform.position);
         });
@@ -488,13 +488,13 @@ public class IceView3D : MonoBehaviour
             float eased = TweenAnimationUtility.EvaluateSmoothStep(t);
             presentedThickness = Mathf.LerpUnclamped(fromThickness, toThickness, eased);
             presentedCrackAmount = Mathf.LerpUnclamped(fromCrack, toCrack, eased);
-            
+
             // Impact pulse on damage
             float pulse = 1f + (0.04f * Mathf.Sin(eased * Mathf.PI));
             ApplyLayoutTransform(presentedThickness, pulse);
             ApplyAppearanceImmediate(to, 1f, presentedCrackAmount, 0.4f * (1f - eased));
         }));
-        
+
         activeSequence.OnComplete(() =>
         {
             presentedDurability = to;
@@ -558,7 +558,7 @@ public class IceView3D : MonoBehaviour
             ApplyLayoutTransform(presentedThickness, xz);
             ApplyAppearanceImmediate(1, presentedFreezeProgress, presentedCrackAmount, 0f);
         }));
-        
+
         activeSequence.OnComplete(() =>
         {
             FinishMelt();

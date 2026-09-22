@@ -553,6 +553,41 @@ public class BoardPresentationController : MonoBehaviour
     }
 
     /// <summary>
+    /// Explicit presentation sync for offline batch verification / screenshot captures.
+    /// Does not alter any gameplay state.
+    /// </summary>
+    public void ForceSyncPresentationEditor()
+    {
+        ClearAllPieceViewsImmediate();
+        Light key = FindNamedLight("BoardKeyLight");
+        if (key != null)
+        {
+            key.transform.rotation = Quaternion.Euler(45f, 28f, 0f);
+            key.intensity = 1.65f;
+            key.color = new Color(1.00f, 0.985f, 0.95f, 1f);
+        }
+        Light fill = FindNamedLight("BoardFillLight");
+        if (fill != null)
+        {
+            fill.transform.rotation = Quaternion.Euler(25f, 210f, 0f);
+            fill.intensity = 0.55f;
+            fill.color = new Color(0.70f, 0.68f, 0.95f, 1f);
+        }
+        RefreshAdaptivePresentation(force: true);
+        Block[] blocks = FindObjectsByType<Block>(FindObjectsSortMode.None);
+        Target[] targets = FindObjectsByType<Target>(FindObjectsSortMode.None);
+        IceState[] ices = FindObjectsByType<IceState>(FindObjectsSortMode.None);
+        ShutterState[] shutters = FindObjectsByType<ShutterState>(FindObjectsSortMode.None);
+
+        SyncWorldPieceViews(blocks, targets);
+        SyncWorldObstacleViews(ices, shutters);
+        SyncStaticObstacleView();
+        RefreshWorldPositions(blocks, targets);
+        FollowMultiCellWorldViews(blocks, targets);
+        SetUiBoardVisualsActive(false);
+    }
+
+    /// <summary>
     /// Presentation-only safety net: after nested outer peel, any leftover green mesh /
     /// NestedInner3D / residual under a logical survivor must be remeshed or destroyed.
     /// Does not change gameplay layers.
@@ -784,25 +819,25 @@ public class BoardPresentationController : MonoBehaviour
         if (boardLight != null)
         {
             boardLight.gameObject.SetActive(true);
-            // Phase 6: studio key light — 52° elevation catches shoulder bevels, soft grounding shadows.
-            boardLight.intensity = 2.10f;
+            // Key light from top-left (42° pitch, 30° yaw) casts soft diffuse shadow downward-right and highlights bevels.
+            boardLight.intensity = 1.65f;
             boardLight.color = new Color(1.00f, 0.985f, 0.95f, 1f);
             boardLight.shadows = LightShadows.Soft;
-            boardLight.shadowStrength = 0.50f;
-            boardLight.shadowBias = 0.015f;
-            boardLight.shadowNormalBias = 0.20f;
-            boardLight.transform.rotation = Quaternion.Euler(52f, 322f, 0f);
+            boardLight.shadowStrength = 0.38f;
+            boardLight.shadowBias = 0.005f;
+            boardLight.shadowNormalBias = 0.10f;
+            boardLight.transform.rotation = Quaternion.Euler(42f, 30f, 0f);
         }
 
         Light fillLight = FindNamedLight("BoardFillLight");
         if (fillLight != null)
         {
             fillLight.gameObject.SetActive(true);
-            // Phase 6: soft cool fill keeps side walls and nest cavities clearly readable with rich 3D depth.
-            fillLight.intensity = 0.65f;
-            fillLight.color = new Color(0.72f, 0.76f, 0.95f, 1f);
+            // Fill light from back-right (25° pitch, 210° yaw) softens cavities and prevents crushed blacks.
+            fillLight.intensity = 0.55f;
+            fillLight.color = new Color(0.70f, 0.68f, 0.95f, 1f);
             fillLight.shadows = LightShadows.None;
-            fillLight.transform.rotation = Quaternion.Euler(36f, 148f, 0f);
+            fillLight.transform.rotation = Quaternion.Euler(25f, 210f, 0f);
         }
 
         EnsureBoardEnvironment();
@@ -921,12 +956,13 @@ public class BoardPresentationController : MonoBehaviour
     {
         blockHeight = cell * BoardAdaptivePresentation3D.BlockHeightRatio;
         nestHeight = cell * BoardAdaptivePresentation3D.NestHeightRatio;
+        boardPresenter3D.transform.localRotation = Quaternion.Euler(BoardPresenter3D.DefaultPresentationRotationEuler);
         boardPresenter3D.ApplyPresentationScale(cell);
 
         if (centerOnArea)
         {
             Vector3 p = boardPresenter3D.transform.position;
-            boardPresenter3D.transform.position = new Vector3(areaCenter.x, p.y, areaCenter.z);
+            boardPresenter3D.transform.position = new Vector3(0f, p.y, 0f);
         }
     }
 
@@ -1459,13 +1495,13 @@ public class BoardPresentationController : MonoBehaviour
             }
             else
             {
-              
+
             }
 
             ShapeType nestOuter = target.GetOuterShapeAtIndex(target.AnchorCellIndex);
             ShapeColor nestOuterColor = target.GetOuterColorAtIndex(target.AnchorCellIndex);
             Material[] nestMaterials = ShapeVisuals3D.NestMaterialSet(nestOuter, nestOuterColor, theme);
-          
+
             view.ConfigureVisual(
                 nestOuter,
                 nestMaterials[0],
@@ -4080,6 +4116,7 @@ public class BoardPresentationController : MonoBehaviour
 
     public void ClearAllPieceViewsImmediate()
     {
+        ResolveReferences();
         var doomedBlocks = new List<PieceView3D>(worldViewsByBlockId.Values);
         for (int i = 0; i < doomedBlocks.Count; i++)
         {
@@ -4102,7 +4139,54 @@ public class BoardPresentationController : MonoBehaviour
         worldViewsByTargetId.Clear();
         extraViewsByTargetId.Clear();
 
+        foreach (var kvp in connectorsByBlockId)
+        {
+            if (kvp.Value != null)
+            {
+                for (int i = 0; i < kvp.Value.Count; i++)
+                {
+                    if (kvp.Value[i] != null)
+                    {
+                        DestroyConnector(kvp.Value[i]);
+                    }
+                }
+            }
+        }
+        connectorsByBlockId.Clear();
+
         ClearAllNestedInnerTravelersImmediate();
+
+        if (boardPresenter3D != null)
+        {
+            if (boardPresenter3D.PiecesRoot != null)
+            {
+                for (int i = boardPresenter3D.PiecesRoot.childCount - 1; i >= 0; i--)
+                {
+                    Transform child = boardPresenter3D.PiecesRoot.GetChild(i);
+                    if (child != null)
+                    {
+                        if (Application.isPlaying)
+                            Destroy(child.gameObject);
+                        else
+                            DestroyImmediate(child.gameObject);
+                    }
+                }
+            }
+            if (boardPresenter3D.NestsRoot != null)
+            {
+                for (int i = boardPresenter3D.NestsRoot.childCount - 1; i >= 0; i--)
+                {
+                    Transform child = boardPresenter3D.NestsRoot.GetChild(i);
+                    if (child != null)
+                    {
+                        if (Application.isPlaying)
+                            Destroy(child.gameObject);
+                        else
+                            DestroyImmediate(child.gameObject);
+                    }
+                }
+            }
+        }
     }
 
     private void SweepUnregisteredNestedInnerTravelers(bool immediate)
@@ -4501,6 +4585,10 @@ public class BoardPresentationController : MonoBehaviour
         if (boardPresenter3D == null)
         {
             boardPresenter3D = FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Include);
+        }
+        if (boardPresenter3D != null)
+        {
+            boardPresenter3D.transform.localRotation = Quaternion.Euler(BoardPresenter3D.DefaultPresentationRotationEuler);
         }
 
         if (boardCamera3D == null)

@@ -147,18 +147,8 @@ public class ChainConnectorView3D : MonoBehaviour
             return sharedCapsule;
         }
 
-        GameObject temp = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        Mesh source = temp.GetComponent<MeshFilter>().sharedMesh;
-        sharedCapsule = source;
-        if (Application.isPlaying)
-        {
-            Destroy(temp);
-        }
-        else
-        {
-            DestroyImmediate(temp);
-        }
-
+        sharedCapsule = Resources.GetBuiltinResource<Mesh>("Capsule.fbx")
+            ?? Resources.GetBuiltinResource<Mesh>("New-Capsule.fbx");
         return sharedCapsule;
     }
 }

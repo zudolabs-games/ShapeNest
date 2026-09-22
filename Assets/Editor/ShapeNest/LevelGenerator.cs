@@ -275,23 +275,23 @@ internal static class LevelGenerator
                 if (isNested[i]) nestedPiecesCount++;
                 if (targetLayouts[i].Count > 1) multiCellPiecesCount++;
             }
-            
+
             int idx = levelNumber - 6;
-            
+
             // Nested limits
-            int[] minNested = { 0, 1, 1, 1, 2, 2, 2, 2, 2, 2 }; 
-            int[] maxNested = { 1, 1, 2, 2, 4, 4, 5, 5, 5, 6 }; 
-            
+            int[] minNested = { 0, 1, 1, 1, 2, 2, 2, 2, 2, 2 };
+            int[] maxNested = { 1, 1, 2, 2, 4, 4, 5, 5, 5, 6 };
+
             if (nestedPiecesCount < minNested[idx] || nestedPiecesCount > maxNested[idx]) {
                 result.Outcome = GenerationOutcome.RejectedInvalid;
                 result.Message = "Nested count out of range.";
                 return result;
             }
-            
+
             // Multi-cell limits
             int[] minMulti = { 1, 1, 2, 2, 3, 3, 3, 4, 4, 4 };
             int[] maxMulti = { 1, 2, 3, 4, 4, 5, 5, 6, 6, 7 };
-            
+
             if (multiCellPiecesCount < minMulti[idx] || multiCellPiecesCount > maxMulti[idx]) {
                 result.Outcome = GenerationOutcome.RejectedInvalid;
                 result.Message = "Multi-cell piece count out of required range.";

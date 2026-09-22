@@ -209,7 +209,7 @@ namespace ShapeNest.Editor
 
                     // Red channel = crack progression threshold (0 = deep core, 1 = hairline tips)
                     float progress = crackCombined > 0.01f ? Mathf.Clamp01(crackCombined * severity) : 0f;
-                    
+
                     // Green channel = edge glow / internal refraction around crack
                     float glow = Mathf.Pow(crackCombined, 1.5f) * 0.8f;
 

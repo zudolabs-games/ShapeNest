@@ -79,10 +79,13 @@ public class BoardPresenter3D : MonoBehaviour
     private float builtCellSize;
     private float builtGap;
 
+    public static readonly Vector3 DefaultPresentationRotationEuler = new Vector3(9.31f, 0f, 0f);
+
     public IGridSpace GridSpace => gridSpace;
     public GridSpace3D GridSpace3D => gridSpace;
     public float CellWorldSize => cellWorldSize;
     public float CellGap => cellGap;
+    public float BoardThickness => boardThickness;
     public int BuiltWidth => builtWidth;
     public int BuiltHeight => builtHeight;
 
@@ -171,6 +174,7 @@ public class BoardPresenter3D : MonoBehaviour
 
     private void Awake()
     {
+        transform.localRotation = Quaternion.Euler(DefaultPresentationRotationEuler);
         EnsureHierarchy();
         gridSpace.Bind(transform);
         TryResolveBoardManager();
@@ -179,6 +183,7 @@ public class BoardPresenter3D : MonoBehaviour
 
     private void OnEnable()
     {
+        transform.localRotation = Quaternion.Euler(DefaultPresentationRotationEuler);
         EnsureHierarchy();
         gridSpace.Bind(transform);
         TryResolveBoardManager();
@@ -261,6 +266,7 @@ public class BoardPresenter3D : MonoBehaviour
 
     public void Rebuild(int gridWidth, int gridHeight)
     {
+        transform.localRotation = Quaternion.Euler(DefaultPresentationRotationEuler);
         EnsureHierarchy();
         gridSpace.Bind(transform);
 
@@ -394,32 +400,10 @@ public class BoardPresenter3D : MonoBehaviour
     private void RebuildSurface()
     {
         ClearChildren(surfaceRoot);
-        Vector2 footprint = gridSpace.GridFootprint;
-        float sizeX = footprint.x + framePadding * 2f;
-        float sizeZ = footprint.y + framePadding * 2f;
-        // Floor only — kept below cell tops so recessed tiles remain visible.
-        float floorHeight = Mathf.Max(0.08f, boardThickness - cellRecess - 0.02f);
-
-        if (ShapeNestVisualCatalog3D.TryGetBoardSurfacePrefab(out GameObject surfacePrefab))
+        if (surfaceRoot != null)
         {
-            GameObject instance = Instantiate(surfacePrefab);
-            instance.name = "Slab";
-            instance.transform.SetParent(surfaceRoot, false);
-            instance.transform.localPosition = new Vector3(0f, floorHeight * 0.5f, 0f);
-            instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = new Vector3(sizeX, floorHeight, sizeZ);
-            return;
+            surfaceRoot.gameObject.SetActive(false);
         }
-
-        GameObject slab = new GameObject("Slab");
-        slab.transform.SetParent(surfaceRoot, false);
-        slab.transform.localPosition = new Vector3(0f, floorHeight * 0.5f, 0f);
-        var filter = slab.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(sizeX, floorHeight, sizeZ, boardCornerRadius, 4);
-        slab.AddComponent<MeshRenderer>();
-        ApplyMaterial(slab, boardMaterial, new Color(0.07f, 0.06f, 0.20f, 1f));
-        // Phase 52J: darker matte slab so the playable well reads as a physical recess.
-        TuneSharedMaterial(boardMaterial, new Color(0.07f, 0.06f, 0.20f, 1f), 0f, 0.24f);
     }
 
     private void RebuildFrame()
@@ -430,57 +414,123 @@ public class BoardPresenter3D : MonoBehaviour
         float innerZ = footprint.y + framePadding * 2f;
         float outerX = innerX + frameWallThickness * 2f;
         float outerZ = innerZ + frameWallThickness * 2f;
-        float wallHeight = boardThickness + 0.1f;
-        float y = wallHeight * 0.5f;
+        float floorHeight = boardThickness;
+        float rimLipHeight = cellWorldSize * 0.28f;
+        float totalHeight = boardThickness + rimLipHeight;
+        float outerCorner = Mathf.Max(boardCornerRadius, frameWallThickness * 1.5f);
+        float innerCorner = Mathf.Max(0.08f, outerCorner - frameWallThickness * 0.8f);
+        float rimBevel = Mathf.Min(frameWallThickness * 0.35f, cellWorldSize * 0.12f);
 
         if (ShapeNestVisualCatalog3D.TryGetBoardFramePrefab(out GameObject framePrefab))
         {
             GameObject instance = Instantiate(framePrefab);
             instance.name = "DesignerFrame";
             instance.transform.SetParent(frameRoot, false);
-            instance.transform.localPosition = new Vector3(0f, y, 0f);
+            instance.transform.localPosition = new Vector3(0f, totalHeight * 0.5f, 0f);
             instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = new Vector3(outerX, wallHeight, outerZ);
+            instance.transform.localScale = new Vector3(outerX, totalHeight, outerZ);
             return;
         }
 
-        float zEdge = (outerZ * 0.5f) - (frameWallThickness * 0.5f);
-        float xEdge = (outerX * 0.5f) - (frameWallThickness * 0.5f);
-        float corner = Mathf.Min(boardCornerRadius * 0.55f, frameWallThickness * 0.9f);
+        GameObject tray = new GameObject("MoldedTray");
+        tray.transform.SetParent(frameRoot, false);
+        tray.transform.localPosition = Vector3.zero;
+        tray.transform.localRotation = Quaternion.identity;
+        tray.transform.localScale = Vector3.one;
 
-        CreateFrameWall("FrameNorth", new Vector3(0f, y, zEdge), new Vector3(outerX, wallHeight, frameWallThickness), corner);
-        CreateFrameWall("FrameSouth", new Vector3(0f, y, -zEdge), new Vector3(outerX, wallHeight, frameWallThickness), corner);
-        CreateFrameWall("FrameEast", new Vector3(xEdge, y, 0f), new Vector3(frameWallThickness, wallHeight, innerZ), corner);
-        CreateFrameWall("FrameWest", new Vector3(-xEdge, y, 0f), new Vector3(frameWallThickness, wallHeight, innerZ), corner);
-        TuneSharedMaterial(frameMaterial, new Color(0.17f, 0.13f, 0.37f, 1f), 0f, 0.32f);
+        var filter = tray.AddComponent<MeshFilter>();
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedBoardTray(
+            outerX,
+            outerZ,
+            innerX,
+            innerZ,
+            totalHeight,
+            floorHeight,
+            outerCorner,
+            innerCorner,
+            rimBevel,
+            8);
+
+        var renderer = tray.AddComponent<MeshRenderer>();
+        var matFrame = frameMaterial != null ? frameMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
+        var matFloor = boardMaterial != null ? boardMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
+
+        Color trayColor = new Color(0.40f, 0.33f, 0.78f, 1f);
+        // Pass B: very dark seam floor — creates the groove lines visible between cell tiles
+        Color basinSeamColor = new Color(0.06f, 0.07f, 0.13f, 1f);
+
+        TuneSharedMaterial(matFrame, trayColor, 0f, 0.82f);
+        TuneSharedMaterial(matFloor, basinSeamColor, 0f, 0.30f);
+        renderer.sharedMaterials = new Material[] { matFrame, matFloor };
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        renderer.receiveShadows = true;
+
+        // Grounding shadow: soft rounded-rect contact shadow hugging molded tray silhouette
+        GameObject shadowGo = new GameObject("GroundingShadow");
+        shadowGo.transform.SetParent(frameRoot, false);
+        shadowGo.transform.localPosition = new Vector3(0.06f, -0.015f, -0.10f);
+        shadowGo.transform.localRotation = Quaternion.identity;
+        shadowGo.transform.localScale = Vector3.one;
+
+        var shadowFilter = shadowGo.AddComponent<MeshFilter>();
+        shadowFilter.sharedMesh = BoardMeshFactory3D.GetSoftBoardContactShadow(
+            outerX,
+            outerZ,
+            outerCorner,
+            0.50f);
+
+        var shadowRenderer = shadowGo.AddComponent<MeshRenderer>();
+        shadowRenderer.sharedMaterial = GetGroundingShadowMaterial();
+        shadowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        shadowRenderer.receiveShadows = false;
     }
 
-    private void CreateFrameWall(string wallName, Vector3 localPos, Vector3 localScale, float cornerRadius)
+    private static Material sharedGroundingShadowMaterial;
+
+    private static Material GetGroundingShadowMaterial()
     {
-        GameObject wall = new GameObject(wallName);
-        wall.transform.SetParent(frameRoot, false);
-        wall.transform.localPosition = localPos;
-        var filter = wall.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetRoundedBox(
-            localScale.x,
-            localScale.y,
-            localScale.z,
-            Mathf.Min(cornerRadius, Mathf.Min(localScale.x, localScale.z) * 0.35f),
-            3);
-        wall.AddComponent<MeshRenderer>();
-        ApplyMaterial(wall, frameMaterial, new Color(0.19f, 0.14f, 0.39f, 1f));
+        if (sharedGroundingShadowMaterial != null)
+        {
+            return sharedGroundingShadowMaterial;
+        }
+
+        Shader shader = Shader.Find("Sprites/Default")
+            ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+            ?? Shader.Find("UI/Default")
+            ?? Shader.Find("Universal Render Pipeline/Unlit");
+
+        Color shadowTint = new Color(0.035f, 0.020f, 0.10f, 0.45f);
+        sharedGroundingShadowMaterial = new Material(shader)
+        {
+            name = "BoardGroundingShadow_Runtime",
+            color = shadowTint
+        };
+        if (sharedGroundingShadowMaterial.HasProperty("_Color"))
+        {
+            sharedGroundingShadowMaterial.SetColor("_Color", shadowTint);
+        }
+        if (sharedGroundingShadowMaterial.HasProperty("_BaseColor"))
+        {
+            sharedGroundingShadowMaterial.SetColor("_BaseColor", shadowTint);
+        }
+
+        return sharedGroundingShadowMaterial;
     }
 
     private void RebuildCells(int gridWidth, int gridHeight)
     {
         ClearChildren(cellsRoot);
-        float tileThickness = Mathf.Max(0.06f, cellRecess + 0.04f);
-        float tileFace = cellWorldSize * 0.88f;
-        float floorTop = Mathf.Max(0.08f, boardThickness - cellRecess - 0.02f);
-        float cellCenterY = floorTop + tileThickness * 0.5f;
+        float cellTopY = boardThickness;
 
-        // Keep GridSpace surface at cell top centers for future piece placement.
-        gridSpace.Configure(gridWidth, gridHeight, cellWorldSize, cellGap, floorTop + tileThickness);
+        // Keep GridSpace surface at playbed top for piece placement.
+        gridSpace.Configure(gridWidth, gridHeight, cellWorldSize, cellGap, cellTopY);
+
+        // Pass B: cell tile color — lighter than basin seam for 3-level value contrast
+        // purple rim (bright) → cell pad (mid-navy, specular) → seam groove (very dark)
+        Color playbedTileColor = new Color(0.18f, 0.20f, 0.36f, 1f);
+
+        var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
+        TuneSharedMaterial(matTile, playbedTileColor, 0f, 0.72f);
 
         for (int y = 0; y < gridHeight; y++)
         {
@@ -489,50 +539,42 @@ public class BoardPresenter3D : MonoBehaviour
                 Vector2Int cell = new Vector2Int(x, y);
                 Vector3 center = gridSpace.GridToLocal(cell);
 
-                // Single Socket Prototype Experiment: Render cell (0,0) as a 3D molded cavity prototype.
-                if (x == 0 && y == 0)
-                {
-                    GameObject protoTile = CreateMoldedSocketPrototypeTile(cell, cellWorldSize, cellRecess);
-                    protoTile.transform.SetParent(cellsRoot, false);
-                    protoTile.transform.localPosition = new Vector3(center.x, floorTop + tileThickness, center.z);
-                    protoTile.transform.localRotation = Quaternion.identity;
-                    protoTile.transform.localScale = Vector3.one;
-                    continue;
-                }
-
-                GameObject tile = CreateCellTile(cell, tileFace, tileThickness, out bool keepDesignerMaterials);
+                GameObject tile = CreateCellTile(cell, cellWorldSize, cellGap, out bool keepDesignerMaterials);
                 tile.transform.SetParent(cellsRoot, false);
-                tile.transform.localPosition = new Vector3(center.x, cellCenterY, center.z);
+                tile.transform.localPosition = new Vector3(center.x, cellTopY, center.z);
                 tile.transform.localRotation = Quaternion.identity;
                 tile.transform.localScale = Vector3.one;
                 if (!keepDesignerMaterials)
                 {
-                    ApplyMaterial(tile, cellMaterial, new Color(0.20f, 0.16f, 0.41f, 1f));
+                    var renderer = tile.GetComponent<MeshRenderer>();
+                    if (renderer != null)
+                    {
+                        renderer.sharedMaterial = matTile;
+                        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                        renderer.receiveShadows = true;
+                    }
                 }
             }
         }
-
-        // Phase 52J: readable molded slots — slightly lighter than slab, matte, subordinate to pieces.
-        TuneSharedMaterial(cellMaterial, new Color(0.20f, 0.16f, 0.41f, 1f), 0f, 0.34f);
     }
 
     private GameObject CreateMoldedSocketPrototypeTile(Vector2Int cell, float cellSize, float recessDepth)
     {
         GameObject tile = new GameObject($"Cell_Proto_{cell.x}_{cell.y}");
         var filter = tile.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetMoldedSocketTile(cellSize, recessDepth, 0.88f, cellSize * 0.18f);
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(cellSize, cellGap);
         var renderer = tile.AddComponent<MeshRenderer>();
 
-        var matShelf = boardMaterial != null ? boardMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-        var matCavity = cellMaterial != null ? cellMaterial : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+        var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
+        TuneSharedMaterial(matTile, new Color(0.18f, 0.20f, 0.36f, 1f), 0f, 0.72f);
 
-        renderer.sharedMaterials = new Material[] { matShelf, matCavity };
+        renderer.sharedMaterial = matTile;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         renderer.receiveShadows = true;
         return tile;
     }
 
-    private GameObject CreateCellTile(Vector2Int cell, float face, float thickness, out bool keepDesignerMaterials)
+    private GameObject CreateCellTile(Vector2Int cell, float cellSize, float gap, out bool keepDesignerMaterials)
     {
         keepDesignerMaterials = false;
         GameObject prefab = cellPrefab;
@@ -546,13 +588,13 @@ public class BoardPresenter3D : MonoBehaviour
         {
             GameObject instance = Instantiate(prefab);
             instance.name = $"Cell_{cell.x}_{cell.y}";
-            instance.transform.localScale = new Vector3(face, thickness, face);
+            instance.transform.localScale = new Vector3(cellSize, 0.05f, cellSize);
             return instance;
         }
 
         GameObject tile = new GameObject($"Cell_{cell.x}_{cell.y}");
         var filter = tile.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetCellTile(face, thickness, face, face * 0.12f);
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(cellSize, gap);
         tile.AddComponent<MeshRenderer>();
         return tile;
     }
@@ -600,12 +642,16 @@ public class BoardPresenter3D : MonoBehaviour
             return;
         }
 
-        var mat = new Material(Shader.Find("Universal Render Pipeline/Lit")
-            ?? Shader.Find("Standard"));
+        var mat = new Material(ShapeVisuals3D.GetDefaultLitShader());
         mat.color = fallbackColor;
         if (mat.HasProperty("_BaseColor"))
         {
             mat.SetColor("_BaseColor", fallbackColor);
+        }
+
+        if (mat.HasProperty("_Color"))
+        {
+            mat.SetColor("_Color", fallbackColor);
         }
 
         if (mat.HasProperty("_Smoothness"))
@@ -613,9 +659,24 @@ public class BoardPresenter3D : MonoBehaviour
             mat.SetFloat("_Smoothness", 0.4f);
         }
 
+        if (mat.HasProperty("_Glossiness"))
+        {
+            mat.SetFloat("_Glossiness", 0.4f);
+        }
+
         if (mat.HasProperty("_Metallic"))
         {
             mat.SetFloat("_Metallic", 0.02f);
+        }
+
+        if (mat.HasProperty("_SpecularHighlights"))
+        {
+            mat.SetFloat("_SpecularHighlights", 1f);
+        }
+
+        if (mat.HasProperty("_GlossyReflections"))
+        {
+            mat.SetFloat("_GlossyReflections", 1f);
         }
 
         renderer.sharedMaterial = mat;
@@ -636,6 +697,11 @@ public class BoardPresenter3D : MonoBehaviour
             material.SetColor("_BaseColor", color);
         }
 
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+
         if (material.HasProperty("_Metallic"))
         {
             material.SetFloat("_Metallic", metallic);
@@ -644,6 +710,21 @@ public class BoardPresenter3D : MonoBehaviour
         if (material.HasProperty("_Smoothness"))
         {
             material.SetFloat("_Smoothness", smoothness);
+        }
+
+        if (material.HasProperty("_Glossiness"))
+        {
+            material.SetFloat("_Glossiness", smoothness);
+        }
+
+        if (material.HasProperty("_SpecularHighlights"))
+        {
+            material.SetFloat("_SpecularHighlights", 1f);
+        }
+
+        if (material.HasProperty("_GlossyReflections"))
+        {
+            material.SetFloat("_GlossyReflections", 1f);
         }
     }
 }

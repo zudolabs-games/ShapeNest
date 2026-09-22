@@ -206,11 +206,13 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
     private void OnDisable()
     {
+        SetDragRenderPriority(false);
         ClearCarryPresentation(applyToTransform: false);
     }
 
     private void OnDestroy()
     {
+        SetDragRenderPriority(false);
         ClearCarryPresentation(applyToTransform: false);
     }
 
@@ -223,11 +225,12 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         Vector3 world = gridSpace.GridToWorld(gridPosition);
         float halfHeight = Mathf.Abs(transform.lossyScale.y) * 0.5f;
-        world.y += surfaceLift + halfHeight + PresentationLift;
+        Vector3 boardNormal = transform.parent != null ? transform.parent.up : transform.up;
+        world += boardNormal * (surfaceLift + halfHeight + PresentationLift);
         if (!PieceMotionMath.IsFinite(world))
         {
             world = gridSpace.GridToWorld(gridPosition);
-            world.y += surfaceLift + halfHeight;
+            world += boardNormal * (surfaceLift + halfHeight);
         }
 
         if (PieceMotionMath.IsFinite(world))
@@ -251,11 +254,12 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         Vector3 world = gridSpace.GridToWorld(gridPosition);
         float halfHeight = Mathf.Abs(transform.lossyScale.y) * 0.5f;
-        world.y += surfaceLift + halfHeight + PresentationLift;
+        Vector3 boardNormal = transform.parent != null ? transform.parent.up : transform.up;
+        world += boardNormal * (surfaceLift + halfHeight + PresentationLift);
         if (!PieceMotionMath.IsFinite(world))
         {
             world = gridSpace.GridToWorld(gridPosition);
-            world.y += surfaceLift + halfHeight;
+            world += boardNormal * (surfaceLift + halfHeight);
         }
 
         if (PieceMotionMath.IsFinite(world))
@@ -337,7 +341,8 @@ public class PieceView3D : MonoBehaviour, IPieceView
         if (applyToTransform && Mathf.Abs(lift) >= 0.00001f)
         {
             Vector3 world = transform.position;
-            world.y -= lift;
+            Vector3 boardNormal = transform.parent != null ? transform.parent.up : transform.up;
+            world -= boardNormal * lift;
             if (PieceMotionMath.IsFinite(world))
             {
                 transform.position = world;
@@ -551,12 +556,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
     private static Material CreateSoftContactShadowMaterial(string materialName, Color tint)
     {
-        // Particles/Unlit multiplies vertex colors → radial soft falloff from soft disc mesh.
-        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
-            ?? Shader.Find("Universal Render Pipeline/Unlit")
-            ?? Shader.Find("Sprites/Default")
-            ?? Shader.Find("Universal Render Pipeline/Lit")
-            ?? Shader.Find("Standard");
+        Shader shader = Shader.Find("Sprites/Default")
+            ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+            ?? Shader.Find("UI/Default")
+            ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
+            ?? Shader.Find("Universal Render Pipeline/Unlit");
 
         var material = new Material(shader)
         {
@@ -605,6 +609,77 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
 
         return material;
+    }
+
+    private const int NormalRenderQueue = 3000;
+    private const int DragRenderQueue = 3200;
+    private bool isDragRenderPriorityActive;
+
+    public bool IsDragRenderPriorityActive => isDragRenderPriorityActive;
+
+    /// <summary>
+    /// Temporary drag-only rendering priority boost so actively dragged shapes render above board overlays.
+    /// Restores to standard queue (3000) when drag ends.
+    /// </summary>
+    public void SetDragRenderPriority(bool active)
+    {
+        isDragRenderPriorityActive = active;
+        EnsureMeshComponents();
+        int targetQueue = active ? DragRenderQueue : NormalRenderQueue;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers == null)
+        {
+            return;
+        }
+
+        for (int r = 0; r < renderers.Length; r++)
+        {
+            Renderer rend = renderers[r];
+            if (rend == null || rend is ParticleSystemRenderer)
+            {
+                continue;
+            }
+
+            if (contactShadowRenderer != null && rend == contactShadowRenderer)
+            {
+                continue;
+            }
+
+            ApplyRenderQueueToRenderer(rend, targetQueue);
+        }
+    }
+
+    private static void ApplyRenderQueueToRenderer(Renderer renderer, int queue)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        Material[] mats = renderer.materials;
+        if (mats != null)
+        {
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (mats[i] != null && mats[i].renderQueue != queue)
+                {
+                    mats[i].renderQueue = queue;
+                }
+            }
+        }
+
+        Material[] sharedMats = renderer.sharedMaterials;
+        if (sharedMats != null)
+        {
+            for (int i = 0; i < sharedMats.Length; i++)
+            {
+                if (sharedMats[i] != null && sharedMats[i].renderQueue != queue)
+                {
+                    sharedMats[i].renderQueue = queue;
+                }
+            }
+        }
     }
 
     public void BeginMotionLock()
@@ -1197,9 +1272,8 @@ public class PieceView3D : MonoBehaviour, IPieceView
         configuredShape = shape;
         configuredAsNest = asNest;
         configuredSolidMaterial = material;
-        // Phase 5B: chunky physical volume under 63° camera pitch
-        float heightMultiplier = asNest ? 1.60f : 1.50f;
-        pieceHeight = Mathf.Max(0.01f, height * heightMultiplier);
+        // Chunky physical volume matching BoardAdaptivePresentation3D ratios
+        pieceHeight = Mathf.Max(0.01f, height);
 
         if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
         {
@@ -1267,10 +1341,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
             ApplyProceduralMaterials(material, asNest: false, shape, nestMaterials: null);
         }
 
-        // Blocks sit proudly on the cell; nests sit slightly recessed as destinations.
-        surfaceLift = asNest ? -0.02f : 0.025f;
-
+        // Pass C/D seating: target sockets sit with rim elevated above playbed cell face (no clipping).
+        // Blocks sit on cell surface and socket openings.
         float size = Mathf.Max(0.01f, footprint);
+        surfaceLift = asNest ? (0.5f * pieceHeight - 0.04f * size) : (0.5f * pieceHeight - 0.06f * size);
+
         transform.localScale = new Vector3(size, pieceHeight, size);
         configuredFootprintScale = transform.localScale;
         hasRestScale = false;
@@ -1729,6 +1804,10 @@ public class PieceView3D : MonoBehaviour, IPieceView
         StripColliders(designerVisualInstance);
         designerVisualRenderer = designerVisualInstance.GetComponentInChildren<MeshRenderer>(true);
         SetProceduralMeshVisible(false);
+        if (isDragRenderPriorityActive)
+        {
+            SetDragRenderPriority(true);
+        }
     }
 
     private void ClearDesignerVisual()
@@ -1768,6 +1847,11 @@ public class PieceView3D : MonoBehaviour, IPieceView
         if (nestedInnerRenderer != null)
         {
             nestedInnerRenderer.enabled = false;
+        }
+
+        if (isDragRenderPriorityActive)
+        {
+            SetDragRenderPriority(true);
         }
     }
 

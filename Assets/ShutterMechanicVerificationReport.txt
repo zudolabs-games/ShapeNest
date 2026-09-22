@@ -1,0 +1,46 @@
+Shutter Mechanic Verification
+Unity 6000.3.8f1
+Time: 2026-09-21T17:50:43.1592260+05:30
+PlayMode: False
+
+=== Source contract audit ===
+PASS: NotifySuccessfulMatch calls ConsumeSuccessfulMatch on every spawned shutter
+PASS: ConsumeAndRebuild notifies LevelManager once per successful cell consume
+PASS: ConsumeAndRebuild processes only the first focused nest cell per call
+PASS: ShutterState keeps a single durability int
+FAIL: ShutterState creates one durability label object
+FAIL: Closed shutter blocks movement via BoardManager
+FAIL: Auto-match skips blocks under closed shutters
+PASS: Open unlock unregisters shutter from BoardManager
+
+=== Existing shutter level assets ===
+FAIL: Level7 has one single-cell shutter
+FAIL: Level8 has multiple independent shutters
+FAIL: Level9 has multiple independent shutters
+FAIL: Level10 has one multi-cell shutter covering multiple structures
+
+=== Synthetic runtime cases ===
+PASS: Multi-cell shutter starts closed
+PASS: Multi-cell shutter covers all authored cells
+FAIL: Multi-cell shutter has exactly one durability TMP label
+PASS: Board blocks every covered cell while closed
+PASS: Match #1 decrements multi shutter exactly once (3→2)
+FAIL: After match #1 still exactly one durability label
+PASS: Match #2 decrements multi shutter exactly once (2→1)
+PASS: Match #3 opens shutter (1→0)
+PASS: Zero durability unlocks entire multi-cell region simultaneously
+FAIL: Independent shutters each have one durability label
+PASS: Global match decrements every closed shutter once
+PASS: Second global match opens A and leaves B closed
+PASS: Opened shutter A no longer blocks; B still blocks
+PASS: Opened shutter ignores further match consumes
+PASS: LevelManager.NotifySuccessfulMatch method exists
+PASS: LevelManager stores spawnedShutters list
+PASS: BoardManager shutter gate is cell/footprint based (structure-agnostic)
+
+=== Live scene / Play Mode inspection ===
+SKIP live Play Mode shutter spawn checks (Editor not in Play Mode).
+Open SampleScene, enter Play Mode, load Level10/Level8, then re-run this menu.
+
+
+SUMMARY: PASS=19 FAIL=10

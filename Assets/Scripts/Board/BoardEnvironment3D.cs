@@ -8,37 +8,26 @@ using UnityEngine;
 public class BoardEnvironment3D : MonoBehaviour
 {
     [SerializeField]
-    private Transform floor;
-
-    [SerializeField]
-    private Transform underBoardShadow;
+    private Transform backdropPlane;
 
     [SerializeField]
     private Camera targetCamera;
 
     [SerializeField]
-    private Color clearColor = new Color(0.137f, 0.098f, 0.392f, 1f);
+    private Color clearColor = new Color(0.145f, 0.110f, 0.330f, 1f);
 
     [SerializeField]
-    private Color floorColor = new Color(0.12f, 0.09f, 0.34f, 1f);
+    private Color ambientColor = new Color(0.25f, 0.21f, 0.42f, 1f);
 
-    [SerializeField]
-    private Color ambientColor = new Color(0.18f, 0.14f, 0.32f, 1f);
-
-    private static Material sharedFloorMaterial;
-    private static Material sharedShadowMaterial;
+    private static Material sharedBackdropMaterial;
 
     public void Apply(BoardPresenter3D board, Camera camera)
     {
         targetCamera = camera;
-        EnsureFloor();
-        EnsureUnderShadow(board);
 
-        // Soft indigo backdrop — board remains the colorful focus.
-        clearColor = new Color(0.09f, 0.06f, 0.26f, 1f);
-        floorColor = clearColor;
-        // Phase 6: rich indigo ambient for side/cavity depth without washing out key-light form.
-        ambientColor = new Color(0.32f, 0.28f, 0.48f, 1f);
+        // Reference video background: saturated clean indigo-purple #251c54.
+        clearColor = new Color(0.145f, 0.110f, 0.330f, 1f);
+        ambientColor = new Color(0.25f, 0.21f, 0.42f, 1f);
 
         if (targetCamera != null)
         {
@@ -46,159 +35,26 @@ public class BoardEnvironment3D : MonoBehaviour
             targetCamera.backgroundColor = clearColor;
         }
 
+        // Clean up any legacy fake shadow quads, discs, or floors.
+        CleanupLegacyShadowObjects();
+
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = ambientColor;
-        RenderSettings.ambientIntensity = 1.05f;
-        // Studio plastic sheen — controlled reflections.
-        RenderSettings.reflectionIntensity = 0.90f;
-
-        if (board != null)
-        {
-            Vector2 footprint = board.BoardFootprint;
-            float span = Mathf.Max(footprint.x, footprint.y) * 10f;
-            if (floor != null)
-            {
-                floor.position = new Vector3(board.transform.position.x, -0.06f, board.transform.position.z);
-                floor.localScale = new Vector3(span, 1f, span);
-                ApplyMatColor(floor.GetComponent<MeshRenderer>(), floorColor);
-            }
-
-            if (underBoardShadow != null)
-            {
-                float shadowSpan = Mathf.Max(footprint.x, footprint.y) * 1.05f;
-                underBoardShadow.position = new Vector3(
-                    board.BoardCenterWorld.x,
-                    0.002f,
-                    board.BoardCenterWorld.z + footprint.y * 0.04f);
-                underBoardShadow.localScale = new Vector3(shadowSpan, 1f, shadowSpan * 0.88f);
-                // Soft board grounding disc — supports cast shadows without a dark outline.
-                ApplyMatColor(underBoardShadow.GetComponent<MeshRenderer>(), new Color(0.01f, 0.005f, 0.04f, 0.62f));
-            }
-        }
+        RenderSettings.ambientIntensity = 1.0f;
+        RenderSettings.reflectionIntensity = 0.85f;
     }
 
-    private static void ApplyMatColor(MeshRenderer renderer, Color color)
+    private void CleanupLegacyShadowObjects()
     {
-        if (renderer == null || renderer.sharedMaterial == null)
+        string[] legacyNames = { "SoftFloor", "BoardContactShadow", "BoardFloor", "Floor", "BoardBackdropPlane" };
+        for (int i = 0; i < legacyNames.Length; i++)
         {
-            return;
-        }
-
-        renderer.sharedMaterial.color = color;
-        if (renderer.sharedMaterial.HasProperty("_BaseColor"))
-        {
-            renderer.sharedMaterial.SetColor("_BaseColor", color);
-        }
-    }
-
-    private void EnsureFloor()
-    {
-        if (floor == null)
-        {
-            Transform existing = transform.Find("SoftFloor");
-            if (existing != null)
+            Transform t = transform.Find(legacyNames[i]);
+            if (t != null)
             {
-                floor = existing;
+                if (Application.isPlaying) Destroy(t.gameObject);
+                else DestroyImmediate(t.gameObject);
             }
-            else
-            {
-                var go = new GameObject("SoftFloor");
-                go.transform.SetParent(transform, false);
-                var filter = go.AddComponent<MeshFilter>();
-                filter.sharedMesh = BoardMeshFactory3D.GetShadowDisc(48);
-                var renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = GetFloorMaterial();
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = true;
-                floor = go.transform;
-            }
-        }
-    }
-
-    private void EnsureUnderShadow(BoardPresenter3D board)
-    {
-        if (underBoardShadow == null)
-        {
-            Transform existing = transform.Find("BoardContactShadow");
-            if (existing != null)
-            {
-                underBoardShadow = existing;
-            }
-            else
-            {
-                var go = new GameObject("BoardContactShadow");
-                go.transform.SetParent(transform, false);
-                var filter = go.AddComponent<MeshFilter>();
-                filter.sharedMesh = BoardMeshFactory3D.GetShadowDisc(40);
-                var renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = GetShadowMaterial();
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                underBoardShadow = go.transform;
-            }
-        }
-    }
-
-    private static Material GetFloorMaterial()
-    {
-        if (sharedFloorMaterial != null)
-        {
-            return sharedFloorMaterial;
-        }
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        sharedFloorMaterial = new Material(shader)
-        {
-            name = "BoardFloor3D_Runtime",
-            color = new Color(0.11f, 0.08f, 0.32f, 1f)
-        };
-        ApplyLit(sharedFloorMaterial, sharedFloorMaterial.color, 0f, 0.15f);
-        return sharedFloorMaterial;
-    }
-
-    private static Material GetShadowMaterial()
-    {
-        if (sharedShadowMaterial != null)
-        {
-            return sharedShadowMaterial;
-        }
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-        sharedShadowMaterial = new Material(shader)
-        {
-            name = "BoardContactShadow3D_Runtime",
-            color = new Color(0.02f, 0.01f, 0.06f, 0.55f)
-        };
-        ApplyLit(sharedShadowMaterial, sharedShadowMaterial.color, 0f, 0f);
-        if (sharedShadowMaterial.HasProperty("_Surface"))
-        {
-            sharedShadowMaterial.SetFloat("_Surface", 1f);
-            sharedShadowMaterial.SetOverrideTag("RenderType", "Transparent");
-            sharedShadowMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            sharedShadowMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            sharedShadowMaterial.SetInt("_ZWrite", 0);
-            sharedShadowMaterial.renderQueue = 3000;
-            sharedShadowMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        }
-
-        return sharedShadowMaterial;
-    }
-
-    private static void ApplyLit(Material material, Color color, float metallic, float smoothness)
-    {
-        if (material.HasProperty("_BaseColor"))
-        {
-            material.SetColor("_BaseColor", color);
-        }
-
-        if (material.HasProperty("_Metallic"))
-        {
-            material.SetFloat("_Metallic", metallic);
-        }
-
-        if (material.HasProperty("_Smoothness"))
-        {
-            material.SetFloat("_Smoothness", smoothness);
         }
     }
 }

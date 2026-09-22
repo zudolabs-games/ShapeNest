@@ -421,7 +421,7 @@ public class InputManager : MonoBehaviour
         EndActiveDragAndClear();
         pressScreenPosition = screenPosition;
         latestScreenPosition = screenPosition;
-      
+
 
         if (IsPointerOverBlockingUI(screenPosition, out string uiName))
         {

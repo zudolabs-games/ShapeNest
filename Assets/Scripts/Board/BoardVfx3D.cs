@@ -121,7 +121,7 @@ public static class BoardVfx3D
             "IceFreezeFrostVFX",
             0.045f * s,
             BurstFeel.IceBreak);
-            
+
         Color mist = new Color(0.85f, 0.94f, 1.0f, 0.40f);
         SpawnBurst(
             worldPosition + Vector3.up * (0.012f * s),
