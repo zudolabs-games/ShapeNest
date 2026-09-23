@@ -18,7 +18,7 @@ public class BoardCamera3D : MonoBehaviour
     [SerializeField]
     [Tooltip("Pitch above the board in degrees (0 = horizontal, 90 = top-down).")]
     [Range(15f, 90f)]
-    private float lookPitch = 90f;
+    private float lookPitch = 54f;
 
     [SerializeField]
     [Min(0.1f)]
@@ -33,19 +33,19 @@ public class BoardCamera3D : MonoBehaviour
     [SerializeField]
     [Range(0.4f, 0.98f)]
     [Tooltip("Target board height as a fraction of the Gameplay Area (or full Game view fallback).")]
-    private float targetVerticalFill = 0.85f;
+    private float targetVerticalFill = 0.88f;
 
     [SerializeField]
     [Range(0.55f, 0.98f)]
     [Tooltip("Target board width as a fraction of the Gameplay Area (or full Game view fallback).")]
-    private float targetHorizontalFill = 0.88f;
+    private float targetHorizontalFill = 0.92f;
 
     [SerializeField]
     [Tooltip("Look-at bias in world space. Under default pitch, -Z raises the board on screen; +Z lowers it.")]
     private Vector3 lookOffset = new Vector3(0f, 0f, 0f);
 
     [SerializeField]
-    private bool useOrthographic = true;
+    private bool useOrthographic = false;
 
     private float lastFramedAspect = -1f;
     private Vector2 lastGameplayScreenSize = new Vector2(-1f, -1f);
@@ -152,6 +152,14 @@ public class BoardCamera3D : MonoBehaviour
         {
             cachedCamera.orthographic = true;
 
+            // Project board depth and physical thickness onto camera image plane:
+            // The camera looks down at pitch theta (e.g. 72°), so board Z and block/board Y project vertically.
+            float pitchRad = lookPitch * Mathf.Deg2Rad;
+            float sinPitch = Mathf.Sin(pitchRad);
+            float cosPitch = Mathf.Cos(pitchRad);
+            float totalThickness = board.CellWorldSize * (BoardAdaptivePresentation3D.ThicknessRatio + BoardAdaptivePresentation3D.BlockHeightRatio);
+            float projectedExtY = (footprint.y * sinPitch) + (totalThickness * cosPitch);
+
             Rect gpScreen = default;
             bool hasGameplayRect = gameplayArea != null
                 && BoardAdaptivePresentation3D.TryGetScreenRect(gameplayArea, out gpScreen)
@@ -163,16 +171,15 @@ public class BoardCamera3D : MonoBehaviour
                 float screenW = Mathf.Max(1f, ResolveScreenWidth());
                 float gpFracH = gpScreen.height / screenH;
                 float gpFracW = gpScreen.width / screenW;
-                float sizeByHeight = (footprint.y * 0.5f) / Mathf.Max(0.05f, gpFracH * targetVerticalFill);
+                float sizeByHeight = (projectedExtY * 0.5f) / Mathf.Max(0.05f, gpFracH * targetVerticalFill);
                 float sizeByWidth = (footprint.x * 0.5f) / (aspect * Mathf.Max(0.05f, gpFracW * targetHorizontalFill));
                 cachedCamera.orthographicSize = Mathf.Max(sizeByHeight, sizeByWidth) * distanceMultiplier;
                 lastGameplayScreenSize = gpScreen.size;
             }
             else
             {
-                float halfSpan = span * 0.5f;
-                float sizeByHeight = halfSpan / Mathf.Max(0.05f, targetVerticalFill);
-                float sizeByWidth = halfSpan / (aspect * Mathf.Max(0.05f, targetHorizontalFill));
+                float sizeByHeight = (projectedExtY * 0.5f) / Mathf.Max(0.05f, targetVerticalFill);
+                float sizeByWidth = (footprint.x * 0.5f) / (aspect * Mathf.Max(0.05f, targetHorizontalFill));
                 cachedCamera.orthographicSize = Mathf.Max(sizeByHeight, sizeByWidth) * distanceMultiplier;
                 lastGameplayScreenSize = new Vector2(-1f, -1f);
             }
@@ -190,32 +197,35 @@ public class BoardCamera3D : MonoBehaviour
             cachedCamera.orthographic = false;
             cachedCamera.fieldOfView = fieldOfView;
 
+            float pitchRad = lookPitch * Mathf.Deg2Rad;
+            float sinPitch = Mathf.Sin(pitchRad);
+            float cosPitch = Mathf.Cos(pitchRad);
+
+            float totalThickness = board.CellWorldSize * (BoardAdaptivePresentation3D.ThicknessRatio + BoardAdaptivePresentation3D.BlockHeightRatio);
+            float projectedExtY = (footprint.y * sinPitch) + (totalThickness * cosPitch);
+            float projectedExtX = footprint.x;
+
+            float halfFovRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
+            float tanHalfFov = Mathf.Tan(halfFovRad);
+
             Rect gpScreen = default;
             bool hasGameplayRect = gameplayArea != null
                 && BoardAdaptivePresentation3D.TryGetScreenRect(gameplayArea, out gpScreen)
                 && gpScreen.height > 2f
                 && gpScreen.width > 2f;
 
-            float distByWidth;
-            float distByHeight;
+            float fillH = targetVerticalFill;
+            float fillW = targetHorizontalFill;
+            if (hasGameplayRect)
+            {
+                float screenH = Mathf.Max(1f, ResolveScreenHeight());
+                float screenW = Mathf.Max(1f, ResolveScreenWidth());
+                fillH *= (gpScreen.height / screenH);
+                fillW *= (gpScreen.width / screenW);
+            }
 
-            float effectiveAngleDeg = Mathf.Clamp(30f - lookPitch, 15f, 85f);
-            float effectiveAngleRad = effectiveAngleDeg * Mathf.Deg2Rad;
-            float halfFovRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
-            float tanHalfFov = Mathf.Tan(halfFovRad);
-
-            float totalThickness = board.CellWorldSize * (BoardAdaptivePresentation3D.ThicknessRatio + BoardAdaptivePresentation3D.BlockHeightRatio);
-            float projectedExtY = (footprint.y * Mathf.Sin(effectiveAngleRad) + totalThickness * Mathf.Cos(effectiveAngleRad)) * 0.5f;
-            float projectedExtX = footprint.x * 0.5f;
-
-            float fillH = Mathf.Clamp(targetVerticalFill, 0.4f, 0.98f);
-            float fillW = Mathf.Clamp(targetHorizontalFill, 0.55f, 0.98f);
-
-            float effectiveTanH = tanHalfFov * fillH;
-            float effectiveTanW = aspect * tanHalfFov * fillW;
-
-            distByHeight = projectedExtY / Mathf.Max(0.01f, effectiveTanH);
-            distByWidth = projectedExtX / Mathf.Max(0.01f, effectiveTanW);
+            float distByHeight = (projectedExtY * 0.5f) / Mathf.Max(0.01f, tanHalfFov * fillH);
+            float distByWidth = (projectedExtX * 0.5f) / Mathf.Max(0.01f, aspect * tanHalfFov * fillW);
 
             float requiredDist = Mathf.Max(distByHeight, distByWidth) * distanceMultiplier;
             Quaternion rotation = Quaternion.Euler(lookPitch, 0f, 0f);
@@ -228,18 +238,18 @@ public class BoardCamera3D : MonoBehaviour
     }
 
     /// <summary>
-    /// Reference composition defaults: top-down orthographic camera (90° pitch),
-    /// rendering symmetrical molded tray with clean grid alignment.
-    /// Occupies 85-88% of screen width with safe portrait margins for HUD and boosters.
+    /// Reference composition defaults: Perspective mode with ~54° pitch camera showing top faces
+    /// clearly while retaining rich 3D block depth and visible front walls.
+    /// Matches the reference game where blocks read as chunky solid plastic toys in perspective.
     /// </summary>
     public void ApplyArtDirectionDefaults()
     {
-        useOrthographic = true;
-        lookPitch = 90f;
+        useOrthographic = false;
+        lookPitch = 54f;
         distanceMultiplier = 1.0f;
         orthographicSpanFactor = 0.85f;
-        targetVerticalFill = 0.82f;
-        targetHorizontalFill = 0.86f;
+        targetVerticalFill = 0.88f;
+        targetHorizontalFill = 0.92f;
         lookOffset = new Vector3(0f, 0f, 0f);
         fieldOfView = 36f;
     }

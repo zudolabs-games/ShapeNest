@@ -14,10 +14,10 @@ public class BoardEnvironment3D : MonoBehaviour
     private Camera targetCamera;
 
     [SerializeField]
-    private Color clearColor = new Color(0.145f, 0.110f, 0.330f, 1f);
+    private Color clearColor = new Color(0.165f, 0.120f, 0.430f, 1f);
 
     [SerializeField]
-    private Color ambientColor = new Color(0.25f, 0.21f, 0.42f, 1f);
+    private Color ambientColor = new Color(0.320f, 0.280f, 0.520f, 1f);
 
     private static Material sharedBackdropMaterial;
 
@@ -25,9 +25,9 @@ public class BoardEnvironment3D : MonoBehaviour
     {
         targetCamera = camera;
 
-        // Reference video background: saturated clean indigo-purple #251c54.
-        clearColor = new Color(0.145f, 0.110f, 0.330f, 1f);
-        ambientColor = new Color(0.25f, 0.21f, 0.42f, 1f);
+        // Reference video background: saturated clean indigo-purple #2A1F6E.
+        clearColor = new Color(0.165f, 0.120f, 0.430f, 1f);
+        ambientColor = new Color(0.320f, 0.280f, 0.520f, 1f);
 
         if (targetCamera != null)
         {

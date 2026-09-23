@@ -622,7 +622,7 @@ public class IceView3D : MonoBehaviour
 
         shellRenderer.SetPropertyBlock(block);
 
-        Debug.Log($"[ICE_TEXTURE_BINDING] IceView3D ID={GetInstanceID()} -> ShellRenderer='{shellRenderer.name}', Material='{(mat != null ? mat.name : "null")}', Shader='{(mat != null && mat.shader != null ? mat.shader.name : "null")}', _IceTex='{(iceTex != null ? iceTex.name : "NULL")}'");
+       // Debug.Log($"[ICE_TEXTURE_BINDING] IceView3D ID={GetInstanceID()} -> ShellRenderer='{shellRenderer.name}', Material='{(mat != null ? mat.name : "null")}', Shader='{(mat != null && mat.shader != null ? mat.shader.name : "null")}', _IceTex='{(iceTex != null ? iceTex.name : "NULL")}'");
     }
 
     private void KillOwnedTweens(bool complete)

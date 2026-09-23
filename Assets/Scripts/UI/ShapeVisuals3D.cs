@@ -9,15 +9,15 @@ public static class ShapeVisuals3D
 {
     /// <summary>Solid movable pieces — standard Unity Lit material response.</summary>
     public const float BlockMetallic = 0f;
-    public const float BlockSmoothness = 0.5f;
+    public const float BlockSmoothness = 0.70f;
 
     /// <summary>Recessed sockets — standard Unity Lit material response.</summary>
     public const float NestMetallic = 0f;
-    public const float NestSmoothness = 0.5f;
+    public const float NestSmoothness = 0.68f;
 
-    /// <summary>Darker cavity floor/walls — matte response reads as genuine depth.</summary>
+    /// <summary>Darker cavity floor/walls — glossy molded plastic matching block smoothness.</summary>
     public const float NestCavityMetallic = 0f;
-    public const float NestCavitySmoothness = 0.15f; // Pass C: more matte = darker perceived cavity
+    public const float NestCavitySmoothness = 0.68f;
 
     /// <summary>Chain bars share the same plastic family as blocks.</summary>
     public const float ConnectorMetallic = 0f;
@@ -222,6 +222,31 @@ public static class ShapeVisuals3D
             material.SetColor("_Color", color);
         }
 
+        if (material.HasProperty("_Metallic"))
+        {
+            material.SetFloat("_Metallic", metallic);
+        }
+
+        if (material.HasProperty("_Smoothness"))
+        {
+            material.SetFloat("_Smoothness", smoothness);
+        }
+
+        if (material.HasProperty("_Glossiness"))
+        {
+            material.SetFloat("_Glossiness", smoothness);
+        }
+
+        if (material.HasProperty("_SpecularHighlights"))
+        {
+            material.SetFloat("_SpecularHighlights", 1f);
+        }
+
+        if (material.HasProperty("_GlossyReflections"))
+        {
+            material.SetFloat("_GlossyReflections", 1f);
+        }
+
         return material;
     }
 
@@ -337,9 +362,9 @@ public static class ShapeVisuals3D
 
     private static Color ResolveNestCavityColor(Color nestRim, Color blockColor)
     {
-        // 35% darkening for the inner cavity walls/floor — reads as deep recessed socket
+        // 12% shading for inner cavity — vibrant, glossy molded plastic matching reference toy sockets.
         _ = blockColor;
-        Color cavity = Darken(nestRim, 0.35f);
+        Color cavity = Darken(nestRim, 0.12f);
         cavity.a = 1f;
         return cavity;
     }

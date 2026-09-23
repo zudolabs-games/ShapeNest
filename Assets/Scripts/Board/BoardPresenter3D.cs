@@ -79,7 +79,7 @@ public class BoardPresenter3D : MonoBehaviour
     private float builtCellSize;
     private float builtGap;
 
-    public static readonly Vector3 DefaultPresentationRotationEuler = new Vector3(9.31f, 0f, 0f);
+    public static readonly Vector3 DefaultPresentationRotationEuler = new Vector3(0f, 0f, 0f);
 
     public IGridSpace GridSpace => gridSpace;
     public GridSpace3D GridSpace3D => gridSpace;
@@ -415,7 +415,7 @@ public class BoardPresenter3D : MonoBehaviour
         float outerX = innerX + frameWallThickness * 2f;
         float outerZ = innerZ + frameWallThickness * 2f;
         float floorHeight = boardThickness;
-        float rimLipHeight = cellWorldSize * 0.28f;
+        float rimLipHeight = cellWorldSize * 0.35f;
         float totalHeight = boardThickness + rimLipHeight;
         float outerCorner = Mathf.Max(boardCornerRadius, frameWallThickness * 1.5f);
         float innerCorner = Mathf.Max(0.08f, outerCorner - frameWallThickness * 0.8f);
@@ -455,11 +455,11 @@ public class BoardPresenter3D : MonoBehaviour
         var matFrame = frameMaterial != null ? frameMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
         var matFloor = boardMaterial != null ? boardMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
 
-        Color trayColor = new Color(0.40f, 0.33f, 0.78f, 1f);
-        // Pass B: very dark seam floor — creates the groove lines visible between cell tiles
-        Color basinSeamColor = new Color(0.06f, 0.07f, 0.13f, 1f);
+        Color trayColor = new Color(0.33f, 0.21f, 0.83f, 1f);
+        // Deep midnight purple-black seam floor — creates clean groove contrast between cell tiles
+        Color basinSeamColor = new Color(0.06f, 0.04f, 0.18f, 1f);
 
-        TuneSharedMaterial(matFrame, trayColor, 0f, 0.82f);
+        TuneSharedMaterial(matFrame, trayColor, 0f, 0.80f);
         TuneSharedMaterial(matFloor, basinSeamColor, 0f, 0.30f);
         renderer.sharedMaterials = new Material[] { matFrame, matFloor };
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
@@ -468,7 +468,7 @@ public class BoardPresenter3D : MonoBehaviour
         // Grounding shadow: soft rounded-rect contact shadow hugging molded tray silhouette
         GameObject shadowGo = new GameObject("GroundingShadow");
         shadowGo.transform.SetParent(frameRoot, false);
-        shadowGo.transform.localPosition = new Vector3(0.06f, -0.015f, -0.10f);
+        shadowGo.transform.localPosition = new Vector3(0.07f, -0.015f, -0.12f);
         shadowGo.transform.localRotation = Quaternion.identity;
         shadowGo.transform.localScale = Vector3.one;
 
@@ -477,7 +477,7 @@ public class BoardPresenter3D : MonoBehaviour
             outerX,
             outerZ,
             outerCorner,
-            0.50f);
+            0.58f);
 
         var shadowRenderer = shadowGo.AddComponent<MeshRenderer>();
         shadowRenderer.sharedMaterial = GetGroundingShadowMaterial();
@@ -499,7 +499,7 @@ public class BoardPresenter3D : MonoBehaviour
             ?? Shader.Find("UI/Default")
             ?? Shader.Find("Universal Render Pipeline/Unlit");
 
-        Color shadowTint = new Color(0.035f, 0.020f, 0.10f, 0.45f);
+        Color shadowTint = new Color(0.025f, 0.015f, 0.08f, 0.60f);
         sharedGroundingShadowMaterial = new Material(shader)
         {
             name = "BoardGroundingShadow_Runtime",
@@ -527,10 +527,10 @@ public class BoardPresenter3D : MonoBehaviour
 
         // Pass B: cell tile color — lighter than basin seam for 3-level value contrast
         // purple rim (bright) → cell pad (mid-navy, specular) → seam groove (very dark)
-        Color playbedTileColor = new Color(0.18f, 0.20f, 0.36f, 1f);
+        Color playbedTileColor = new Color(0.14f, 0.12f, 0.34f, 1f);
 
         var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
-        TuneSharedMaterial(matTile, playbedTileColor, 0f, 0.72f);
+        TuneSharedMaterial(matTile, playbedTileColor, 0f, 0.65f);
 
         for (int y = 0; y < gridHeight; y++)
         {
@@ -566,7 +566,7 @@ public class BoardPresenter3D : MonoBehaviour
         var renderer = tile.AddComponent<MeshRenderer>();
 
         var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
-        TuneSharedMaterial(matTile, new Color(0.18f, 0.20f, 0.36f, 1f), 0f, 0.72f);
+        TuneSharedMaterial(matTile, new Color(0.14f, 0.12f, 0.34f, 1f), 0f, 0.65f);
 
         renderer.sharedMaterial = matTile;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;

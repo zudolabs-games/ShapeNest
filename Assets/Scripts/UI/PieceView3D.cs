@@ -80,6 +80,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
     public ShapeType ConfiguredShape => configuredShape;
     public Material ConfiguredSolidMaterial => configuredSolidMaterial;
     public bool ConfiguredAsNest => configuredAsNest;
+    public bool IsMultiCellConfigured => meshFilter != null && meshFilter.sharedMesh != null && meshFilter.sharedMesh.name.StartsWith("ShapeNestMulti");
     public bool HasNestedInner => hasNestedInner && nestedInnerRoot != null && nestedInnerRoot.gameObject.activeSelf;
     /// <summary>Phase 79G: presentation-only recessed cavity child under Mesh.</summary>
     public bool HasSocketCavity => hasSocketCavity && socketCavityRoot != null && socketCavityRoot.gameObject.activeSelf;
@@ -1275,13 +1276,8 @@ public class PieceView3D : MonoBehaviour, IPieceView
         // Chunky physical volume matching BoardAdaptivePresentation3D ratios
         pieceHeight = Mathf.Max(0.01f, height);
 
-        if (ShapeNestVisualCatalog3D.TryGetPiecePrefab(shape, asNest, out GameObject prefab))
-        {
-            ClearSocketCavity();
-            ApplyDesignerVisual(prefab);
-            ApplyMaterialToActiveVisual(material, asNest, nestMaterials);
-        }
-        else if (asNest)
+        // Procedural World3D piece presentation with molded shape sockets.
+        if (asNest)
         {
             // Phase 79G: split procedural nest into locked rim (Mesh) + movable SocketCavity3D.
             ClearDesignerVisual();
@@ -1327,7 +1323,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
         {
             ClearSocketCavity();
             ClearDesignerVisual();
-            Mesh mesh = ShapeMeshFactory3D.GetSolidMesh(shape);
+            Mesh mesh = ShapeMeshFactory3D.GetNestMesh(shape);
             if (meshFilter != null)
             {
                 meshFilter.sharedMesh = mesh;
@@ -1338,7 +1334,13 @@ public class PieceView3D : MonoBehaviour, IPieceView
                 visualRoot.localRotation = Quaternion.identity;
             }
 
-            ApplyProceduralMaterials(material, asNest: false, shape, nestMaterials: null);
+            Material blockMat = material != null ? material : ShapeVisuals3D.BlockMaterial(shape);
+            Material cavityMat = ShapeVisuals3D.NestCavityMaterial(shape);
+
+            if (meshRenderer != null && blockMat != null)
+            {
+                meshRenderer.sharedMaterials = new[] { blockMat, cavityMat };
+            }
         }
 
         // Pass C/D seating: target sockets sit with rim elevated above playbed cell face (no clipping).
@@ -1356,6 +1358,80 @@ public class PieceView3D : MonoBehaviour, IPieceView
         if (activate)
         {
             EnsurePresentationVisible();
+        }
+    }
+
+    public void ConfigureMultiCellVisual(
+        Block block,
+        Material material,
+        float footprint,
+        float height,
+        bool activate = true)
+    {
+        if (block == null || block.CellCount <= 1)
+        {
+            ConfigureVisual(block != null ? block.ShapeType : ShapeType.Square, material, asNest: false, footprint, height, nestMaterials: null, activate: activate);
+            return;
+        }
+
+        EnsureMeshComponents();
+        configuredShape = block.ShapeType;
+        configuredAsNest = false;
+        configuredSolidMaterial = material;
+        pieceHeight = Mathf.Max(0.01f, height);
+
+        ClearSocketCavity();
+        ClearDesignerVisual();
+
+        Mesh mesh = ShapeMeshFactory3D.GetMultiCellNestMesh(block.Cells, block.ShapeType);
+        if (meshFilter != null)
+        {
+            meshFilter.sharedMesh = mesh;
+        }
+
+        if (visualRoot != null)
+        {
+            visualRoot.localRotation = Quaternion.identity;
+        }
+
+        Material blockMat = material != null ? material : ShapeVisuals3D.BlockMaterial(block.ShapeType);
+        Material cavityMat = ShapeVisuals3D.NestCavityMaterial(block.ShapeType);
+
+        if (meshRenderer != null && blockMat != null)
+        {
+            meshRenderer.sharedMaterials = new[] { blockMat, cavityMat };
+            meshRenderer.enabled = true;
+        }
+
+        // Multi-cell mesh uses 1.0 unit cell spacing, so XZ scale maps to full cellWorldSize
+        float size = Mathf.Max(0.01f, footprint / BoardAdaptivePresentation3D.BlockFootprintRatio);
+        surfaceLift = 0.5f * pieceHeight - 0.06f * footprint;
+
+        transform.localScale = new Vector3(size, pieceHeight, size);
+        configuredFootprintScale = transform.localScale;
+        hasRestScale = false;
+        CaptureRestScale();
+        ApplyVisualCenterOffset(footprint);
+        ClearCarryPresentation(applyToTransform: false);
+        RefreshPickCollider();
+        if (activate)
+        {
+            EnsurePresentationVisible();
+        }
+    }
+
+    public void ClearOuterMesh()
+    {
+        EnsureMeshComponents();
+        ClearSocketCavity();
+        ClearDesignerVisual();
+        if (meshFilter != null)
+        {
+            meshFilter.sharedMesh = null;
+        }
+        if (meshRenderer != null)
+        {
+            meshRenderer.enabled = false;
         }
     }
 
@@ -1509,9 +1585,9 @@ public class PieceView3D : MonoBehaviour, IPieceView
 
         ApplyMaterialToDesignerInner(material, asNest);
 
-        float scale = Mathf.Clamp(relativeScale, 0.4f, 0.7f);
-        // Slightly flatter Y so the inner extrusion reads seated inside the outer rim.
-        nestedInnerRestScale = new Vector3(scale, scale * 0.72f, scale);
+        float scale = 0.72f;
+        // Seated inside socket cavity with top surface elevated matching reference game
+        nestedInnerRestScale = new Vector3(scale, pieceHeight * 0.88f, scale);
         nestedInnerRoot.localScale = nestedInnerRestScale;
         ApplyNestedInnerVisualCenterOffset();
         nestedInnerRoot.localRotation = Quaternion.identity;

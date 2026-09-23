@@ -118,6 +118,8 @@ public class BoardPresentationController : MonoBehaviour
     private float lastAdaptiveCell = -1f;
     private Vector2 lastAdaptiveAreaScreen = new Vector2(-1f, -1f);
     private Vector2 lastAdaptiveScreen = new Vector2(-1f, -1f);
+    private static int meshVersionTracker = 49;
+    private int lastMeshVersionTracker = -1;
 
     private sealed class ChainTravelState
     {
@@ -493,6 +495,13 @@ public class BoardPresentationController : MonoBehaviour
             return;
         }
 
+        if (lastMeshVersionTracker != meshVersionTracker)
+        {
+            lastMeshVersionTracker = meshVersionTracker;
+            ShapeMeshFactory3D.ClearCache();
+            ForceClearAllViews();
+        }
+
         RefreshAdaptivePresentation(force: false);
 
         Block[] blocks = FindObjectsByType<Block>(FindObjectsSortMode.None);
@@ -819,25 +828,25 @@ public class BoardPresentationController : MonoBehaviour
         if (boardLight != null)
         {
             boardLight.gameObject.SetActive(true);
-            // Key light from top-left (42° pitch, 30° yaw) casts soft diffuse shadow downward-right and highlights bevels.
-            boardLight.intensity = 1.65f;
+            // Key light overhead from top-front (62° pitch, -12° yaw) illuminates top block faces brightly.
+            boardLight.intensity = 2.15f;
             boardLight.color = new Color(1.00f, 0.985f, 0.95f, 1f);
             boardLight.shadows = LightShadows.Soft;
-            boardLight.shadowStrength = 0.38f;
+            boardLight.shadowStrength = 0.45f;
             boardLight.shadowBias = 0.005f;
             boardLight.shadowNormalBias = 0.10f;
-            boardLight.transform.rotation = Quaternion.Euler(42f, 30f, 0f);
+            boardLight.transform.rotation = Quaternion.Euler(62f, -12f, 0f);
         }
 
         Light fillLight = FindNamedLight("BoardFillLight");
         if (fillLight != null)
         {
             fillLight.gameObject.SetActive(true);
-            // Fill light from back-right (25° pitch, 210° yaw) softens cavities and prevents crushed blacks.
-            fillLight.intensity = 0.55f;
-            fillLight.color = new Color(0.70f, 0.68f, 0.95f, 1f);
+            // Fill light softens cavities while preserving depth.
+            fillLight.intensity = 0.42f;
+            fillLight.color = new Color(0.75f, 0.72f, 0.98f, 1f);
             fillLight.shadows = LightShadows.None;
-            fillLight.transform.rotation = Quaternion.Euler(25f, 210f, 0f);
+            fillLight.transform.rotation = Quaternion.Euler(42f, 165f, 0f);
         }
 
         EnsureBoardEnvironment();
@@ -845,6 +854,7 @@ public class BoardPresentationController : MonoBehaviour
         PieceView3D.InvalidateContactShadowMaterials();
         ShapeMeshFactory3D.ClearCache();
         BoardMeshFactory3D.ClearCache();
+        ForceClearAllViews();
 
         // Phase 51B: comfortable in-cell footprint; height scales with cell size.
         blockFootprintFactor = BoardAdaptivePresentation3D.BlockFootprintRatio;
@@ -861,6 +871,33 @@ public class BoardPresentationController : MonoBehaviour
                 FindObjectsByType<IceState>(FindObjectsInactive.Exclude, FindObjectsSortMode.None),
                 FindObjectsByType<ShutterState>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
         }
+    }
+
+    public void ForceClearAllViews()
+    {
+        foreach (var pair in worldViewsByBlockId)
+        {
+            if (pair.Value != null)
+            {
+                DestroyView(pair.Value, immediate: true);
+            }
+        }
+        worldViewsByBlockId.Clear();
+
+        foreach (var pair in extraViewsByBlockId)
+        {
+            if (pair.Value != null)
+            {
+                for (int i = 0; i < pair.Value.Count; i++)
+                {
+                    if (pair.Value[i] != null)
+                    {
+                        DestroyView(pair.Value[i], immediate: true);
+                    }
+                }
+            }
+        }
+        extraViewsByBlockId.Clear();
     }
 
     /// <summary>
@@ -1034,7 +1071,8 @@ public class BoardPresentationController : MonoBehaviour
                     ShapeVisuals3D.BlockMaterial(
                         block.GetOuterShape(block.AnchorCellIndex),
                         block.GetOuterColor(block.AnchorCellIndex),
-                        theme)))
+                        theme),
+                    isMultiCell: block.CellCount > 1))
             {
                 return true;
             }
@@ -1114,7 +1152,8 @@ public class BoardPresentationController : MonoBehaviour
         PieceView3D view,
         ShapeType shape,
         bool expectNest,
-        Material expectedMaterial = null)
+        Material expectedMaterial = null,
+        bool isMultiCell = false)
     {
         if (view == null)
         {
@@ -1126,7 +1165,17 @@ public class BoardPresentationController : MonoBehaviour
             return true;
         }
 
-        if (!view.HasRenderableMesh || !view.HasValidPresentationScale)
+        if (isMultiCell && !view.IsMultiCellConfigured)
+        {
+            return true;
+        }
+
+        if (!isMultiCell && view.IsMultiCellConfigured)
+        {
+            return true;
+        }
+
+        if (!isMultiCell && (!view.HasRenderableMesh || !view.HasValidPresentationScale))
         {
             return true;
         }
@@ -1364,7 +1413,7 @@ public class BoardPresentationController : MonoBehaviour
             ShapeType outer = block.GetOuterShape(block.AnchorCellIndex);
             ShapeColor outerColor = block.GetOuterColor(block.AnchorCellIndex);
             Material outerMat = ShapeVisuals3D.BlockMaterial(outer, outerColor, theme);
-            bool needsVisual = NeedsPieceViewResync(view, outer, expectNest: false, outerMat)
+            bool needsVisual = NeedsPieceViewResync(view, outer, expectNest: false, outerMat, isMultiCell: block.CellCount > 1)
                 || block.WorldView != view;
 
             // Pending nested extraction: residual covers SOURCE. The traveler still has the
@@ -1381,12 +1430,23 @@ public class BoardPresentationController : MonoBehaviour
             }
             else if (needsVisual || (!motionBusy && !motionLocked))
             {
-                view.ConfigureVisual(
-                    outer,
-                    outerMat,
-                    asNest: false,
-                    footprint: cell * blockFootprintFactor,
-                    height: blockHeight);
+                if (block.CellCount > 1)
+                {
+                    view.ConfigureMultiCellVisual(
+                        block,
+                        outerMat,
+                        footprint: cell * blockFootprintFactor,
+                        height: blockHeight);
+                }
+                else
+                {
+                    view.ConfigureVisual(
+                        outer,
+                        outerMat,
+                        asNest: false,
+                        footprint: cell * blockFootprintFactor,
+                        height: blockHeight);
+                }
             }
             else
             {
@@ -3294,7 +3354,11 @@ public class BoardPresentationController : MonoBehaviour
             ShapeColor shapeColor = block.GetOuterColor(i);
             Material blockMat = ShapeVisuals3D.BlockMaterial(shape, shapeColor, theme);
             bool needsVisual = NeedsPieceViewResync(view, shape, expectNest: false, blockMat);
-            if (needsVisual || (!motionBusy && !motionLocked))
+            if (block.CellCount > 1)
+            {
+                view.ClearOuterMesh();
+            }
+            else if (needsVisual || (!motionBusy && !motionLocked))
             {
                 view.ConfigureVisual(
                     shape,

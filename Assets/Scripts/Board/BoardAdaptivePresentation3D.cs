@@ -9,22 +9,21 @@ public static class BoardAdaptivePresentation3D
 {
     public const float ReferenceCellSize = 1f;
     public const float GapRatio = 0.04f;
-    public const float FramePadRatio = 0.20f;
-    public const float FrameWallRatio = 0.36f;
-    public const float ThicknessRatio = 0.46f;
+    public const float FramePadRatio = 0.14f;
+    public const float FrameWallRatio = 0.24f;
+    public const float ThicknessRatio = 0.76f; // Thick chunky 3D tray box matching reference
     public const float RecessRatio = 0.18f;
-    public const float CornerRadiusRatio = 0.46f;
-    public const float BlockHeightRatio = 0.60f; // Pass C: chunky physical height
-    public const float NestHeightRatio = 0.40f;  // Pass C: deep molded socket cavity
+    public const float CornerRadiusRatio = 0.38f;
+    public const float BlockHeightRatio = 0.52f; // Chunky physical height matching reference 3D blocks
+    public const float NestHeightRatio = 0.22f;  // Socket tile height flush on the board surface
 
     /// <summary>Visible recessed tile face as fraction of cell pitch (matches BoardPresenter3D).</summary>
     public const float CellTileFaceRatio = 0.84f;
 
     /// <summary>
-    /// Solid block XZ footprint as fraction of cell pitch. ~76% pitch (~90% of cavity opening)
-    /// so extruded shapes look thick and satisfying with clear side walls and in-cell clearance.
+    /// Solid block XZ footprint as fraction of cell pitch. Fits neatly into target sockets.
     /// </summary>
-    public const float BlockFootprintRatio = 0.76f;
+    public const float BlockFootprintRatio = 0.78f;
 
     /// <summary>Nest outer footprint as fraction of cell pitch.</summary>
     public const float NestFootprintRatio = 0.84f;
@@ -103,7 +102,7 @@ public static class BoardAdaptivePresentation3D
             }
         }
 
-        // BoardCamera3D default: pitch 66°, yaw 0° → screen-up on board is +Z.
+        // BoardCamera3D default: pitch 72°, yaw 0° → screen-up on board is +Z.
         return new Vector3(0f, 0f, -1f);
     }
 
