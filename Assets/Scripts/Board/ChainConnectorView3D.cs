@@ -1,16 +1,16 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Presentation-only 3D bar between two 4-connected chain cells.
-/// Mirrors <see cref="PieceGameplayVisuals"/> ChainLink Images; not a gameplay object.
-/// Phase 52A: rounded capsule rod oriented along existing endpoint positions with
-/// block-height cross section so it reads as physical 3D geometry from BoardCamera3D.
+/// Presentation-only 3D neck connector between two 4-connected chain cells.
+/// Uses a purpose-built beveled bridge mesh with flat end faces (so end caps remain
+/// 100% concealed inside shape bodies without protruding rounded capsule caps).
 /// </summary>
 [DisallowMultipleComponent]
 public class ChainConnectorView3D : MonoBehaviour
 {
-    private const float UnitCapsuleHeight = 2f;
-    private const float UnitCapsuleDiameter = 1f;
+    private const float UnitMeshLength = 1f;
+    private const float UnitMeshDiameter = 1f;
 
     private float restLength;
     private float restCrossHeight;
@@ -52,7 +52,7 @@ public class ChainConnectorView3D : MonoBehaviour
     }
 
     /// <summary>
-    /// Places and orients the rod between existing chain endpoints. Does not alter endpoint logic.
+    /// Places and orients the bridge between existing chain endpoints. Does not alter endpoint logic.
     /// </summary>
     public void Follow(Vector3 worldA, Vector3 worldB, Vector3 scaleFactor, float occlusionDropScale = 1f)
     {
@@ -79,21 +79,27 @@ public class ChainConnectorView3D : MonoBehaviour
 
         transform.position = mid;
         transform.rotation = Quaternion.FromToRotation(Vector3.up, axis);
+
         if (mostlyX)
         {
-            // Capsule Y→world X: local X→world Y (height), local Z→world Z (thickness).
+            // Bridge Y→world X: local X→world Y (height), local Z→world Z (thickness).
             transform.localScale = new Vector3(
-                crossHeight / UnitCapsuleDiameter,
-                length / UnitCapsuleHeight,
-                crossThickness / UnitCapsuleDiameter);
+                crossHeight / UnitMeshDiameter,
+                length / UnitMeshLength,
+                crossThickness / UnitMeshDiameter);
         }
         else
         {
-            // Capsule Y→world Z: local Z→world Y (height), local X→world X (thickness).
+            // Bridge Y→world Z: local Z→world Y (height), local X→world X (thickness).
             transform.localScale = new Vector3(
-                crossThickness / UnitCapsuleDiameter,
-                length / UnitCapsuleHeight,
-                crossHeight / UnitCapsuleDiameter);
+                crossThickness / UnitMeshDiameter,
+                length / UnitMeshLength,
+                crossHeight / UnitMeshDiameter);
+        }
+
+        if (Time.frameCount % 300 == 1)
+        {
+            Debug.Log($"[ChainConnectorView3D Diagnostic] Name={name}, WorldPos={transform.position}, WorldScale={transform.lossyScale}, Enabled={(meshRenderer != null && meshRenderer.enabled)}, Mat={(meshRenderer != null && meshRenderer.sharedMaterial != null ? meshRenderer.sharedMaterial.name : "null")}, Bounds={(meshRenderer != null ? meshRenderer.bounds.ToString() : "null")}");
         }
     }
 
@@ -121,7 +127,7 @@ public class ChainConnectorView3D : MonoBehaviour
 
         if (meshFilter.sharedMesh == null)
         {
-            meshFilter.sharedMesh = SharedCapsule();
+            meshFilter.sharedMesh = GetBridgeMesh();
         }
 
         Collider collider = GetComponent<Collider>();
@@ -138,17 +144,116 @@ public class ChainConnectorView3D : MonoBehaviour
         }
     }
 
-    private static Mesh sharedCapsule;
+    private static Mesh sharedBridgeMesh;
 
-    private static Mesh SharedCapsule()
+    private static Mesh GetBridgeMesh()
     {
-        if (sharedCapsule != null)
+        if (sharedBridgeMesh != null)
         {
-            return sharedCapsule;
+            return sharedBridgeMesh;
         }
 
-        sharedCapsule = Resources.GetBuiltinResource<Mesh>("Capsule.fbx")
-            ?? Resources.GetBuiltinResource<Mesh>("New-Capsule.fbx");
-        return sharedCapsule;
+        // Purpose-built 3D bridge prism with flat end faces (Y = -0.5 to Y = +0.5)
+        // and rounded/beveled longitudinal edges along the chain direction.
+        var verts = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var tris = new List<int>();
+
+        float halfW = 0.5f;
+        float bevel = 0.14f;
+        float innerW = halfW - bevel;
+
+        // 8-point chamfered cross-section in XZ (unit size 1.0 x 1.0)
+        Vector2[] section = new Vector2[]
+        {
+            new Vector2( innerW,  halfW),
+            new Vector2( halfW,   innerW),
+            new Vector2( halfW,  -innerW),
+            new Vector2( innerW, -halfW),
+            new Vector2(-innerW, -halfW),
+            new Vector2(-halfW,  -innerW),
+            new Vector2(-halfW,   innerW),
+            new Vector2(-innerW,  halfW),
+        };
+
+        int N = section.Length;
+        float y0 = -0.5f;
+        float y1 = 0.5f;
+
+        // 1. Flat End Cap at Y = -0.5 (Facing -Y)
+        int startBottom = verts.Count;
+        for (int i = 0; i < N; i++)
+        {
+            verts.Add(new Vector3(section[i].x, y0, section[i].y));
+            normals.Add(Vector3.down);
+            uvs.Add(new Vector2(section[i].x + 0.5f, section[i].y + 0.5f));
+        }
+        for (int i = 1; i < N - 1; i++)
+        {
+            tris.Add(startBottom);
+            tris.Add(startBottom + i + 1);
+            tris.Add(startBottom + i);
+        }
+
+        // 2. Flat End Cap at Y = +0.5 (Facing +Y)
+        int startTop = verts.Count;
+        for (int i = 0; i < N; i++)
+        {
+            verts.Add(new Vector3(section[i].x, y1, section[i].y));
+            normals.Add(Vector3.up);
+            uvs.Add(new Vector2(section[i].x + 0.5f, section[i].y + 0.5f));
+        }
+        for (int i = 1; i < N - 1; i++)
+        {
+            tris.Add(startTop);
+            tris.Add(startTop + i);
+            tris.Add(startTop + i + 1);
+        }
+
+        // 3. Side faces connecting Y = -0.5 to Y = +0.5
+        for (int i = 0; i < N; i++)
+        {
+            int next = (i + 1) % N;
+            Vector2 p0 = section[i];
+            Vector2 p1 = section[next];
+
+            Vector3 n0 = new Vector3(p0.x, 0f, p0.y).normalized;
+            Vector3 n1 = new Vector3(p1.x, 0f, p1.y).normalized;
+
+            int vIdx = verts.Count;
+            verts.Add(new Vector3(p0.x, y0, p0.y));
+            verts.Add(new Vector3(p1.x, y0, p1.y));
+            verts.Add(new Vector3(p1.x, y1, p1.y));
+            verts.Add(new Vector3(p0.x, y1, p0.y));
+
+            normals.Add(n0);
+            normals.Add(n1);
+            normals.Add(n1);
+            normals.Add(n0);
+
+            uvs.Add(Vector2.zero);
+            uvs.Add(Vector2.right);
+            uvs.Add(Vector2.one);
+            uvs.Add(Vector2.up);
+
+            tris.Add(vIdx);
+            tris.Add(vIdx + 3);
+            tris.Add(vIdx + 2);
+            tris.Add(vIdx);
+            tris.Add(vIdx + 2);
+            tris.Add(vIdx + 1);
+        }
+
+        sharedBridgeMesh = new Mesh
+        {
+            name = "ProceduralBridgeMesh3D"
+        };
+        sharedBridgeMesh.SetVertices(verts);
+        sharedBridgeMesh.SetNormals(normals);
+        sharedBridgeMesh.SetUVs(0, uvs);
+        sharedBridgeMesh.SetTriangles(tris, 0);
+        sharedBridgeMesh.RecalculateBounds();
+        return sharedBridgeMesh;
     }
 }

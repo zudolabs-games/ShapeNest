@@ -28,17 +28,17 @@ public static class BoardAdaptivePresentation3D
     /// <summary>Nest outer footprint as fraction of cell pitch.</summary>
     public const float NestFootprintRatio = 0.84f;
 
-    /// <summary>Phase 52A: chain connector bar radius as fraction of cell pitch (~22% diameter).</summary>
-    public const float ConnectorRadiusRatio = 0.11f;
+    /// <summary>Phase 52A: chain connector bar radius as fraction of cell pitch (~18% diameter stem).</summary>
+    public const float ConnectorRadiusRatio = 0.09f;
 
-    /// <summary>Phase 52A: connector span along the link as fraction of cell pitch (matches 2D ConnectorOverlap).</summary>
-    public const float ConnectorLengthOverlapRatio = 0.42f;
+    /// <summary>Phase 52A: connector span along link (0.30 cell pitch spans the gap with small hidden overlap).</summary>
+    public const float ConnectorLengthOverlapRatio = 0.30f;
 
-    /// <summary>Phase 52A: connector cross-section height as fraction of block height (slightly inset from block top).</summary>
-    public const float ConnectorCrossHeightRatio = 0.88f;
+    /// <summary>Phase 52A: connector cross-section height as fraction of block height (inset below block top bevel).</summary>
+    public const float ConnectorCrossHeightRatio = 0.55f;
 
-    /// <summary>Phase 52A: vertical midpoint drop as fraction of block height (keeps bar behind block faces).</summary>
-    public const float ConnectorOcclusionDropRatio = 0.16f;
+    /// <summary>Phase 52A: vertical midpoint drop as fraction of block height (recesses stem into gap between side walls).</summary>
+    public const float ConnectorOcclusionDropRatio = 0.06f;
 
     /// <summary>
     /// Phase 51F: presentation-only board-plane shift for block visuals (unit mesh space).

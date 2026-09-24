@@ -1430,7 +1430,7 @@ public class BoardPresentationController : MonoBehaviour
             }
             else if (needsVisual || (!motionBusy && !motionLocked))
             {
-                if (block.CellCount > 1)
+                if (block.CellCount > 1 && block.Composition != PieceComposition.Simple)
                 {
                     view.ConfigureMultiCellVisual(
                         block,
@@ -2005,13 +2005,13 @@ public class BoardPresentationController : MonoBehaviour
         {
             for (int j = i + 1; j < count; j++)
             {
-                Vector2Int a = block.GetLocalCell(i);
-                Vector2Int b = block.GetLocalCell(j);
-                Vector2Int delta = b - a;
-                if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
+                if (!IsValidChainLink(block, i, j))
                 {
                     continue;
                 }
+
+                Vector2Int a = block.GetLocalCell(i);
+                Vector2Int b = block.GetLocalCell(j);
 
                 if (link >= links.Count || links[link] == null)
                 {
@@ -3354,7 +3354,7 @@ public class BoardPresentationController : MonoBehaviour
             ShapeColor shapeColor = block.GetOuterColor(i);
             Material blockMat = ShapeVisuals3D.BlockMaterial(shape, shapeColor, theme);
             bool needsVisual = NeedsPieceViewResync(view, shape, expectNest: false, blockMat);
-            if (block.CellCount > 1)
+            if (block.CellCount > 1 && block.Composition != PieceComposition.Simple)
             {
                 view.ClearOuterMesh();
             }
@@ -3401,10 +3401,7 @@ public class BoardPresentationController : MonoBehaviour
         {
             for (int j = i + 1; j < count; j++)
             {
-                Vector2Int a = block.GetLocalCell(i);
-                Vector2Int b = block.GetLocalCell(j);
-                Vector2Int delta = b - a;
-                if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
+                if (!IsValidChainLink(block, i, j))
                 {
                     continue;
                 }
@@ -3415,7 +3412,13 @@ public class BoardPresentationController : MonoBehaviour
                 }
 
                 ChainConnectorView3D view = links[link];
-                view.Configure(pitch, height, material);
+                ShapeType shapeA = block.GetOuterShape(i);
+                ShapeColor colorA = block.GetOuterColor(i);
+                ShapeColor colorB = block.GetOuterColor(j);
+                Material linkMaterial = (colorA == colorB)
+                    ? ShapeVisuals3D.BlockMaterial(shapeA, colorA, theme)
+                    : ShapeVisuals3D.ChainConnectorMaterial(theme);
+                view.Configure(pitch, height, linkMaterial);
                 link++;
             }
         }
@@ -3458,6 +3461,18 @@ public class BoardPresentationController : MonoBehaviour
         return live != needed;
     }
 
+    private static bool IsValidChainLink(Block block, int i, int j)
+    {
+        if (block == null)
+        {
+            return false;
+        }
+
+        Vector2Int delta = block.GetLocalCell(j) - block.GetLocalCell(i);
+
+        return Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1;
+    }
+
     private static int CountFourConnectedLinks(Block block)
     {
         if (block == null || block.CellCount <= 1)
@@ -3471,8 +3486,7 @@ public class BoardPresentationController : MonoBehaviour
         {
             for (int j = i + 1; j < count; j++)
             {
-                Vector2Int delta = block.GetLocalCell(j) - block.GetLocalCell(i);
-                if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1)
+                if (IsValidChainLink(block, i, j))
                 {
                     links++;
                 }
