@@ -8,13 +8,13 @@ using UnityEngine;
 public static class BoardAdaptivePresentation3D
 {
     public const float ReferenceCellSize = 1f;
-    public const float GapRatio = 0.04f;
-    public const float FramePadRatio = 0.14f;
-    public const float FrameWallRatio = 0.24f;
-    public const float ThicknessRatio = 0.76f; // Thick chunky 3D tray box matching reference
+    public const float GapRatio = 0.06f;
+    public const float FramePadRatio = 0.10f;
+    public const float FrameWallRatio = 0.16f;
+    public const float ThicknessRatio = 0.18f;
     public const float RecessRatio = 0.18f;
     public const float CornerRadiusRatio = 0.38f;
-    public const float BlockHeightRatio = 0.52f; // Chunky physical height matching reference 3D blocks
+    public const float BlockHeightRatio = 0.58f; // Chunky physical height matching reference 3D blocks
     public const float NestHeightRatio = 0.22f;  // Socket tile height flush on the board surface
 
     /// <summary>Visible recessed tile face as fraction of cell pitch (matches BoardPresenter3D).</summary>

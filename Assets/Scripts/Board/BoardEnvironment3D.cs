@@ -42,6 +42,25 @@ public class BoardEnvironment3D : MonoBehaviour
         RenderSettings.ambientLight = ambientColor;
         RenderSettings.ambientIntensity = 1.0f;
         RenderSettings.reflectionIntensity = 0.85f;
+
+        EnsureKeyLight();
+    }
+
+    private void EnsureKeyLight()
+    {
+        Light keyLight = FindFirstObjectByType<Light>();
+        if (keyLight == null || keyLight.type != LightType.Directional)
+        {
+            GameObject lightGo = new GameObject("BoardKeyLight3D");
+            lightGo.transform.SetParent(transform, false);
+            keyLight = lightGo.AddComponent<Light>();
+            keyLight.type = LightType.Directional;
+        }
+
+        keyLight.transform.rotation = Quaternion.Euler(52f, -32f, 0f);
+        keyLight.color = new Color(1.00f, 0.96f, 0.92f, 1f);
+        keyLight.intensity = 1.25f;
+        keyLight.shadows = LightShadows.Soft;
     }
 
     private void CleanupLegacyShadowObjects()

@@ -527,10 +527,10 @@ public class BoardPresenter3D : MonoBehaviour
 
         // Pass B: cell tile color — lighter than basin seam for 3-level value contrast
         // purple rim (bright) → cell pad (mid-navy, specular) → seam groove (very dark)
-        Color playbedTileColor = new Color(0.14f, 0.12f, 0.34f, 1f);
+        Color playbedTileColor = new Color(0.18f, 0.16f, 0.44f, 1f);
 
         var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
-        TuneSharedMaterial(matTile, playbedTileColor, 0f, 0.65f);
+        TuneSharedMaterial(matTile, playbedTileColor, 0.02f, 0.82f);
 
         for (int y = 0; y < gridHeight; y++)
         {
@@ -562,11 +562,17 @@ public class BoardPresenter3D : MonoBehaviour
     {
         GameObject tile = new GameObject($"Cell_Proto_{cell.x}_{cell.y}");
         var filter = tile.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(cellSize, cellGap);
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(
+            cellSize: cellSize,
+            cellGap: cellGap,
+            reliefHeight: cellSize * 0.06f,
+            cornerRadius: cellSize * 0.14f,
+            bevelWidth: cellSize * 0.05f,
+            cornerSegments: 6);
         var renderer = tile.AddComponent<MeshRenderer>();
 
         var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
-        TuneSharedMaterial(matTile, new Color(0.14f, 0.12f, 0.34f, 1f), 0f, 0.65f);
+        TuneSharedMaterial(matTile, new Color(0.18f, 0.16f, 0.44f, 1f), 0.02f, 0.82f);
 
         renderer.sharedMaterial = matTile;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
@@ -594,7 +600,13 @@ public class BoardPresenter3D : MonoBehaviour
 
         GameObject tile = new GameObject($"Cell_{cell.x}_{cell.y}");
         var filter = tile.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(cellSize, gap);
+        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(
+            cellSize: cellSize,
+            cellGap: gap,
+            reliefHeight: cellSize * 0.06f,
+            cornerRadius: cellSize * 0.14f,
+            bevelWidth: cellSize * 0.05f,
+            cornerSegments: 6);
         tile.AddComponent<MeshRenderer>();
         return tile;
     }

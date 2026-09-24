@@ -18,7 +18,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetSolidMesh(ShapeType shape)
     {
-        string key = "solid_v49_" + shape;
+        string key = "solid_v80_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -32,7 +32,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetNestMesh(ShapeType shape)
     {
-        string key = "nest_v70_" + shape;
+        string key = "nest_v80_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -46,7 +46,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetBlockMesh(ShapeType shape)
     {
-        string key = "block_v70_" + shape;
+        string key = "block_v80_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -66,7 +66,7 @@ public static class ShapeMeshFactory3D
         }
 
         string signature = GetMultiCellSignature(cells, defaultShape);
-        string key = "multicell_nest_v70_" + signature;
+        string key = "multicell_nest_v80_" + signature;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -81,7 +81,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Outer rim only (nest submesh 0). Presentation split for Phase 79G socket beckon.</summary>
     public static Mesh GetNestRimMesh(ShapeType shape)
     {
-        string key = "nest_rim_v70_" + shape;
+        string key = "nest_rim_v80_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -96,7 +96,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Inner cavity walls/floor only (nest submesh 1). Presentation-only socket beckon target.</summary>
     public static Mesh GetNestCavityMesh(ShapeType shape)
     {
-        string key = "nest_cavity_v70_" + shape;
+        string key = "nest_cavity_v80_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -627,7 +627,7 @@ public static class ShapeMeshFactory3D
 
         // Nest outer block base is closed solid at bottom
         AddCap(vertices, normals, rimTriangles, uvs, outerBottom, null, y0, Vector3.down, hollow: false);
-        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow, topCrownHeight: 0f);
+        AddCap(vertices, normals, rimTriangles, uvs, outerTop, innerTop, y1, Vector3.up, hollow, topCrownHeight: hollow ? 0f : 0.05f);
 
         if (addBottomBevel)
         {

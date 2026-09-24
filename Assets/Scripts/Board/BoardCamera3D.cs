@@ -12,13 +12,13 @@ public class BoardCamera3D : MonoBehaviour
     private Camera cachedCamera;
 
     [SerializeField]
-    [Range(20f, 75f)]
-    private float fieldOfView = 36f;
+    [Range(5f, 85f)]
+    private float fieldOfView = 28f;
 
     [SerializeField]
     [Tooltip("Pitch above the board in degrees (0 = horizontal, 90 = top-down).")]
     [Range(15f, 90f)]
-    private float lookPitch = 54f;
+    private float lookPitch = 60f;
 
     [SerializeField]
     [Min(0.1f)]
@@ -245,13 +245,13 @@ public class BoardCamera3D : MonoBehaviour
     public void ApplyArtDirectionDefaults()
     {
         useOrthographic = false;
-        lookPitch = 54f;
+        lookPitch = 60f;
         distanceMultiplier = 1.0f;
         orthographicSpanFactor = 0.85f;
         targetVerticalFill = 0.88f;
         targetHorizontalFill = 0.92f;
         lookOffset = new Vector3(0f, 0f, 0f);
-        fieldOfView = 36f;
+        fieldOfView = 28f;
     }
 
     /// <summary>

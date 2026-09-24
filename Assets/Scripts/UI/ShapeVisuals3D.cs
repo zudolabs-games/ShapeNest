@@ -9,11 +9,11 @@ public static class ShapeVisuals3D
 {
     /// <summary>Solid movable pieces — glossy toy plastic response.</summary>
     public const float BlockMetallic = 0.04f;
-    public const float BlockSmoothness = 0.84f;
+    public const float BlockSmoothness = 0.88f;
 
     /// <summary>Recessed sockets — glossy toy plastic response.</summary>
     public const float NestMetallic = 0.04f;
-    public const float NestSmoothness = 0.82f;
+    public const float NestSmoothness = 0.85f;
 
     /// <summary>Darker cavity floor/walls — glossy molded plastic matching block smoothness.</summary>
     public const float NestCavityMetallic = 0.02f;

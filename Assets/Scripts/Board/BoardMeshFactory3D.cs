@@ -1111,30 +1111,25 @@ public static class BoardMeshFactory3D
     /// </summary>
     public static Mesh GetMoldedPlaybedTile(
         float cellSize = 1.0f,
-        float cellGap = 0.04f,
-        float reliefHeight = 0.024f,
-        float cornerRadius = 0.08f,
+        float cellGap = 0.06f,
+        float reliefHeight = 0.05f,
+        float cornerRadius = 0.12f,
         float bevelWidth = 0.04f,
         int cornerSegments = 6)
     {
         // Derive all proportions from cellGap for consistent molded feel
-        float gap = cellGap > 0.001f ? cellGap : cellSize * 0.04f;
+        float gap = cellGap > 0.001f ? cellGap : cellSize * 0.06f;
 
         // Full-gap seam: tile occupies cellSize - gap so the seam = gap wide
         float span = cellSize - gap;
         float halfSpan = span * 0.5f;
 
-        // Molded plastic parameters derived from gap
-        float r   = Mathf.Clamp(gap * 2.5f, 0.01f, halfSpan * 0.28f);
-        float bevel = Mathf.Clamp(gap * 1.5f, 0.01f, halfSpan * 0.20f);
-        float h   = Mathf.Max(0.005f, gap * 0.80f);
+        // Molded plastic parameters
+        float r = Mathf.Clamp(cornerRadius, 0.01f, halfSpan * 0.35f);
+        float bevel = Mathf.Clamp(bevelWidth, 0.01f, halfSpan * 0.25f);
+        float h = Mathf.Max(0.01f, reliefHeight);
 
-        // Override with explicit params if callers provide non-default values
-        if (!Mathf.Approximately(cornerRadius, 0.08f)) r = Mathf.Clamp(cornerRadius, 0.01f, halfSpan * 0.28f);
-        if (!Mathf.Approximately(bevelWidth, 0.04f))   bevel = Mathf.Clamp(bevelWidth, 0.01f, halfSpan * 0.20f);
-        if (!Mathf.Approximately(reliefHeight, 0.024f)) h = Mathf.Max(0.005f, reliefHeight);
-
-        string key = $"playbed_tile_{cellSize:F3}_{gap:F3}_{h:F3}_{r:F3}_{bevel:F3}_{cornerSegments}";
+        string key = $"playbed_tile_v71_{cellSize:F3}_{gap:F3}_{h:F3}_{r:F3}_{bevel:F3}_{cornerSegments}";
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
