@@ -1323,7 +1323,7 @@ public class PieceView3D : MonoBehaviour, IPieceView
         {
             ClearSocketCavity();
             ClearDesignerVisual();
-            Mesh mesh = ShapeMeshFactory3D.GetNestMesh(shape);
+            Mesh mesh = ShapeMeshFactory3D.GetBlockMesh(shape);
             if (meshFilter != null)
             {
                 meshFilter.sharedMesh = mesh;
@@ -1335,11 +1335,10 @@ public class PieceView3D : MonoBehaviour, IPieceView
             }
 
             Material blockMat = material != null ? material : ShapeVisuals3D.BlockMaterial(shape);
-            Material cavityMat = ShapeVisuals3D.NestCavityMaterial(shape);
 
             if (meshRenderer != null && blockMat != null)
             {
-                meshRenderer.sharedMaterials = new[] { blockMat, cavityMat };
+                meshRenderer.sharedMaterials = new[] { blockMat };
             }
         }
 
@@ -1395,11 +1394,10 @@ public class PieceView3D : MonoBehaviour, IPieceView
         }
 
         Material blockMat = material != null ? material : ShapeVisuals3D.BlockMaterial(block.ShapeType);
-        Material cavityMat = ShapeVisuals3D.NestCavityMaterial(block.ShapeType);
 
         if (meshRenderer != null && blockMat != null)
         {
-            meshRenderer.sharedMaterials = new[] { blockMat, cavityMat };
+            meshRenderer.sharedMaterials = new[] { blockMat };
             meshRenderer.enabled = true;
         }
 

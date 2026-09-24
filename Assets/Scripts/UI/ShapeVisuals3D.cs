@@ -7,21 +7,21 @@ using UnityEngine;
 /// </summary>
 public static class ShapeVisuals3D
 {
-    /// <summary>Solid movable pieces — standard Unity Lit material response.</summary>
-    public const float BlockMetallic = 0f;
-    public const float BlockSmoothness = 0.70f;
+    /// <summary>Solid movable pieces — glossy toy plastic response.</summary>
+    public const float BlockMetallic = 0.04f;
+    public const float BlockSmoothness = 0.84f;
 
-    /// <summary>Recessed sockets — standard Unity Lit material response.</summary>
-    public const float NestMetallic = 0f;
-    public const float NestSmoothness = 0.68f;
+    /// <summary>Recessed sockets — glossy toy plastic response.</summary>
+    public const float NestMetallic = 0.04f;
+    public const float NestSmoothness = 0.82f;
 
     /// <summary>Darker cavity floor/walls — glossy molded plastic matching block smoothness.</summary>
-    public const float NestCavityMetallic = 0f;
-    public const float NestCavitySmoothness = 0.68f;
+    public const float NestCavityMetallic = 0.02f;
+    public const float NestCavitySmoothness = 0.80f;
 
     /// <summary>Chain bars share the same plastic family as blocks.</summary>
-    public const float ConnectorMetallic = 0f;
-    public const float ConnectorSmoothness = 0.74f;
+    public const float ConnectorMetallic = 0.04f;
+    public const float ConnectorSmoothness = 0.84f;
 
     private static Material[] blockMaterials;
     private static Material[] nestMaterials;
@@ -362,9 +362,9 @@ public static class ShapeVisuals3D
 
     private static Color ResolveNestCavityColor(Color nestRim, Color blockColor)
     {
-        // 12% shading for inner cavity — vibrant, glossy molded plastic matching reference toy sockets.
+        // 30% shading for inner cavity — rich 3D molded socket depth matching reference toy targets.
         _ = blockColor;
-        Color cavity = Darken(nestRim, 0.12f);
+        Color cavity = Darken(nestRim, 0.30f);
         cavity.a = 1f;
         return cavity;
     }

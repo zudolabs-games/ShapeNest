@@ -32,7 +32,7 @@ public static class ShapeMeshFactory3D
 
     public static Mesh GetNestMesh(ShapeType shape)
     {
-        string key = "nest_v49_" + shape;
+        string key = "nest_v70_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -40,6 +40,20 @@ public static class ShapeMeshFactory3D
 
         Mesh mesh = BuildNest(shape);
         mesh.name = "ShapeNest_" + shape;
+        Cache[key] = mesh;
+        return mesh;
+    }
+
+    public static Mesh GetBlockMesh(ShapeType shape)
+    {
+        string key = "block_v70_" + shape;
+        if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
+        {
+            return cached;
+        }
+
+        Mesh mesh = BuildSolid(shape);
+        mesh.name = "ShapeBlock_" + shape;
         Cache[key] = mesh;
         return mesh;
     }
@@ -52,7 +66,7 @@ public static class ShapeMeshFactory3D
         }
 
         string signature = GetMultiCellSignature(cells, defaultShape);
-        string key = "multicell_nest_v49_" + signature;
+        string key = "multicell_nest_v70_" + signature;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -67,7 +81,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Outer rim only (nest submesh 0). Presentation split for Phase 79G socket beckon.</summary>
     public static Mesh GetNestRimMesh(ShapeType shape)
     {
-        string key = "nest_rim_v47_" + shape;
+        string key = "nest_rim_v70_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -82,7 +96,7 @@ public static class ShapeMeshFactory3D
     /// <summary>Inner cavity walls/floor only (nest submesh 1). Presentation-only socket beckon target.</summary>
     public static Mesh GetNestCavityMesh(ShapeType shape)
     {
-        string key = "nest_cavity_v47_" + shape;
+        string key = "nest_cavity_v70_" + shape;
         if (Cache.TryGetValue(key, out Mesh cached) && cached != null)
         {
             return cached;
@@ -157,10 +171,52 @@ public static class ShapeMeshFactory3D
             addNestFloor: false);
     }
 
+    private static Mesh BuildBlock(ShapeType shape)
+    {
+        float outerRadius = GetShapeOuterRadius(shape);
+        float innerRadius = GetShapeInnerRadius(shape);
+        Vector2[] outer = GetOutline(shape, outerRadius);
+        Vector2[] inner = GetOutline(shape, innerRadius);
+
+        CenterOutlineAabb(outer, inner);
+        NormalizeOutlineAabb(outer, inner);
+        ApplyVisualSilhouetteScale(outer, inner, shape);
+
+        ShapeBuild build = GetBuild(shape, nest: false);
+        return BuildBeveledPrism(
+            outer,
+            inner,
+            1f,
+            build.bevel,
+            build.smoothWalls,
+            addBottomBevel: true,
+            addNestFloor: true);
+    }
+
+    private static float GetShapeOuterRadius(ShapeType shape)
+    {
+        switch (shape)
+        {
+            case ShapeType.Triangle: return 0.44f;
+            case ShapeType.Star: return 0.46f;
+            default: return 0.48f;
+        }
+    }
+
+    private static float GetShapeInnerRadius(ShapeType shape)
+    {
+        switch (shape)
+        {
+            case ShapeType.Triangle: return 0.26f;
+            case ShapeType.Star: return 0.28f;
+            default: return 0.30f;
+        }
+    }
+
     private static Mesh BuildNest(ShapeType shape)
     {
         Vector2[] outer = SquareOutline(0.5f);
-        float innerRadius = shape == ShapeType.Triangle ? 0.25f : (shape == ShapeType.Star ? 0.26f : 0.28f);
+        float innerRadius = shape == ShapeType.Triangle ? 0.34f : (shape == ShapeType.Star ? 0.35f : 0.36f);
         Vector2[] inner = GetOutline(shape, innerRadius);
 
         // Center inner cavity outline on origin so socket is perfectly centered inside block cell:
@@ -187,26 +243,7 @@ public static class ShapeMeshFactory3D
 
     private static ShapeBuild GetBuild(ShapeType shape, bool nest)
     {
-        // Pass E: chunky tactile blocks with refined bevels and clear molded rim
-        switch (shape)
-        {
-            case ShapeType.Circle:
-                return new ShapeBuild { bevel = nest ? 0.15f : 0.14f, smoothWalls = true };
-            case ShapeType.Square:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.14f, smoothWalls = false };
-            case ShapeType.Triangle:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.14f, smoothWalls = false };
-            case ShapeType.Diamond:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.14f, smoothWalls = false };
-            case ShapeType.Hexagon:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.14f, smoothWalls = false };
-            case ShapeType.Star:
-                return new ShapeBuild { bevel = nest ? 0.12f : 0.12f, smoothWalls = false };
-            case ShapeType.Pentagon:
-                return new ShapeBuild { bevel = nest ? 0.14f : 0.14f, smoothWalls = false };
-            default:
-                return new ShapeBuild { bevel = 0.14f, smoothWalls = false };
-        }
+        return new ShapeBuild { bevel = nest ? 0.16f : 0.15f, smoothWalls = true };
     }
 
     private static Vector2[] GetOutline(ShapeType shape, float radius)
@@ -218,13 +255,13 @@ public static class ShapeMeshFactory3D
             case ShapeType.Triangle:
                 return RoundedTriangleOutline(radius, -90f * Mathf.Deg2Rad);
             case ShapeType.Diamond:
-                return RegularPolygon(4, radius, 0f);
+                return RoundedSquareOutlineRotated(radius, radius * 0.24f, 4, 45f * Mathf.Deg2Rad);
             case ShapeType.Hexagon:
-                return RegularPolygon(6, radius, 30f * Mathf.Deg2Rad);
+                return RoundedPolygonOutline(6, radius, 30f * Mathf.Deg2Rad, radius * 0.16f);
             case ShapeType.Star:
-                return StarPolygon(5, radius, radius * 0.42f, -90f * Mathf.Deg2Rad);
+                return RoundedStarPolygon(5, radius, radius * 0.44f, -90f * Mathf.Deg2Rad, radius * 0.14f);
             case ShapeType.Pentagon:
-                return RegularPolygon(5, radius, -90f * Mathf.Deg2Rad);
+                return RoundedPolygonOutline(5, radius, -90f * Mathf.Deg2Rad, radius * 0.16f);
             case ShapeType.Square:
             default:
                 return SquareOutline(radius);
@@ -233,7 +270,7 @@ public static class ShapeMeshFactory3D
 
     private static Vector2[] SquareOutline(float half)
     {
-        return RoundedSquareOutline(half, half * 0.22f, 4);
+        return RoundedSquareOutline(half, half * 0.24f, 4);
     }
 
     private static Vector2[] RoundedSquareOutline(float half, float radius, int segmentsPerCorner)
@@ -266,9 +303,22 @@ public static class ShapeMeshFactory3D
         return points.ToArray();
     }
 
+    private static Vector2[] RoundedSquareOutlineRotated(float half, float radius, int segmentsPerCorner, float rotation)
+    {
+        Vector2[] basePts = RoundedSquareOutline(half, radius, segmentsPerCorner);
+        float cos = Mathf.Cos(rotation);
+        float sin = Mathf.Sin(rotation);
+        for (int i = 0; i < basePts.Length; i++)
+        {
+            Vector2 p = basePts[i];
+            basePts[i] = new Vector2(p.x * cos - p.y * sin, p.x * sin + p.y * cos);
+        }
+        return basePts;
+    }
+
     private static Vector2[] RoundedTriangleOutline(float radius, float rotation)
     {
-        float cornerRadius = radius * 0.16f;
+        float cornerRadius = radius * 0.18f;
         int segmentsPerCorner = 4;
         var points = new List<Vector2>();
 
@@ -290,6 +340,40 @@ public static class ShapeMeshFactory3D
             float baseAngle = Mathf.Atan2(dir.y, dir.x);
             float startAngle = baseAngle - (Mathf.PI / 6f);
             float endAngle = baseAngle + (Mathf.PI / 6f);
+
+            for (int s = 0; s <= segmentsPerCorner; s++)
+            {
+                if (s == 0 && i > 0) continue;
+                float a = startAngle + (s * (endAngle - startAngle) / segmentsPerCorner);
+                points.Add(new Vector2(arcCenter.x + Mathf.Cos(a) * cornerRadius, arcCenter.y + Mathf.Sin(a) * cornerRadius));
+            }
+        }
+
+        return points.ToArray();
+    }
+
+    private static Vector2[] RoundedPolygonOutline(int sides, float radius, float rotation, float cornerRadius)
+    {
+        int segmentsPerCorner = 3;
+        var points = new List<Vector2>();
+
+        Vector2[] sharpVerts = new Vector2[sides];
+        for (int i = 0; i < sides; i++)
+        {
+            float a = rotation + (i * Mathf.PI * 2f / sides);
+            sharpVerts[i] = new Vector2(Mathf.Cos(a) * radius, Mathf.Sin(a) * radius);
+        }
+
+        float halfAngle = Mathf.PI / sides;
+        for (int i = 0; i < sides; i++)
+        {
+            Vector2 p = sharpVerts[i];
+            Vector2 dir = p.normalized;
+            Vector2 arcCenter = p - dir * cornerRadius;
+
+            float baseAngle = Mathf.Atan2(dir.y, dir.x);
+            float startAngle = baseAngle - halfAngle * 0.5f;
+            float endAngle = baseAngle + halfAngle * 0.5f;
 
             for (int s = 0; s <= segmentsPerCorner; s++)
             {
@@ -326,6 +410,41 @@ public static class ShapeMeshFactory3D
 
         return verts;
     }
+
+    private static Vector2[] RoundedStarPolygon(int points, float outerRadius, float innerRadius, float rotation, float cornerRadius)
+    {
+        Vector2[] raw = StarPolygon(points, outerRadius, innerRadius, rotation);
+        int total = raw.Length;
+        var result = new List<Vector2>();
+        int segs = 3;
+
+        for (int i = 0; i < total; i++)
+        {
+            Vector2 prev = raw[(i + total - 1) % total];
+            Vector2 curr = raw[i];
+            Vector2 next = raw[(i + 1) % total];
+
+            Vector2 d1 = (prev - curr).normalized;
+            Vector2 d2 = (next - curr).normalized;
+
+            float r = (i % 2 == 0) ? cornerRadius : cornerRadius * 0.6f;
+            Vector2 pStart = curr + d1 * r;
+            Vector2 pEnd = curr + d2 * r;
+
+            for (int s = 0; s <= segs; s++)
+            {
+                float t = (float)s / segs;
+                Vector2 pt = Vector2.Lerp(pStart, pEnd, t);
+                Vector2 cornerDir = (curr - (pStart + pEnd) * 0.5f).normalized;
+                pt += cornerDir * (r * 0.25f * Mathf.Sin(t * Mathf.PI));
+                result.Add(pt);
+            }
+        }
+
+        return result.ToArray();
+    }
+
+
 
     /// <summary>
     /// After AABB normalization, nudges silhouettes that read smaller at the same unit AABB
@@ -628,11 +747,10 @@ public static class ShapeMeshFactory3D
 
         if (!hollow)
         {
-            // Fan from the footprint origin (AABB center), not the vertex-average
-            // centroid, so Triangle/Star mass does not pull the hub off-cell.
+            Vector2 polyCenter = GetOutlineCenter(outer);
             int centerIndex = vertices.Count;
             float centerY = y + (normal.y > 0f ? topCrownHeight : 0f);
-            vertices.Add(new Vector3(0f, centerY, 0f));
+            vertices.Add(new Vector3(polyCenter.x, centerY, polyCenter.y));
             normals.Add(normal);
             uvs.Add(new Vector2(0.5f, 0.5f));
 
@@ -644,14 +762,14 @@ public static class ShapeMeshFactory3D
                 if (normal.y > 0f)
                 {
                     triangles.Add(centerIndex);
-                    triangles.Add(ring0);
                     triangles.Add(ring1);
+                    triangles.Add(ring0);
                 }
                 else
                 {
                     triangles.Add(centerIndex);
-                    triangles.Add(ring1);
                     triangles.Add(ring0);
+                    triangles.Add(ring1);
                 }
             }
 
@@ -996,86 +1114,158 @@ public static class ShapeMeshFactory3D
     private static Mesh BuildMultiCellNest(IReadOnlyList<ShapeCellData> cells, ShapeType defaultShape)
     {
         int count = cells.Count;
-        int minX = int.MaxValue, maxX = int.MinValue;
-        int minY = int.MaxValue, maxY = int.MinValue;
-
         var cellPositions = new Vector2Int[count];
         var cellShapes = new ShapeType[count];
 
         for (int i = 0; i < count; i++)
         {
-            Vector2Int pos = ShapeLayout.EffectiveLocal(cells, i);
-            ShapeType st = ShapeLayout.EffectiveShape(cells, i, defaultShape);
-            cellPositions[i] = pos;
-            cellShapes[i] = st;
-            if (pos.x < minX) minX = pos.x;
-            if (pos.x > maxX) maxX = pos.x;
-            if (pos.y < minY) minY = pos.y;
-            if (pos.y > maxY) maxY = pos.y;
+            cellPositions[i] = ShapeLayout.EffectiveLocal(cells, i);
+            cellShapes[i] = ShapeLayout.EffectiveShape(cells, i, defaultShape);
         }
-
-        float width = maxX - minX + 1f;
-        float depth = maxY - minY + 1f;
-        float cx = (minX + maxX) * 0.5f;
-        float cz = (minY + maxY) * 0.5f;
-        float hx = width * 0.5f;
-        float hz = depth * 0.5f;
-
-        Vector2[] outer = RoundedRectangleOutline(cx, cz, hx, hz, 0.11f, 4);
 
         float height = 1f;
         float y0 = -height * 0.5f;
         float y1 = height * 0.5f;
-        float bevel = 0.14f * height;
-        float yBevelTop = y1 - bevel;
-        float inset = 0.94f;
-        Vector2[] outerTop = ScaleOutlineAboutCenter(outer, cx, cz, inset);
 
         var vertices = new List<Vector3>();
         var normals = new List<Vector3>();
         var uvs = new List<Vector2>();
         var rimTriangles = new List<int>();
-        var cavityTriangles = new List<int>();
 
-        AddCap(vertices, normals, rimTriangles, uvs, outer, null, y0, Vector3.down, hollow: false);
-        AddWalls(vertices, normals, rimTriangles, uvs, outer, y0, yBevelTop, outward: true);
-        AddBevelBand(vertices, normals, rimTriangles, uvs, outer, outerTop, yBevelTop, y1, outward: true, smoothWalls: false);
-
-        float floorY = Mathf.Lerp(y0, y1, 0.55f);
-
+        // 1. Build individual solid 3D shape prisms for each cell
         for (int c = 0; c < count; c++)
         {
-            Vector2Int cellPos = cellPositions[c];
+            Vector2Int pos = cellPositions[c];
             ShapeType shape = cellShapes[c];
+            Vector2 cellCenter = new Vector2(pos.x, pos.y);
 
-            Vector2 cellCenter = new Vector2(cellPos.x, cellPos.y);
-            float innerRadius = shape == ShapeType.Triangle ? 0.35f : 0.38f;
-            Vector2[] innerRaw = GetOutline(shape, innerRadius);
+            float outerRadius = GetShapeOuterRadius(shape);
+            Vector2[] outer = GetOutline(shape, outerRadius);
 
-            GetAabb(innerRaw, out float iMinX, out float iMaxX, out float iMinY, out float iMaxY);
-            Vector2 iCenter = new Vector2((iMinX + iMaxX) * 0.5f, (iMinY + iMaxY) * 0.5f);
-            Vector2[] innerTop = TranslateOutlineCopy(innerRaw, cellCenter - iCenter);
+            CenterOutlineAabb(outer, null);
+            NormalizeOutlineAabb(outer, null);
+            ApplyVisualSilhouetteScale(outer, null, shape);
 
-            Vector2[] innerChamfer = ScaleOutlineAboutCenter(innerTop, cellCenter.x, cellCenter.y, 0.94f);
-            Vector2[] innerFloor = ScaleOutlineAboutCenter(innerTop, cellCenter.x, cellCenter.y, 0.88f);
+            TranslateOutline(outer, cellCenter);
 
-            Vector2[] cellOuter = BuildCellCapOuterBoundary(cellPos, cellPositions, outerTop);
-            AddHollowCapBandForCell(vertices, normals, rimTriangles, uvs, cellOuter, innerTop, y1);
-
-            AddBevelBand(vertices, normals, rimTriangles, uvs, innerChamfer, innerTop, y1 - 0.04f, y1, outward: false, smoothWalls: true);
-            AddBevelBand(vertices, normals, cavityTriangles, uvs, innerFloor, innerChamfer, floorY, y1 - 0.04f, outward: false, smoothWalls: false);
-            AddCap(vertices, normals, cavityTriangles, uvs, innerFloor, null, floorY, Vector3.up, hollow: false);
+            ShapeBuild build = GetBuild(shape, nest: false);
+            AddCellPrismGeometry(
+                vertices, normals, uvs, rimTriangles,
+                outer, y0, y1, build.bevel, build.smoothWalls);
         }
 
-        var mesh = new Mesh { name = "MultiCellNest" };
+        // 2. Add connecting bridges between adjacent cells
+        for (int i = 0; i < count; i++)
+        {
+            for (int j = i + 1; j < count; j++)
+            {
+                Vector2Int p1 = cellPositions[i];
+                Vector2Int p2 = cellPositions[j];
+                int dx = Mathf.Abs(p1.x - p2.x);
+                int dy = Mathf.Abs(p1.y - p2.y);
+                if (dx + dy == 1)
+                {
+                    AddConnectingBridge(
+                        vertices, normals, uvs, rimTriangles,
+                        new Vector2(p1.x, p1.y), new Vector2(p2.x, p2.y),
+                        y0, y1, 0.14f);
+                }
+            }
+        }
+
+        var mesh = new Mesh { name = "MultiCellBlock" };
+        CenterVerticesOnOrigin(vertices);
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
         mesh.SetUVs(0, uvs);
-        mesh.subMeshCount = 2;
         mesh.SetTriangles(rimTriangles, 0);
-        mesh.SetTriangles(cavityTriangles, 1);
         mesh.RecalculateBounds();
         return mesh;
+    }
+
+    private static void AddCellPrismGeometry(
+        List<Vector3> vertices,
+        List<Vector3> normals,
+        List<Vector2> uvs,
+        List<int> rimTriangles,
+        Vector2[] outer,
+        float y0,
+        float y1,
+        float bevelFraction,
+        bool smoothWalls)
+    {
+        float height = y1 - y0;
+        float bevel = Mathf.Clamp(bevelFraction, 0.03f, 0.26f) * height;
+        float yBevelTop = y1 - bevel;
+        float yBevelBottom = y0 + bevel;
+        float inset = 1f - Mathf.Clamp(bevelFraction, 0.03f, 0.26f) * 0.55f;
+
+        Vector2 center = GetOutlineCenter(outer);
+        Vector2[] outerTop = ScaleOutlineAboutCenter(outer, center.x, center.y, inset);
+        Vector2[] outerBottom = ScaleOutlineAboutCenter(outer, center.x, center.y, inset);
+
+        AddCap(vertices, normals, rimTriangles, uvs, outerBottom, null, y0, Vector3.down, hollow: false);
+        AddCap(vertices, normals, rimTriangles, uvs, outerTop, null, y1, Vector3.up, hollow: false, topCrownHeight: 0f);
+
+        AddBevelBand(vertices, normals, rimTriangles, uvs, outerBottom, outer, y0, yBevelBottom, outward: true, smoothWalls: smoothWalls);
+
+        if (smoothWalls)
+        {
+            AddSmoothWalls(vertices, normals, rimTriangles, uvs, outer, yBevelBottom, yBevelTop, outward: true);
+        }
+        else
+        {
+            AddWalls(vertices, normals, rimTriangles, uvs, outer, yBevelBottom, yBevelTop, outward: true);
+        }
+
+        AddBevelBand(vertices, normals, rimTriangles, uvs, outer, outerTop, yBevelTop, y1, outward: true, smoothWalls: smoothWalls);
+    }
+
+    private static void AddConnectingBridge(
+        List<Vector3> vertices,
+        List<Vector3> normals,
+        List<Vector2> uvs,
+        List<int> rimTriangles,
+        Vector2 p1,
+        Vector2 p2,
+        float y0,
+        float y1,
+        float bevelFraction)
+    {
+        Vector2 mid = (p1 + p2) * 0.5f;
+        Vector2 dir = (p2 - p1).normalized;
+        Vector2 perp = new Vector2(-dir.y, dir.x);
+        float halfWidth = 0.20f;
+        float bridgeLength = 0.50f;
+
+        Vector2[] ring = new Vector2[4]
+        {
+            mid - dir * (bridgeLength * 0.5f) - perp * halfWidth,
+            mid + dir * (bridgeLength * 0.5f) - perp * halfWidth,
+            mid + dir * (bridgeLength * 0.5f) + perp * halfWidth,
+            mid - dir * (bridgeLength * 0.5f) + perp * halfWidth
+        };
+
+        float height = y1 - y0;
+        float bevel = Mathf.Clamp(bevelFraction, 0.03f, 0.26f) * height;
+        float yBevelTop = y1 - bevel;
+        float yBevelBottom = y0 + bevel;
+        Vector2[] ringTop = ScaleOutlineAboutCenter(ring, mid.x, mid.y, 0.90f);
+        Vector2[] ringBottom = ScaleOutlineAboutCenter(ring, mid.x, mid.y, 0.90f);
+
+        AddCap(vertices, normals, rimTriangles, uvs, ringBottom, null, y0, Vector3.down, hollow: false);
+        AddCap(vertices, normals, rimTriangles, uvs, ringTop, null, y1, Vector3.up, hollow: false);
+
+        AddBevelBand(vertices, normals, rimTriangles, uvs, ringBottom, ring, y0, yBevelBottom, outward: true, smoothWalls: false);
+        AddWalls(vertices, normals, rimTriangles, uvs, ring, yBevelBottom, yBevelTop, outward: true);
+        AddBevelBand(vertices, normals, rimTriangles, uvs, ring, ringTop, yBevelTop, y1, outward: true, smoothWalls: false);
+    }
+
+    private static Vector2 GetOutlineCenter(Vector2[] points)
+    {
+        if (points == null || points.Length == 0) return Vector2.zero;
+        GetAabb(points, out float minX, out float maxX, out float minY, out float maxY);
+        return new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
     }
 
     private static Vector2[] RoundedRectangleOutline(float cx, float cy, float halfX, float halfY, float radius, int segmentsPerCorner)
