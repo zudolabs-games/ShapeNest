@@ -558,27 +558,6 @@ public class BoardPresenter3D : MonoBehaviour
         }
     }
 
-    private GameObject CreateMoldedSocketPrototypeTile(Vector2Int cell, float cellSize, float recessDepth)
-    {
-        GameObject tile = new GameObject($"Cell_Proto_{cell.x}_{cell.y}");
-        var filter = tile.AddComponent<MeshFilter>();
-        filter.sharedMesh = BoardMeshFactory3D.GetMoldedPlaybedTile(
-            cellSize: cellSize,
-            cellGap: cellGap,
-            reliefHeight: cellSize * 0.06f,
-            cornerRadius: cellSize * 0.14f,
-            bevelWidth: cellSize * 0.05f,
-            cornerSegments: 6);
-        var renderer = tile.AddComponent<MeshRenderer>();
-
-        var matTile = cellMaterial != null ? cellMaterial : new Material(ShapeVisuals3D.GetDefaultLitShader());
-        TuneSharedMaterial(matTile, new Color(0.18f, 0.16f, 0.44f, 1f), 0.02f, 0.82f);
-
-        renderer.sharedMaterial = matTile;
-        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-        renderer.receiveShadows = true;
-        return tile;
-    }
 
     private GameObject CreateCellTile(Vector2Int cell, float cellSize, float gap, out bool keepDesignerMaterials)
     {

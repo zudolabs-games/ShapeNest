@@ -43,6 +43,17 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
     private Color strokeColor = Color.white;
     private bool visible;
     private float loopTime;
+    private BoardPresenter3D cachedPresenter;
+
+    private BoardPresenter3D GetPresenter()
+    {
+        if (cachedPresenter == null)
+        {
+            cachedPresenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        }
+
+        return cachedPresenter;
+    }
     private float cellPitch = 1f;
     private Transform curveRoot;
 
@@ -348,7 +359,7 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
 
     private Transform ResolveWorldCurveParent()
     {
-        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        BoardPresenter3D presenter = GetPresenter();
         if (presenter != null)
         {
             return presenter.transform;
@@ -479,7 +490,7 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
 
     private Vector3 ResolveTargetWorld()
     {
-        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        BoardPresenter3D presenter = GetPresenter();
         Vector2Int cell = hasFocusWorldCell
             ? focusWorldCell
             : (target != null ? target.GridPosition : Vector2Int.zero);
@@ -563,9 +574,9 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
         return (u * u * p0) + (2f * u * t * p1) + (t * t * p2);
     }
 
-    private static Vector3 ResolveTowardWorld(Vector2Int towardBlock)
+    private Vector3 ResolveTowardWorld(Vector2Int towardBlock)
     {
-        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        BoardPresenter3D presenter = GetPresenter();
         if (presenter != null && presenter.GridSpace3D != null)
         {
             Vector3 a = presenter.GridSpace3D.GridToWorld(Vector2Int.zero);
@@ -582,9 +593,9 @@ public sealed class TargetDirectionHintEffect : MonoBehaviour
         return fallback.sqrMagnitude > 0.0000001f ? fallback.normalized : Vector3.forward;
     }
 
-    private static float ResolveCellPitch()
+    private float ResolveCellPitch()
     {
-        BoardPresenter3D presenter = Object.FindFirstObjectByType<BoardPresenter3D>(FindObjectsInactive.Exclude);
+        BoardPresenter3D presenter = GetPresenter();
         if (presenter != null)
         {
             return Mathf.Max(0.01f, presenter.CellWorldSize);

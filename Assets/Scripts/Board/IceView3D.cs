@@ -33,6 +33,8 @@ public class IceView3D : MonoBehaviour
 
     [SerializeField]
     private IceState source;
+    private Block cachedBlock;
+    private BoardPresenter3D cachedPresenter;
     private static Material sharedIceMaterial;
 
     /// <summary>Gameplay-facing frozen flag last observed for VFX edge detection.</summary>
@@ -74,6 +76,7 @@ public class IceView3D : MonoBehaviour
         }
 
         Block block = ice != null ? ice.GetComponent<Block>() : null;
+        cachedBlock = block;
         Debug.Log($"[ICE_LIFECYCLE] Bind: IceView3D ID={GetInstanceID()}, IceState ID={(ice != null ? ice.GetInstanceID() : 0)}, Block ID={(block != null ? block.GetInstanceID() : 0)}, Cell={(block != null ? block.GridPosition : Vector2Int.zero)}, IsFrozen={(ice != null && ice.IsFrozen)}, Durability={(ice != null ? ice.Durability : 0)}, activeSelf={gameObject.activeSelf}");
 
         if (!sameSource)
@@ -94,6 +97,8 @@ public class IceView3D : MonoBehaviour
         Debug.Log($"[ICE_LIFECYCLE] ClearBind called on IceView3D ID={GetInstanceID()}");
         KillOwnedTweens(false);
         source = null;
+        cachedBlock = null;
+        cachedPresenter = null;
         wasFrozen = false;
         presentedDurability = -1;
         targetDurability = -1;
@@ -229,14 +234,19 @@ public class IceView3D : MonoBehaviour
     {
         if (source != null && source.IsFrozen)
         {
-            Block block = source.GetComponent<Block>();
-            if (block != null)
+            if (cachedBlock == null || cachedBlock.gameObject != source.gameObject)
             {
-                BoardPresenter3D presenter = FindPresenter();
-                if (presenter != null)
-                {
-                    transform.position = CalculateBlockVisualCenter(block, presenter);
-                }
+                cachedBlock = source.GetComponent<Block>();
+            }
+
+            if (cachedPresenter == null)
+            {
+                cachedPresenter = FindPresenter();
+            }
+
+            if (cachedBlock != null && cachedPresenter != null)
+            {
+                transform.position = CalculateBlockVisualCenter(cachedBlock, cachedPresenter);
             }
         }
     }

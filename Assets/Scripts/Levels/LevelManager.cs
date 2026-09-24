@@ -147,11 +147,6 @@ public class LevelManager : MonoBehaviour
     }
 
     [ContextMenu("Load Level 0")]
-    private void LoadLevelZeroDebug()
-    {
-        LoadLevel(0);
-    }
-
     public bool LoadLevel(int levelIndex)
     {
         if (isLoading)

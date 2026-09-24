@@ -7,8 +7,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BoardEnvironment3D : MonoBehaviour
 {
-    [SerializeField]
-    private Transform backdropPlane;
 
     [SerializeField]
     private Camera targetCamera;
